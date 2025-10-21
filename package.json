@@ -1,0 +1,17 @@
+{
+  "name": "ai-sihat",
+  "version": "1.0.0",
+  "description": "An AI-powered healthcare assistant to help patients with medication compliance and pharmacy communication",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:server": "cd server && npm run dev",
+    "dev:client": "cd client && npm run dev",
+    "install:all": "npm install && cd server && npm install && cd ../client && npm install"
+  },
+  "keywords": ["healthcare", "ai", "vue", "express"],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}
