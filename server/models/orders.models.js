@@ -1,5 +1,5 @@
 module.exports = (sequelize, Sequelize) => {
-  const Order = sequelize.define("order", {
+  const Model = sequelize.define("order", {
     order_id: {
       type: Sequelize.INTEGER,
       primaryKey: true,
@@ -35,6 +35,6 @@ module.exports = (sequelize, Sequelize) => {
     },
   });
 
-  return Order;
+  return Model;
 };
 

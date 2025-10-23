@@ -1,5 +1,5 @@
 const dbConfig = require("../config/db.config.js");
-const { Sequelize } = require("sequelize");
+const Sequelize = require("sequelize");
 
 // ✅ Create Sequelize instance
 const sequelize = new Sequelize(
@@ -16,16 +16,11 @@ db.Sequelize = Sequelize;
 db.sequelize = sequelize;
 
 // ✅ Import models
-db.medicine = require("./medicine.model.js")(sequelize, Sequelize);
-db.user = require("./user.model.js")(sequelize, Sequelize);
-db.order = require("./order.model.js")(sequelize, Sequelize);
+db.medicine = require("./medicines.models.js")(sequelize, Sequelize);
+db.user = require("./users.models.js")(sequelize, Sequelize);
+db.order = require("./orders.models.js")(sequelize, Sequelize);
 
-// ✅ Define relationships (foreign keys)
-db.user.hasMany(db.order, { foreignKey: "user_id", as: "orders" });
-db.order.belongsTo(db.user, { foreignKey: "user_id", as: "user" });
 
-db.medicine.hasMany(db.order, { foreignKey: "medicine_id", as: "orders" });
-db.order.belongsTo(db.medicine, { foreignKey: "medicine_id", as: "medicine" });
 
 // ✅ Export db object
 module.exports = db;
