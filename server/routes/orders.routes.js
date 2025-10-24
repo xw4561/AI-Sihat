@@ -4,5 +4,5 @@ module.exports = (app) => {
 
   router.post("/", controller.create);           // Create order
 
-  app.use("/ai-sihat/order", router);
+  app.use("/ai-sihat/orders", router);
 };

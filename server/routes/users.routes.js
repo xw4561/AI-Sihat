@@ -8,5 +8,5 @@ module.exports = (app) => {
   router.put("/:id/points", controller.updatePoints); // Update user points
   router.post("/delete", controller.delete);    // Delete user (POST style)
 
-  app.use("/ai-sihat/user", router);
+  app.use("/ai-sihat/users", router);
 };
