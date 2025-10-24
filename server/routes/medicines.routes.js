@@ -1,7 +1,10 @@
-module.exports = (app) => {
-  const controller = require("../controllers/medicines.controller.js");
-  var router = require("express").Router();
-  router.post("/", controller.create);           // Create order
+import express from "express";
+import { createMedicine, validateMedicine, getAllMedicines } from "../controllers/medicines.controller.js";
 
-  app.use("/ai-sihat/medicines", router);
-};
+const router = express.Router();
+
+router.post("/", validateMedicine, createMedicine);
+router.get("/", getAllMedicines);
+
+export default router;
+

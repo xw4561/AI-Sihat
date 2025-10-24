@@ -1,42 +1,46 @@
-const db = require("../models");
-const { validationResult } = require("express-validator");
+import { supabase } from "../config/supabase.config.js";
+import Joi from "joi";
 
-exports.create = async (req, res) => {
+// Joi schema
+const orderSchema = Joi.object({
+  user_id: Joi.number().integer().required(),
+  medicine_id: Joi.number().integer().required(),
+  quantity: Joi.number().integer().required(),
+  ai_consultation: Joi.boolean().optional(), // double points if true
+});
+
+// Validation middleware
+export const validateOrder = (req, res, next) => {
+  const { error } = orderSchema.validate(req.body);
+  if (error) return res.status(400).json({ error: error.details[0].message });
+  next();
+};
+
+// Controller functions
+export const createOrder = async (req, res) => {
   try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) throw { errors: errors.array() };
+    const { user_id, medicine_id, quantity, ai_consultation } = req.body;
 
-    const { user_id, medicine_id, quantity, order_type, use_ai } = req.body;
+    const points = ai_consultation ? quantity * 2 : quantity;
 
-    const user = await db.user.findByPk(user_id);
-    const medicine = await db.medicine.findByPk(medicine_id);
+    const { data, error } = await supabase
+      .from("orders")
+      .insert([{ user_id, medicine_id, quantity, points }]);
 
-    if (!user || !medicine)
-      return res.status(404).json({ message: "User or Medicine not found" });
-
-    const basePoints = quantity * 10;
-    const earnedPoints = use_ai ? basePoints * 2 : basePoints;
-
-    const newOrder = await db.order.create({
-      user_id,
-      medicine_id,
-      quantity,
-      order_type,
-      use_ai,
-      total_points: earnedPoints,
-      status: "completed",
-    });
-
-    user.points += earnedPoints;
-    await user.save();
-
-    res.status(201).json({
-      message: "Order created successfully",
-      order: newOrder,
-      updatedPoints: user.points,
-    });
-  } catch (error) {
-    console.log(error);
-    res.status(400).json(error);
+    if (error) throw error;
+    res.status(200).json(data);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
   }
 };
+
+export const getAllOrders = async (req, res) => {
+  try {
+    const { data, error } = await supabase.from("orders").select("*");
+    if (error) throw error;
+    res.status(200).json(data);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+};
+

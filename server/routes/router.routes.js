@@ -1,6 +1,13 @@
-module.exports = (app) => {
-  require("./medicines.routes")(app);
-  require("./users.routes")(app);
-  require("./orders.routes")(app);
-};
+import express from "express";
+import medicinesRoutes from "./medicines.routes.js";
+import usersRoutes from "./users.routes.js";
+import ordersRoutes from "./orders.routes.js";
+
+const router = express.Router();
+
+router.use("/medicines", medicinesRoutes);
+router.use("/users", usersRoutes);
+router.use("/orders", ordersRoutes);
+
+export default router;
 

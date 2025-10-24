@@ -1,12 +1,11 @@
-module.exports = (app) => {
-  const controller = require("../controllers/users.controller.js");
-  var router = require("express").Router();
+import express from "express";
+import { createUser, validateUser, getAllUsers } from "../controllers/users.controller.js";
 
-  router.post("/", controller.create);           // Create user
-  router.get("/", controller.findAll);          // Get all users
-  router.get("/:id", controller.findOne);       // Get user by id
-  router.put("/:id/points", controller.updatePoints); // Update user points
-  router.post("/delete", controller.delete);    // Delete user (POST style)
+const router = express.Router();
 
-  app.use("/ai-sihat/users", router);
-};
+router.post("/", validateUser, createUser);
+router.get("/", getAllUsers);
+
+export default router;
+
+

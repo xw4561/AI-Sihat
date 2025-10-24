@@ -1,8 +1,11 @@
-module.exports = (app) => {
-  const controller = require("../controllers/orders.controller.js");
-  var router = require("express").Router();
+import express from "express";
+import { createOrder, validateOrder, getAllOrders } from "../controllers/orders.controller.js";
 
-  router.post("/", controller.create);           // Create order
+const router = express.Router();
 
-  app.use("/ai-sihat/orders", router);
-};
+router.post("/", validateOrder, createOrder);
+router.get("/", getAllOrders);
+
+export default router;
+
+
