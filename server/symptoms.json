@@ -1,0 +1,243 @@
+{
+  "CommonIntake": [
+	{
+        "id": "1",
+        "prompt": "Select Your Preferred Language",
+        "type": "single_choice",
+        "options": ["English", "Malay"],
+        "next_logic": "2"
+    },
+    {
+      "id": "2",
+      "prompt": "Can you describe your symptoms in your own words?",
+      "type": "text_input",
+      "useGemini": true,
+	  "next_logic": "3"
+    },
+    {
+      "id": "3",
+      "prompt": "Please type patient’s name (as in IC)",
+      "type": "text_input",
+	  "next_logic": "4"
+    },
+    {
+      "id": "4",
+      "prompt": "Patient’s age (assume above 18)",
+      "type": "number_input",
+	  "next_logic": "5"
+    },
+    {
+      "id": "5",
+      "prompt": "Patient gender",
+      "type": "single_choice",
+      "options": ["Male", "Female"]
+    },
+    {
+      "id": "6",
+      "prompt": "Is the patient pregnant or breastfeeding?",
+      "type": "single_choice",
+      "options": ["Yes, pregnant", "Yes, breastfeeding", "Not for both"],
+	  "next_logic": "7"
+    },
+    {
+      "id": "7",
+      "prompt": "What are your symptoms? (Select one or more)",
+      "type": "multiple_choice",
+      "options": [
+        "Fever",
+        "Cough",
+        "Flu",
+        "Cold",
+        "Nausea and Vomiting",
+        "Diarrhoe",
+        "Indigestion",
+        "Bloat",
+        "Gastritis",
+        "Stomach Pain",
+        "Constipation",
+        "Menstrual Pain",
+        "Joint Pain",
+        "Muscle Pain",
+        "Itchy Skin",
+        "Sunburn",
+        "Cut",
+        "Other (Specify)"
+      ],
+      "next_logic": "8"
+    },
+	 {
+      "id": "8",
+      "prompt": "How long do the symptoms persist?",
+      "type": "single_choice",
+      "options": ["less than 1 day", "2 days", "3 days", "More than 3 days"],
+      "next_logic": "9"
+    },
+    {
+      "id": "9",
+      "prompt": "What is your body temperature? (degrees Celsius)",
+      "type": "number_input",
+      "options": ["Enter Temperature"],
+      "next_logic": "10"
+    },
+    {
+      "id": "10",
+      "prompt": "Do you have allergies to any medication?",
+      "type": "single_choice",
+      "options": ["Yes (List down details)", "No"],
+      "next_logic": "11"
+    },
+    {
+      "id": "11",
+      "prompt": "Did you take any medication recently?",
+      "type": "single_choice",
+      "options": ["Yes (List down details)", "No"],
+      "next_logic": "SYMPTOM_ROUTING"
+    }
+  ],
+
+  "Flu": [
+    {
+      "id": "F1",
+      "prompt": "Do you experience flu symptoms before?",
+      "type": "single_choice",
+      "options": ["Yes", "No"]
+    },
+    {
+      "id": "R1",
+      "type": "recommendation",
+      "prompt": "ANS for less than 1–2 days persistence",
+      "details": [
+        "Hurix's 600 Fluaway capsule improved: 3 tablets 4 times per day.",
+        "If your condition becomes serious or does not improve, please refer to a doctor."
+      ],
+	  "next_logic": "AppFlow"
+    }
+  ],
+
+  "Fever": [
+    {
+      "id": "V1",
+      "prompt": "Do you experience fever symptoms before?",
+      "type": "single_choice",
+      "options": ["Yes", "No"]
+    },
+    {
+      "id": "R1",
+      "type": "recommendation",
+      "prompt": "ANS for less than 1–2 days persistence",
+      "details": [
+        "Paracetamol (Panadol) 500mg: 2 tablets three times a day, max 8 tablets per day.",
+        "If your condition becomes serious or does not improve, please refer to a doctor."
+      ],
+	  "next_logic": "AppFlow"
+    }
+  ],
+
+  "Cough": [
+    {
+      "id": "K1",
+      "prompt": "Do you feel sore throat?",
+      "type": "single_choice",
+      "options": ["Yes", "No"]
+    },
+    {
+      "id": "K2",
+      "prompt": "Do you experience this cough before?",
+      "type": "single_choice",
+      "options": ["Yes", "No"]
+    },
+    {
+      "id": "R1",
+      "type": "recommendation",
+      "prompt": "ANS for less than 1–2 days persistence",
+      "details": [
+        "Breacol Expectorant (Guaifenesin): 10–20ml every 4 hours.",
+        "If your condition becomes serious or does not improve, please refer to a doctor."
+      ],
+	  "next_logic": "AppFlow"
+    }
+  ],
+
+  "Diarrhoe": [
+    {
+      "id": "D1",
+      "prompt": "Do you experience diarrhoea before?",
+      "type": "single_choice",
+      "options": ["Yes (Specify When)", "No"]
+    },
+    {
+      "id": "D2",
+      "prompt": "Do you have abdominal discomfort?",
+      "type": "single_choice",
+      "options": ["Yes", "No"]
+    },
+    {
+      "id": "R1",
+      "type": "recommendation",
+      "prompt": "ANS for less than 1–2 days persistence",
+      "details": [
+        "Lactul Solution (Lactulose): 15ml twice daily.",
+        "If your condition becomes serious or does not improve, please refer to a doctor."
+      ],
+	  "next_logic": "AppFlow"
+    }
+  ],
+
+  "Constipation": [
+    {
+      "id": "C1",
+      "prompt": "Do you experience constipation before?",
+      "type": "single_choice",
+      "options": ["Yes", "No"]
+    },
+    {
+      "id": "R1",
+      "type": "recommendation",
+      "prompt": "ANS for less than 1–2 days persistence",
+      "details": [
+        "Lactul Solution (Lactulose): 15ml twice daily.",
+        "If your condition becomes serious or does not improve, please refer to a doctor."
+      ],
+	  "next_logic": "AppFlow"
+    }
+  ],
+
+  "AppFlow": [
+    {
+      "id": "A1",
+      "prompt": "Do you want to purchase this medication?",
+      "type": "single_choice",
+      "options": ["Yes", "No"],
+      "next_logic": "A2"
+    },
+    {
+      "id": "A2",
+      "prompt": "Choose your preferred method",
+      "type": "single_choice",
+      "options": ["Pick Up", "Delivery"],
+      "next_logic": null
+    },
+    {
+      "id": "A3",
+      "prompt": "Purchase method (Pick Up)",
+      "type": "single_choice",
+      "options": ["Online Banking", "Touch N Go", "Pay at counter"]
+    },
+    {
+      "id": "A4",
+      "prompt": "Type your address (Delivery)",
+      "type": "text_input"
+    },
+    {
+      "id": "A5",
+      "prompt": "Phone number (Delivery)",
+      "type": "number_input"
+    },
+    {
+      "id": "A6",
+      "prompt": "Purchase method (Delivery)",
+      "type": "single_choice",
+      "options": ["Online Banking", "Touch N Go"]
+    }
+  ]
+}
