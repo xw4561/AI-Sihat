@@ -1,5 +1,6 @@
 // server.js
 import express from "express";
+import cors from "cors";
 import fs from "fs";
 import { v4 as uuidv4 } from "uuid";
 import dotenv from "dotenv";
@@ -8,6 +9,12 @@ import { processAnswer, getFirstQuestion, getNextQuestion } from "./logic.js";
 dotenv.config();
 
 const app = express();
+// Configure CORS from env (CORS_ORIGIN supports comma-separated origins); default allows all
+const allowedOrigins = process.env.CORS_ORIGIN
+  ? process.env.CORS_ORIGIN.split(",").map(s => s.trim()).filter(Boolean)
+  : [];
+const corsOptions = allowedOrigins.length > 0 ? { origin: allowedOrigins } : undefined;
+app.use(cors(corsOptions));
 app.use(express.json());
 const PORT = process.env.PORT || 3000;
 
@@ -182,6 +189,15 @@ app.post("/chat/approve", (req, res) => {
     message: approved
       ? "✅ Approved! Proceeding to payment."
       : "❌ Not approved. Session ended."
+  });
+});
+
+// Simple health/test endpoint (useful for client/dev checks)
+app.get("/api/test", (req, res) => {
+  res.json({
+    message: "Test API is working!",
+    timestamp: new Date().toISOString(),
+    status: "success",
   });
 });
 

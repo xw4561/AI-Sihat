@@ -1,5 +1,4 @@
 {
-<<<<<<< HEAD
   "name": "ai-sihat",
   "version": "1.0.0",
   "description": "An AI-powered healthcare assistant to help patients with medication compliance and pharmacy communication",
@@ -14,11 +13,5 @@
   "license": "ISC",
   "devDependencies": {
     "concurrently": "^9.2.1"
-=======
-  "dependencies": {
-    "@google/genai": "^1.27.0",
-    "dotenv": "^17.2.3",
-    "readline-sync": "^1.4.10"
->>>>>>> chatbot
   }
 }
