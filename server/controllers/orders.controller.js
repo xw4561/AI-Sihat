@@ -52,7 +52,7 @@ exports.delete = async (req, res) => {
   try {
     const { id } = req.params;
     await prisma.order.delete({
-      where: { orderId: parseInt(id) }
+      where: { orderId: id }
     });
     res.status(200).json({ message: "Order deleted successfully" });
   } catch (error) {

@@ -61,12 +61,12 @@ async function getAllUsers() {
 
 /**
  * Get user by ID (without password)
- * @param {number} userId - User ID
+ * @param {string} userId - User ID
  * @returns {Promise<object|null>} User or null
  */
 async function getUserById(userId) {
   const user = await prisma.user.findUnique({
-    where: { userId: parseInt(userId) },
+    where: { userId: userId },
     select: {
       userId: true,
       username: true,
@@ -86,7 +86,7 @@ async function getUserById(userId) {
 
 /**
  * Update user points
- * @param {number} userId - User ID
+ * @param {string} userId - User ID
  * @param {number} points - New points value
  * @returns {Promise<object>} Updated user
  */
@@ -96,7 +96,7 @@ async function updateUserPoints(userId, points) {
   }
 
   const user = await prisma.user.update({
-    where: { userId: parseInt(userId) },
+    where: { userId: userId },
     data: { points },
     select: {
       userId: true,
@@ -113,7 +113,7 @@ async function updateUserPoints(userId, points) {
 
 /**
  * Add points to user (for rewards, orders, etc.)
- * @param {number} userId - User ID
+ * @param {string} userId - User ID
  * @param {number} pointsToAdd - Points to add
  * @returns {Promise<object>} Updated user
  */
@@ -123,7 +123,7 @@ async function addUserPoints(userId, pointsToAdd) {
   }
 
   const user = await prisma.user.update({
-    where: { userId: parseInt(userId) },
+    where: { userId: userId },
     data: { points: { increment: pointsToAdd } },
     select: {
       userId: true,
@@ -140,12 +140,12 @@ async function addUserPoints(userId, pointsToAdd) {
 
 /**
  * Delete a user
- * @param {number} userId - User ID
+ * @param {string} userId - User ID
  * @returns {Promise<boolean>} True if deleted
  */
 async function deleteUser(userId) {
   await prisma.user.delete({
-    where: { userId: parseInt(userId) },
+    where: { userId: userId },
   });
   return true;
 }

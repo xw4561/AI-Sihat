@@ -7,27 +7,27 @@ const prisma = require("../prisma/client");
 
 /**
  * Create a new medicine
- * @param {object} medicineData - { medicine_name, medicine_type, medicine_quantity }
+ * @param {object} medicineData - { medicineName, medicineType, medicineQuantity }
  * @returns {Promise<object>} Created medicine
  */
 async function createMedicine(medicineData) {
-  const { medicine_name, medicine_type, medicine_quantity } = medicineData;
+  const { medicineName, medicineType, medicineQuantity } = medicineData;
 
   // Validate required fields
-  if (!medicine_name || !medicine_type || medicine_quantity === undefined) {
-    throw new Error("Missing required fields: medicine_name, medicine_type, medicine_quantity");
+  if (!medicineName || !medicineType || medicineQuantity === undefined) {
+    throw new Error("Missing required fields: medicineName, medicineType, medicineQuantity");
   }
 
   // Validate quantity
-  if (typeof medicine_quantity !== "number" || medicine_quantity < 0) {
+  if (typeof medicineQuantity !== "number" || medicineQuantity < 0) {
     throw new Error("Quantity must be a non-negative number");
   }
 
   // Check if medicine already exists
   const existing = await prisma.medicine.findFirst({
     where: {
-      medicineName: medicine_name,
-      medicineType: medicine_type
+      medicineName: medicineName,
+      medicineType: medicineType
     }
   });
 
@@ -37,9 +37,9 @@ async function createMedicine(medicineData) {
 
   const medicine = await prisma.medicine.create({
     data: {
-      medicineName: medicine_name,
-      medicineType: medicine_type,
-      medicineQuantity: medicine_quantity,
+      medicineName: medicineName,
+      medicineType: medicineType,
+      medicineQuantity: medicineQuantity,
     }
   });
 
@@ -67,12 +67,12 @@ async function getAllMedicines(filters = {}) {
 
 /**
  * Get medicine by ID
- * @param {number} medicineId - Medicine ID
+ * @param {string} medicineId - Medicine ID
  * @returns {Promise<object>} Medicine
  */
 async function getMedicineById(medicineId) {
   const medicine = await prisma.medicine.findUnique({
-    where: { medicineId: parseInt(medicineId) }
+    where: { medicineId: medicineId }
   });
   
   if (!medicine) {
@@ -84,26 +84,26 @@ async function getMedicineById(medicineId) {
 
 /**
  * Update medicine details
- * @param {number} medicineId - Medicine ID
+ * @param {string} medicineId - Medicine ID
  * @param {object} updates - Fields to update
  * @returns {Promise<object>} Updated medicine
  */
 async function updateMedicine(medicineId, updates) {
   // Validate quantity if provided
-  if (updates.medicine_quantity !== undefined) {
-    if (typeof updates.medicine_quantity !== "number" || updates.medicine_quantity < 0) {
+  if (updates.medicineQuantity !== undefined) {
+    if (typeof updates.medicineQuantity !== "number" || updates.medicineQuantity < 0) {
       throw new Error("Quantity must be a non-negative number");
     }
   }
 
-  // Map snake_case to camelCase
+  // Build update data object
   const data = {};
-  if (updates.medicine_name) data.medicineName = updates.medicine_name;
-  if (updates.medicine_type) data.medicineType = updates.medicine_type;
-  if (updates.medicine_quantity !== undefined) data.medicineQuantity = updates.medicine_quantity;
+  if (updates.medicineName) data.medicineName = updates.medicineName;
+  if (updates.medicineType) data.medicineType = updates.medicineType;
+  if (updates.medicineQuantity !== undefined) data.medicineQuantity = updates.medicineQuantity;
 
   const medicine = await prisma.medicine.update({
-    where: { medicineId: parseInt(medicineId) },
+    where: { medicineId: medicineId },
     data
   });
 
@@ -112,7 +112,7 @@ async function updateMedicine(medicineId, updates) {
 
 /**
  * Update medicine stock quantity
- * @param {number} medicineId - Medicine ID
+ * @param {string} medicineId - Medicine ID
  * @param {number} quantity - New quantity
  * @returns {Promise<object>} Updated medicine
  */
@@ -122,7 +122,7 @@ async function updateStock(medicineId, quantity) {
   }
 
   const medicine = await prisma.medicine.update({
-    where: { medicineId: parseInt(medicineId) },
+    where: { medicineId: medicineId },
     data: { medicineQuantity: quantity }
   });
   
@@ -131,7 +131,7 @@ async function updateStock(medicineId, quantity) {
 
 /**
  * Increase medicine stock
- * @param {number} medicineId - Medicine ID
+ * @param {string} medicineId - Medicine ID
  * @param {number} amount - Amount to add
  * @returns {Promise<object>} Updated medicine
  */
@@ -141,7 +141,7 @@ async function increaseStock(medicineId, amount) {
   }
 
   const medicine = await prisma.medicine.update({
-    where: { medicineId: parseInt(medicineId) },
+    where: { medicineId: medicineId },
     data: { medicineQuantity: { increment: amount } }
   });
   
@@ -150,7 +150,7 @@ async function increaseStock(medicineId, amount) {
 
 /**
  * Decrease medicine stock
- * @param {number} medicineId - Medicine ID
+ * @param {string} medicineId - Medicine ID
  * @param {number} amount - Amount to subtract
  * @returns {Promise<object>} Updated medicine
  */
@@ -160,7 +160,7 @@ async function decreaseStock(medicineId, amount) {
   }
 
   const medicine = await prisma.medicine.findUnique({
-    where: { medicineId: parseInt(medicineId) }
+    where: { medicineId: medicineId }
   });
 
   if (!medicine) {
@@ -172,7 +172,7 @@ async function decreaseStock(medicineId, amount) {
   }
 
   const updated = await prisma.medicine.update({
-    where: { medicineId: parseInt(medicineId) },
+    where: { medicineId: medicineId },
     data: { medicineQuantity: { decrement: amount } }
   });
   
@@ -181,12 +181,12 @@ async function decreaseStock(medicineId, amount) {
 
 /**
  * Delete a medicine
- * @param {number} medicineId - Medicine ID
+ * @param {string} medicineId - Medicine ID
  * @returns {Promise<boolean>} True if deleted
  */
 async function deleteMedicine(medicineId) {
   await prisma.medicine.delete({
-    where: { medicineId: parseInt(medicineId) }
+    where: { medicineId: medicineId }
   });
   
   return true;

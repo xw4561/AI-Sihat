@@ -98,13 +98,17 @@ GEMINI_API_KEY=your_api_key_here
 # CORS Origins (comma-separated)
 CORS_ORIGIN=http://localhost:5173
 
-# Database Connection
+# Database Connection (Supabase)
 # Get from Supabase: Project Settings → Database → Connection string
-DATABASE_URL=postgresql://postgres:PASSWORD@db.PROJECT_ID.supabase.co:5432/postgres
 
-# For connection pooling (Recommended for production):
-# DATABASE_URL=postgresql://postgres.PROJECT_ID:PASSWORD@aws-X-region.pooler.supabase.com:6543/postgres?pgbouncer=true
+# Connection pooling for regular queries (port 6543)
+DATABASE_URL=postgresql://postgres.PROJECT_ID:PASSWORD@aws-X-region.pooler.supabase.com:6543/postgres?pgbouncer=true
+
+# Direct connection for migrations (port 5432)
+DIRECT_URL=postgresql://postgres.PROJECT_ID:PASSWORD@aws-X-region.pooler.supabase.com:5432/postgres
 ```
+
+**Important**: The `DIRECT_URL` is required for Prisma migrations to work properly with connection pooling.
 
 ### Database Setup
 
@@ -128,12 +132,17 @@ DATABASE_URL=postgresql://postgres:password@localhost:5432/ai_sihat
 # Generate Prisma client
 npx prisma generate
 
-# Create/update database tables
+# Push schema to database (creates tables)
 npx prisma db push
 
 # Optional: Open Prisma Studio to view data
 npx prisma studio
 ```
+
+**Note**: The schema uses:
+- **CUID** for primary keys (random IDs instead of auto-increment)
+- **String-based enums** for better PostgreSQL compatibility with connection pooling
+- **camelCase** for all API fields and responses
 
 ### Test Database Connection
 
@@ -280,9 +289,20 @@ Create a new user (auto-hashes password).
 **Request:**
 ```json
 {
-  "name": "John Doe",
+  "username": "John Doe",
   "email": "john@example.com",
   "password": "securepass123"
+}
+```
+
+**Response:**
+```json
+{
+  "userId": "clxxx...",
+  "username": "John Doe",
+  "email": "john@example.com",
+  "points": 0,
+  "createdAt": "2025-10-29T..."
 }
 ```
 
@@ -313,9 +333,20 @@ Create a new medicine.
 **Request:**
 ```json
 {
-  "name": "Panadol",
-  "type": "Painkiller",
-  "quantity": 100
+  "medicineName": "Panadol",
+  "medicineType": "Painkiller",
+  "medicineQuantity": 100
+}
+```
+
+**Response:**
+```json
+{
+  "medicineId": "clxxx...",
+  "medicineName": "Panadol",
+  "medicineType": "Painkiller",
+  "medicineQuantity": 100,
+  "createdAt": "2025-10-29T..."
 }
 ```
 
@@ -343,10 +374,30 @@ Create a new order (auto-calculates points and updates user).
 **Request:**
 ```json
 {
-  "userId": 1,
-  "medicineId": 1,
+  "userId": "clxxx...",
+  "medicineId": "clxxx...",
   "quantity": 2,
-  "aiConsultation": true
+  "orderType": "pickup",
+  "useAi": true
+}
+```
+
+**Response:**
+```json
+{
+  "message": "Order created successfully",
+  "order": {
+    "orderId": "clxxx...",
+    "userId": "clxxx...",
+    "medicineId": "clxxx...",
+    "quantity": 2,
+    "orderType": "pickup",
+    "useAi": true,
+    "totalPoints": 40,
+    "status": "completed"
+  },
+  "updatedPoints": 140,
+  "earnedPoints": 40
 }
 ```
 
@@ -367,43 +418,56 @@ Delete an order.
 
 ### Users Table
 ```prisma
-model users {
-  id        Int      @id @default(autoincrement())
-  name      String
-  email     String   @unique
-  password  String   // bcrypt hashed
+model User {
+  userId    String   @id @default(cuid()) @map("user_id")
+  username  String   @db.VarChar(50)
+  email     String   @unique @db.VarChar(100)
+  password  String   @db.VarChar(100)
   points    Int      @default(0)
   createdAt DateTime @default(now())
-  orders    orders[]
+  updatedAt DateTime @updatedAt
+  orders    Order[]
+  @@map("users")
 }
 ```
 
 ### Medicines Table
 ```prisma
-model medicines {
-  id        Int      @id @default(autoincrement())
-  name      String
-  type      String
-  quantity  Int
-  createdAt DateTime @default(now())
-  orders    orders[]
+model Medicine {
+  medicineId       String   @id @default(cuid()) @map("medicine_id")
+  medicineName     String   @map("medicine_name") @db.VarChar(50)
+  medicineType     String   @map("medicine_type") @db.VarChar(50)
+  medicineQuantity Int      @map("medicine_quantity")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  orders           Order[]
+  @@map("medicines")
 }
 ```
 
 ### Orders Table
 ```prisma
-model orders {
-  id              Int       @id @default(autoincrement())
-  userId          Int
-  medicineId      Int
-  quantity        Int
-  pointsEarned    Int
-  aiConsultation  Boolean   @default(false)
-  createdAt       DateTime  @default(now())
-  user            users     @relation(fields: [userId], references: [id])
-  medicine        medicines @relation(fields: [medicineId], references: [id])
+model Order {
+  orderId     String   @id @default(cuid()) @map("order_id")
+  userId      String   @map("user_id")
+  medicineId  String   @map("medicine_id")
+  quantity    Int
+  orderType   String   @map("order_type") @db.VarChar(20)
+  useAi       Boolean  @default(false) @map("use_ai")
+  totalPoints Int      @default(0) @map("total_points")
+  status      String   @default("pending") @db.VarChar(20)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  medicine    Medicine @relation(fields: [medicineId], references: [medicineId], onDelete: Restrict)
+  @@map("orders")
 }
 ```
+
+**Key Changes:**
+- **IDs**: Uses CUID (random strings) instead of auto-increment integers
+- **Enums**: Replaced PostgreSQL enums with string types for pooling compatibility
+- **Naming**: Field names use camelCase in Prisma, mapped to snake_case in database
 
 ## Service Layer Details
 
@@ -474,6 +538,9 @@ npx prisma migrate reset
 3. **Error Handling** - All controllers include try-catch blocks
 4. **Validation** - Use express-validator for input validation
 5. **Testing** - Test endpoints using the client's API Test page or tools like Postman
+6. **camelCase API** - All JSON fields use camelCase for consistency
+7. **CUID IDs** - Primary keys are random strings (e.g., `clxxx...`) for better security
+8. **Connection Pooling** - Uses Supabase pooler (port 6543) for queries, direct (port 5432) for migrations
 
 ## Troubleshooting
 

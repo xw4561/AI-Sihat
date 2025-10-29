@@ -18,21 +18,21 @@ function calculatePoints(quantity, useAI) {
 
 /**
  * Create a new order and update user points
- * @param {object} orderData - { user_id, medicine_id, quantity, order_type, use_ai }
+ * @param {object} orderData - { userId, medicineId, quantity, orderType, useAi }
  * @returns {Promise<object>} { order, updatedPoints }
  */
 async function createOrder(orderData) {
-  const { user_id, medicine_id, quantity, order_type, use_ai } = orderData;
+  const { userId, medicineId, quantity, orderType, useAi } = orderData;
 
   // Validate required fields
-  if (!user_id || !medicine_id || !quantity || !order_type) {
-    throw new Error("Missing required fields: user_id, medicine_id, quantity, order_type");
+  if (!userId || !medicineId || !quantity || !orderType) {
+    throw new Error("Missing required fields: userId, medicineId, quantity, orderType");
   }
 
   // Validate order type
   const validOrderTypes = ["pickup", "delivery"];
-  if (!validOrderTypes.includes(order_type)) {
-    throw new Error("Invalid order_type. Must be 'pickup' or 'delivery'");
+  if (!validOrderTypes.includes(orderType)) {
+    throw new Error("Invalid orderType. Must be 'pickup' or 'delivery'");
   }
 
   // Validate quantity
@@ -42,7 +42,7 @@ async function createOrder(orderData) {
 
   // Check if user exists
   const user = await prisma.user.findUnique({
-    where: { userId: parseInt(user_id) }
+    where: { userId: userId }
   });
   if (!user) {
     throw new Error("User not found");
@@ -50,7 +50,7 @@ async function createOrder(orderData) {
 
   // Check if medicine exists
   const medicine = await prisma.medicine.findUnique({
-    where: { medicineId: parseInt(medicine_id) }
+    where: { medicineId: medicineId }
   });
   if (!medicine) {
     throw new Error("Medicine not found");
@@ -62,17 +62,17 @@ async function createOrder(orderData) {
   }
 
   // Calculate points
-  const earnedPoints = calculatePoints(quantity, use_ai || false);
+  const earnedPoints = calculatePoints(quantity, useAi || false);
 
   // Create order and update user points in a transaction
   const result = await prisma.$transaction(async (tx) => {
     const newOrder = await tx.order.create({
       data: {
-        userId: parseInt(user_id),
-        medicineId: parseInt(medicine_id),
+        userId: userId,
+        medicineId: medicineId,
         quantity,
-        orderType: order_type,
-        useAi: use_ai || false,
+        orderType: orderType,
+        useAi: useAi || false,
         totalPoints: earnedPoints,
         status: "completed",
       },
@@ -86,7 +86,7 @@ async function createOrder(orderData) {
 
     // Update user points
     const updatedUser = await tx.user.update({
-      where: { userId: parseInt(user_id) },
+      where: { userId: userId },
       data: { points: { increment: earnedPoints } }
     });
 
@@ -102,12 +102,12 @@ async function createOrder(orderData) {
 
 /**
  * Get all orders for a user
- * @param {number} userId - User ID
+ * @param {string} userId - User ID
  * @returns {Promise<Array>} Array of orders
  */
 async function getUserOrders(userId) {
   return await prisma.order.findMany({
-    where: { userId: parseInt(userId) },
+    where: { userId: userId },
     include: {
       medicine: {
         select: {
@@ -123,12 +123,12 @@ async function getUserOrders(userId) {
 
 /**
  * Get order by ID
- * @param {number} orderId - Order ID
+ * @param {string} orderId - Order ID
  * @returns {Promise<object>} Order with user and medicine details
  */
 async function getOrderById(orderId) {
   const order = await prisma.order.findUnique({
-    where: { orderId: parseInt(orderId) },
+    where: { orderId: orderId },
     include: {
       user: {
         select: { userId: true, username: true, email: true }
@@ -148,7 +148,7 @@ async function getOrderById(orderId) {
 
 /**
  * Update order status
- * @param {number} orderId - Order ID
+ * @param {string} orderId - Order ID
  * @param {string} status - New status (pending, completed, cancelled)
  * @returns {Promise<object>} Updated order
  */
@@ -159,7 +159,7 @@ async function updateOrderStatus(orderId, status) {
   }
 
   const order = await prisma.order.update({
-    where: { orderId: parseInt(orderId) },
+    where: { orderId: orderId },
     data: { status }
   });
 
@@ -168,12 +168,12 @@ async function updateOrderStatus(orderId, status) {
 
 /**
  * Cancel an order and refund points
- * @param {number} orderId - Order ID
+ * @param {string} orderId - Order ID
  * @returns {Promise<object>} { order, refundedPoints }
  */
 async function cancelOrder(orderId) {
   const order = await prisma.order.findUnique({
-    where: { orderId: parseInt(orderId) }
+    where: { orderId: orderId }
   });
 
   if (!order) {
@@ -188,7 +188,7 @@ async function cancelOrder(orderId) {
   const result = await prisma.$transaction(async (tx) => {
     // Update order status
     const updatedOrder = await tx.order.update({
-      where: { orderId: parseInt(orderId) },
+      where: { orderId: orderId },
       data: { status: "cancelled" }
     });
 

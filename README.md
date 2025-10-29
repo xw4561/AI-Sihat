@@ -42,11 +42,19 @@ npm run install:all
    ```env
    PORT=3000
    GEMINI_API_KEY=your_api_key_here
-   DATABASE_URL=your_postgresql_connection_string
+   
+   # Connection pooling for queries (port 6543)
+   DATABASE_URL=your_postgresql_pooled_connection_string
+   
+   # Direct connection for migrations (port 5432)
+   DIRECT_URL=your_postgresql_direct_connection_string
+   
    CORS_ORIGIN=http://localhost:5173
    ```
 
-2. Initialize database (see [`server/prisma/README.md`](./server/prisma/README.md)):
+2. Update `server/prisma.config.ts` to use both URLs for proper connection pooling
+
+3. Initialize database (see [`server/prisma/README.md`](./server/prisma/README.md)):
    ```powershell
    cd server
    npx prisma generate
@@ -91,6 +99,8 @@ For detailed API endpoints and architecture, see [`server/README.md`](./server/R
 - 💊 **Medicine Inventory** - Track and manage medicine stock
 - 📦 **Order Management** - Automatic points calculation
 - 🔧 **Database Manager** - Admin UI for CRUD operations
+- 🔐 **Secure IDs** - Uses CUID for random, secure primary keys
+- 📊 **Consistent API** - All endpoints use camelCase for JSON fields
 
 ## Documentation
 

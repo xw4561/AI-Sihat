@@ -40,13 +40,13 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="user in users" :key="user.user_id">
-                <td>{{ user.user_id }}</td>
+              <tr v-for="user in users" :key="user.userId">
+                <td>{{ user.userId }}</td>
                 <td>{{ user.username }}</td>
                 <td>{{ user.email }}</td>
                 <td>{{ user.points }}</td>
                 <td>
-                  <button @click="deleteUser(user.user_id)" class="btn-delete">Delete</button>
+                  <button @click="deleteUser(user.userId)" class="btn-delete">Delete</button>
                 </td>
               </tr>
             </tbody>
@@ -64,9 +64,9 @@
         <h4>Add New Medicine</h4>
         <form @submit.prevent="addMedicine">
           <div class="form-row">
-            <input v-model="newMedicine.medicine_name" type="text" placeholder="Medicine Name" required />
-            <input v-model="newMedicine.medicine_type" type="text" placeholder="Type" required />
-            <input v-model.number="newMedicine.medicine_quantity" type="number" placeholder="Quantity" required min="0" />
+            <input v-model="newMedicine.medicineName" type="text" placeholder="Medicine Name" required />
+            <input v-model="newMedicine.medicineType" type="text" placeholder="Type" required />
+            <input v-model.number="newMedicine.medicineQuantity" type="number" placeholder="Quantity" required min="0" />
             <button type="submit" class="btn-add">Add Medicine</button>
           </div>
         </form>
@@ -92,13 +92,13 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="medicine in medicines" :key="medicine.medicine_id">
-                <td>{{ medicine.medicine_id }}</td>
-                <td>{{ medicine.medicine_name }}</td>
-                <td>{{ medicine.medicine_type }}</td>
-                <td>{{ medicine.medicine_quantity }}</td>
+              <tr v-for="medicine in medicines" :key="medicine.medicineId">
+                <td>{{ medicine.medicineId }}</td>
+                <td>{{ medicine.medicineName }}</td>
+                <td>{{ medicine.medicineType }}</td>
+                <td>{{ medicine.medicineQuantity }}</td>
                 <td>
-                  <button @click="deleteMedicine(medicine.medicine_id)" class="btn-delete">Delete</button>
+                  <button @click="deleteMedicine(medicine.medicineId)" class="btn-delete">Delete</button>
                 </td>
               </tr>
             </tbody>
@@ -116,26 +116,26 @@
         <h4>Create New Order</h4>
         <form @submit.prevent="addOrder">
           <div class="form-row">
-            <select v-model.number="newOrder.user_id" required>
+            <select v-model="newOrder.userId" required>
               <option value="" disabled>Select User</option>
-              <option v-for="user in users" :key="user.user_id" :value="user.user_id">
-                {{ user.username }} (ID: {{ user.user_id }})
+              <option v-for="user in users" :key="user.userId" :value="user.userId">
+                {{ user.username }} (ID: {{ user.userId }})
               </option>
             </select>
-            <select v-model.number="newOrder.medicine_id" required>
+            <select v-model="newOrder.medicineId" required>
               <option value="" disabled>Select Medicine</option>
-              <option v-for="medicine in medicines" :key="medicine.medicine_id" :value="medicine.medicine_id">
-                {{ medicine.medicine_name }} (ID: {{ medicine.medicine_id }})
+              <option v-for="medicine in medicines" :key="medicine.medicineId" :value="medicine.medicineId">
+                {{ medicine.medicineName }} (ID: {{ medicine.medicineId }})
               </option>
             </select>
             <input v-model.number="newOrder.quantity" type="number" placeholder="Quantity" required min="1" />
-            <select v-model="newOrder.order_type" required>
+            <select v-model="newOrder.orderType" required>
               <option value="" disabled>Order Type</option>
               <option value="pickup">Pickup</option>
               <option value="delivery">Delivery</option>
             </select>
             <label class="checkbox-label">
-              <input v-model="newOrder.use_ai" type="checkbox" />
+              <input v-model="newOrder.useAi" type="checkbox" />
               Use AI (2x points)
             </label>
             <button type="submit" class="btn-add">Create Order</button>
@@ -167,17 +167,17 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="order in orders" :key="order.order_id">
-                <td>{{ order.order_id }}</td>
-                <td>{{ order.user_id }}</td>
-                <td>{{ order.medicine_id }}</td>
+              <tr v-for="order in orders" :key="order.orderId">
+                <td>{{ order.orderId }}</td>
+                <td>{{ order.userId }}</td>
+                <td>{{ order.medicineId }}</td>
                 <td>{{ order.quantity }}</td>
-                <td>{{ order.order_type }}</td>
-                <td>{{ order.use_ai ? '✅' : '❌' }}</td>
-                <td>{{ order.total_points }}</td>
+                <td>{{ order.orderType }}</td>
+                <td>{{ order.useAi ? '✅' : '❌' }}</td>
+                <td>{{ order.totalPoints }}</td>
                 <td><span :class="'status-' + order.status">{{ order.status }}</span></td>
                 <td>
-                  <button @click="deleteOrder(order.order_id)" class="btn-delete">Delete</button>
+                  <button @click="deleteOrder(order.orderId)" class="btn-delete">Delete</button>
                 </td>
               </tr>
             </tbody>
@@ -205,17 +205,17 @@ const newUser = ref({ username: '', email: '', password: '' })
 // Medicines
 const medicines = ref([])
 const medicinesLoading = ref(false)
-const newMedicine = ref({ medicine_name: '', medicine_type: '', medicine_quantity: 0 })
+const newMedicine = ref({ medicineName: '', medicineType: '', medicineQuantity: 0 })
 
 // Orders
 const orders = ref([])
 const ordersLoading = ref(false)
 const newOrder = ref({ 
-  user_id: '', 
-  medicine_id: '', 
+  userId: '', 
+  medicineId: '', 
   quantity: 1, 
-  order_type: '', 
-  use_ai: false 
+  orderType: '', 
+  useAi: false 
 })
 
 // Status
@@ -283,7 +283,7 @@ const addMedicine = async () => {
   try {
     await axios.post('/ai-sihat/medicines', newMedicine.value)
     showStatus('✅ Medicine added successfully!', 'success')
-    newMedicine.value = { medicine_name: '', medicine_type: '', medicine_quantity: 0 }
+    newMedicine.value = { medicineName: '', medicineType: '', medicineQuantity: 0 }
     await loadMedicines()
   } catch (err) {
     showStatus(err.response?.data?.error || 'Failed to add medicine', 'error')
@@ -318,7 +318,7 @@ const addOrder = async () => {
   try {
     await axios.post('/ai-sihat/order', newOrder.value)
     showStatus('✅ Order created successfully!', 'success')
-    newOrder.value = { user_id: '', medicine_id: '', quantity: 1, order_type: '', use_ai: false }
+    newOrder.value = { userId: '', medicineId: '', quantity: 1, orderType: '', useAi: false }
     await loadOrders()
     await loadUsers() // Refresh to see updated points
   } catch (err) {
