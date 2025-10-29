@@ -2,6 +2,7 @@
 const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
+const prisma = require("./prisma/client");
 
 dotenv.config();
 
@@ -17,7 +18,6 @@ app.use(express.json());
 
 const PORT = process.env.PORT || 3000;
 
-
 // Simple health/test endpoint (useful for client/dev checks)
 app.get("/api/test", (req, res) => {
   res.json({
@@ -27,32 +27,21 @@ app.get("/api/test", (req, res) => {
   });
 });
 
-// Initialize DB (optional, if env present)
-let db;
-try {
-  db = require("./models");
-  if (db && db.sequelize && db.sequelize.authenticate) {
-    db.sequelize.authenticate()
-      .then(() => {
-        console.log("✅ Database connection established");
-        return db.sequelize.sync();
-      })
-      .then(() => console.log("✅ Database synced"))
-      .catch((err) => console.warn("⚠️ DB init warning:", err?.message || err));
+// Database connection check on startup
+(async () => {
+  try {
+    await prisma.$connect();
+    console.log("✅ Database connection established (Prisma)");
+  } catch (err) {
+    console.warn("⚠️ DB connection warning:", err?.message || err);
   }
-} catch (e) {
-  // models are optional; skip if not configured
-}
+})();
 
 // DB health check endpoint
 app.get("/api/db/health", async (req, res) => {
   try {
-    if (!db || !db.sequelize) {
-      return res.status(503).json({ ok: false, error: "DB not initialized" });
-    }
-    await db.sequelize.authenticate();
-    await db.sequelize.query("SELECT 1");
-    res.json({ ok: true, dialect: db.sequelize.getDialect() });
+    await prisma.$queryRaw`SELECT 1`;
+    res.json({ ok: true, dialect: "postgresql" });
   } catch (err) {
     res.status(500).json({ ok: false, error: err.message });
   }
@@ -65,11 +54,10 @@ try {
   console.warn("ℹ️ Chat routes mounting skipped:", e?.message || e);
 }
 
-// Mount legacy REST routes (Users, Medicines, Orders)
+// Mount REST routes (Users, Medicines, Orders)
 try {
   require("./routes/router.routes.js")(app);
 } catch (e) {
-  // Routes are optional; log once if missing or failing to load
   console.warn("ℹ️ API route mounting skipped:", e?.message || e);
 }
 
@@ -83,6 +71,12 @@ app.use((req, res, next) => {
 app.use((err, req, res, next) => {
   console.error("Unhandled error:", err);
   res.status(500).json({ error: "Internal Server Error" });
+});
+
+// Graceful shutdown
+process.on('SIGINT', async () => {
+  await prisma.$disconnect();
+  process.exit(0);
 });
 
 app.listen(PORT, () => {

@@ -3,13 +3,14 @@
  * Business logic for medicine inventory operations
  */
 
+const prisma = require("../prisma/client");
+
 /**
  * Create a new medicine
- * @param {object} db - Sequelize db instance
  * @param {object} medicineData - { medicine_name, medicine_type, medicine_quantity }
  * @returns {Promise<object>} Created medicine
  */
-async function createMedicine(db, medicineData) {
+async function createMedicine(medicineData) {
   const { medicine_name, medicine_type, medicine_quantity } = medicineData;
 
   // Validate required fields
@@ -23,18 +24,23 @@ async function createMedicine(db, medicineData) {
   }
 
   // Check if medicine already exists
-  const existing = await db.medicine.findOne({
-    where: { medicine_name, medicine_type }
+  const existing = await prisma.medicine.findFirst({
+    where: {
+      medicineName: medicine_name,
+      medicineType: medicine_type
+    }
   });
 
   if (existing) {
     throw new Error("Medicine with this name and type already exists");
   }
 
-  const medicine = await db.medicine.create({
-    medicine_name,
-    medicine_type,
-    medicine_quantity,
+  const medicine = await prisma.medicine.create({
+    data: {
+      medicineName: medicine_name,
+      medicineType: medicine_type,
+      medicineQuantity: medicine_quantity,
+    }
   });
 
   return medicine;
@@ -42,32 +48,32 @@ async function createMedicine(db, medicineData) {
 
 /**
  * Get all medicines
- * @param {object} db - Sequelize db instance
  * @param {object} filters - Optional filters { type, inStock }
  * @returns {Promise<Array>} Array of medicines
  */
-async function getAllMedicines(db, filters = {}) {
+async function getAllMedicines(filters = {}) {
   const where = {};
 
   if (filters.type) {
-    where.medicine_type = filters.type;
+    where.medicineType = filters.type;
   }
 
   if (filters.inStock) {
-    where.medicine_quantity = { [db.Sequelize.Op.gt]: 0 };
+    where.medicineQuantity = { gt: 0 };
   }
 
-  return await db.medicine.findAll({ where });
+  return await prisma.medicine.findMany({ where });
 }
 
 /**
  * Get medicine by ID
- * @param {object} db - Sequelize db instance
  * @param {number} medicineId - Medicine ID
  * @returns {Promise<object>} Medicine
  */
-async function getMedicineById(db, medicineId) {
-  const medicine = await db.medicine.findByPk(medicineId);
+async function getMedicineById(medicineId) {
+  const medicine = await prisma.medicine.findUnique({
+    where: { medicineId: parseInt(medicineId) }
+  });
   
   if (!medicine) {
     throw new Error("Medicine not found");
@@ -78,18 +84,11 @@ async function getMedicineById(db, medicineId) {
 
 /**
  * Update medicine details
- * @param {object} db - Sequelize db instance
  * @param {number} medicineId - Medicine ID
  * @param {object} updates - Fields to update
  * @returns {Promise<object>} Updated medicine
  */
-async function updateMedicine(db, medicineId, updates) {
-  const medicine = await db.medicine.findByPk(medicineId);
-  
-  if (!medicine) {
-    throw new Error("Medicine not found");
-  }
-
+async function updateMedicine(medicineId, updates) {
   // Validate quantity if provided
   if (updates.medicine_quantity !== undefined) {
     if (typeof updates.medicine_quantity !== "number" || updates.medicine_quantity < 0) {
@@ -97,113 +96,113 @@ async function updateMedicine(db, medicineId, updates) {
     }
   }
 
-  await medicine.update(updates);
+  // Map snake_case to camelCase
+  const data = {};
+  if (updates.medicine_name) data.medicineName = updates.medicine_name;
+  if (updates.medicine_type) data.medicineType = updates.medicine_type;
+  if (updates.medicine_quantity !== undefined) data.medicineQuantity = updates.medicine_quantity;
+
+  const medicine = await prisma.medicine.update({
+    where: { medicineId: parseInt(medicineId) },
+    data
+  });
+
   return medicine;
 }
 
 /**
  * Update medicine stock quantity
- * @param {object} db - Sequelize db instance
  * @param {number} medicineId - Medicine ID
  * @param {number} quantity - New quantity
  * @returns {Promise<object>} Updated medicine
  */
-async function updateStock(db, medicineId, quantity) {
+async function updateStock(medicineId, quantity) {
   if (typeof quantity !== "number" || quantity < 0) {
     throw new Error("Quantity must be a non-negative number");
   }
 
-  const medicine = await db.medicine.findByPk(medicineId);
-  
-  if (!medicine) {
-    throw new Error("Medicine not found");
-  }
-
-  medicine.medicine_quantity = quantity;
-  await medicine.save();
+  const medicine = await prisma.medicine.update({
+    where: { medicineId: parseInt(medicineId) },
+    data: { medicineQuantity: quantity }
+  });
   
   return medicine;
 }
 
 /**
  * Increase medicine stock
- * @param {object} db - Sequelize db instance
  * @param {number} medicineId - Medicine ID
  * @param {number} amount - Amount to add
  * @returns {Promise<object>} Updated medicine
  */
-async function increaseStock(db, medicineId, amount) {
+async function increaseStock(medicineId, amount) {
   if (typeof amount !== "number" || amount <= 0) {
     throw new Error("Amount must be a positive number");
   }
 
-  const medicine = await db.medicine.findByPk(medicineId);
-  
-  if (!medicine) {
-    throw new Error("Medicine not found");
-  }
-
-  medicine.medicine_quantity += amount;
-  await medicine.save();
+  const medicine = await prisma.medicine.update({
+    where: { medicineId: parseInt(medicineId) },
+    data: { medicineQuantity: { increment: amount } }
+  });
   
   return medicine;
 }
 
 /**
  * Decrease medicine stock
- * @param {object} db - Sequelize db instance
  * @param {number} medicineId - Medicine ID
  * @param {number} amount - Amount to subtract
  * @returns {Promise<object>} Updated medicine
  */
-async function decreaseStock(db, medicineId, amount) {
+async function decreaseStock(medicineId, amount) {
   if (typeof amount !== "number" || amount <= 0) {
     throw new Error("Amount must be a positive number");
   }
 
-  const medicine = await db.medicine.findByPk(medicineId);
-  
+  const medicine = await prisma.medicine.findUnique({
+    where: { medicineId: parseInt(medicineId) }
+  });
+
   if (!medicine) {
     throw new Error("Medicine not found");
   }
 
-  if (medicine.medicine_quantity < amount) {
-    throw new Error(`Insufficient stock. Available: ${medicine.medicine_quantity}`);
+  if (medicine.medicineQuantity < amount) {
+    throw new Error(`Insufficient stock. Available: ${medicine.medicineQuantity}`);
   }
 
-  medicine.medicine_quantity -= amount;
-  await medicine.save();
+  const updated = await prisma.medicine.update({
+    where: { medicineId: parseInt(medicineId) },
+    data: { medicineQuantity: { decrement: amount } }
+  });
   
-  return medicine;
+  return updated;
 }
 
 /**
  * Delete a medicine
- * @param {object} db - Sequelize db instance
  * @param {number} medicineId - Medicine ID
  * @returns {Promise<boolean>} True if deleted
  */
-async function deleteMedicine(db, medicineId) {
-  const deleted = await db.medicine.destroy({ where: { medicine_id: medicineId } });
-  
-  if (!deleted) {
-    throw new Error("Medicine not found");
-  }
+async function deleteMedicine(medicineId) {
+  await prisma.medicine.delete({
+    where: { medicineId: parseInt(medicineId) }
+  });
   
   return true;
 }
 
 /**
  * Search medicines by name
- * @param {object} db - Sequelize db instance
  * @param {string} searchTerm - Search term
  * @returns {Promise<Array>} Array of matching medicines
  */
-async function searchMedicines(db, searchTerm) {
-  return await db.medicine.findAll({
+async function searchMedicines(searchTerm) {
+  return await prisma.medicine.findMany({
     where: {
-      medicine_name: {
-        [db.Sequelize.Op.like]: `%${searchTerm}%`
+      medicineName: {
+        contains: searchTerm,
+        mode: 'insensitive'
       }
     }
   });

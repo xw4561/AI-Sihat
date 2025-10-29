@@ -1,4 +1,3 @@
-const db = require("../models");
 const { validationResult } = require("express-validator");
 const medicineService = require("../services/medicineService");
 
@@ -9,7 +8,7 @@ exports.create = async (req, res) => {
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const medicine = await medicineService.createMedicine(db, req.body);
+    const medicine = await medicineService.createMedicine(req.body);
     res.status(201).json(medicine);
   } catch (error) {
     console.error("Create medicine error:", error);
@@ -23,7 +22,7 @@ exports.findAll = async (req, res) => {
       type: req.query.type,
       inStock: req.query.inStock === "true"
     };
-    const medicines = await medicineService.getAllMedicines(db, filters);
+    const medicines = await medicineService.getAllMedicines(filters);
     res.status(200).json(medicines);
   } catch (error) {
     console.error("Get all medicines error:", error);
@@ -34,7 +33,7 @@ exports.findAll = async (req, res) => {
 exports.findOne = async (req, res) => {
   try {
     const { id } = req.params;
-    const medicine = await medicineService.getMedicineById(db, id);
+    const medicine = await medicineService.getMedicineById(id);
     res.status(200).json(medicine);
   } catch (error) {
     console.error("Get medicine error:", error);
@@ -46,7 +45,7 @@ exports.findOne = async (req, res) => {
 exports.update = async (req, res) => {
   try {
     const { id } = req.params;
-    const medicine = await medicineService.updateMedicine(db, id, req.body);
+    const medicine = await medicineService.updateMedicine(id, req.body);
     res.status(200).json(medicine);
   } catch (error) {
     console.error("Update medicine error:", error);
@@ -58,7 +57,7 @@ exports.update = async (req, res) => {
 exports.delete = async (req, res) => {
   try {
     const { id } = req.params;
-    await medicineService.deleteMedicine(db, id);
+    await medicineService.deleteMedicine(id);
     res.status(200).json({ message: "Deleted successfully" });
   } catch (error) {
     console.error("Delete medicine error:", error);

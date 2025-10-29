@@ -3,6 +3,8 @@
  * Business logic for order operations and points calculation
  */
 
+const prisma = require("../prisma/client");
+
 /**
  * Calculate points earned from an order
  * @param {number} quantity - Quantity ordered
@@ -16,11 +18,10 @@ function calculatePoints(quantity, useAI) {
 
 /**
  * Create a new order and update user points
- * @param {object} db - Sequelize db instance
  * @param {object} orderData - { user_id, medicine_id, quantity, order_type, use_ai }
  * @returns {Promise<object>} { order, updatedPoints }
  */
-async function createOrder(db, orderData) {
+async function createOrder(orderData) {
   const { user_id, medicine_id, quantity, order_type, use_ai } = orderData;
 
   // Validate required fields
@@ -40,88 +41,102 @@ async function createOrder(db, orderData) {
   }
 
   // Check if user exists
-  const user = await db.user.findByPk(user_id);
+  const user = await prisma.user.findUnique({
+    where: { userId: parseInt(user_id) }
+  });
   if (!user) {
     throw new Error("User not found");
   }
 
   // Check if medicine exists
-  const medicine = await db.medicine.findByPk(medicine_id);
+  const medicine = await prisma.medicine.findUnique({
+    where: { medicineId: parseInt(medicine_id) }
+  });
   if (!medicine) {
     throw new Error("Medicine not found");
   }
 
   // Check medicine stock
-  if (medicine.medicine_quantity < quantity) {
-    throw new Error(`Insufficient stock. Available: ${medicine.medicine_quantity}`);
+  if (medicine.medicineQuantity < quantity) {
+    throw new Error(`Insufficient stock. Available: ${medicine.medicineQuantity}`);
   }
 
   // Calculate points
   const earnedPoints = calculatePoints(quantity, use_ai || false);
 
-  // Create order
-  const newOrder = await db.order.create({
-    user_id,
-    medicine_id,
-    quantity,
-    order_type,
-    use_ai: use_ai || false,
-    total_points: earnedPoints,
-    status: "completed",
+  // Create order and update user points in a transaction
+  const result = await prisma.$transaction(async (tx) => {
+    const newOrder = await tx.order.create({
+      data: {
+        userId: parseInt(user_id),
+        medicineId: parseInt(medicine_id),
+        quantity,
+        orderType: order_type,
+        useAi: use_ai || false,
+        totalPoints: earnedPoints,
+        status: "completed",
+      },
+      include: {
+        user: {
+          select: { userId: true, username: true, email: true, points: true }
+        },
+        medicine: true
+      }
+    });
+
+    // Update user points
+    const updatedUser = await tx.user.update({
+      where: { userId: parseInt(user_id) },
+      data: { points: { increment: earnedPoints } }
+    });
+
+    return { newOrder, updatedUser };
   });
 
-  // Update user points
-  user.points += earnedPoints;
-  await user.save();
-
-  // Update medicine stock (optional - uncomment if you want to track inventory)
-  // medicine.medicine_quantity -= quantity;
-  // await medicine.save();
-
   return {
-    order: newOrder,
-    updatedPoints: user.points,
+    order: result.newOrder,
+    updatedPoints: result.updatedUser.points,
     earnedPoints
   };
 }
 
 /**
  * Get all orders for a user
- * @param {object} db - Sequelize db instance
  * @param {number} userId - User ID
  * @returns {Promise<Array>} Array of orders
  */
-async function getUserOrders(db, userId) {
-  return await db.order.findAll({
-    where: { user_id: userId },
-    include: [
-      {
-        model: db.medicine,
-        attributes: ["medicine_id", "medicine_name", "medicine_type"]
+async function getUserOrders(userId) {
+  return await prisma.order.findMany({
+    where: { userId: parseInt(userId) },
+    include: {
+      medicine: {
+        select: {
+          medicineId: true,
+          medicineName: true,
+          medicineType: true
+        }
       }
-    ],
-    order: [["createdAt", "DESC"]]
+    },
+    orderBy: { createdAt: 'desc' }
   });
 }
 
 /**
  * Get order by ID
- * @param {object} db - Sequelize db instance
  * @param {number} orderId - Order ID
  * @returns {Promise<object>} Order with user and medicine details
  */
-async function getOrderById(db, orderId) {
-  const order = await db.order.findByPk(orderId, {
-    include: [
-      {
-        model: db.user,
-        attributes: ["user_id", "username", "email"]
+async function getOrderById(orderId) {
+  const order = await prisma.order.findUnique({
+    where: { orderId: parseInt(orderId) },
+    include: {
+      user: {
+        select: { userId: true, username: true, email: true }
       },
-      {
-        model: db.medicine,
-        attributes: ["medicine_id", "medicine_name", "medicine_type"]
+      medicine: {
+        select: { medicineId: true, medicineName: true, medicineType: true }
       }
-    ]
+    }
   });
 
   if (!order) {
@@ -133,36 +148,34 @@ async function getOrderById(db, orderId) {
 
 /**
  * Update order status
- * @param {object} db - Sequelize db instance
  * @param {number} orderId - Order ID
  * @param {string} status - New status (pending, completed, cancelled)
  * @returns {Promise<object>} Updated order
  */
-async function updateOrderStatus(db, orderId, status) {
+async function updateOrderStatus(orderId, status) {
   const validStatuses = ["pending", "completed", "cancelled"];
   if (!validStatuses.includes(status)) {
     throw new Error("Invalid status. Must be: pending, completed, or cancelled");
   }
 
-  const order = await db.order.findByPk(orderId);
-  if (!order) {
-    throw new Error("Order not found");
-  }
-
-  order.status = status;
-  await order.save();
+  const order = await prisma.order.update({
+    where: { orderId: parseInt(orderId) },
+    data: { status }
+  });
 
   return order;
 }
 
 /**
  * Cancel an order and refund points
- * @param {object} db - Sequelize db instance
  * @param {number} orderId - Order ID
  * @returns {Promise<object>} { order, refundedPoints }
  */
-async function cancelOrder(db, orderId) {
-  const order = await db.order.findByPk(orderId);
+async function cancelOrder(orderId) {
+  const order = await prisma.order.findUnique({
+    where: { orderId: parseInt(orderId) }
+  });
+
   if (!order) {
     throw new Error("Order not found");
   }
@@ -171,20 +184,26 @@ async function cancelOrder(db, orderId) {
     throw new Error("Order already cancelled");
   }
 
-  // Get user and refund points
-  const user = await db.user.findByPk(order.user_id);
-  if (user) {
-    user.points -= order.total_points;
-    await user.save();
-  }
+  // Update order and refund points in a transaction
+  const result = await prisma.$transaction(async (tx) => {
+    // Update order status
+    const updatedOrder = await tx.order.update({
+      where: { orderId: parseInt(orderId) },
+      data: { status: "cancelled" }
+    });
 
-  // Update order status
-  order.status = "cancelled";
-  await order.save();
+    // Refund points to user
+    await tx.user.update({
+      where: { userId: order.userId },
+      data: { points: { decrement: order.totalPoints } }
+    });
+
+    return updatedOrder;
+  });
 
   return {
-    order,
-    refundedPoints: order.total_points
+    order: result,
+    refundedPoints: order.totalPoints
   };
 }
 

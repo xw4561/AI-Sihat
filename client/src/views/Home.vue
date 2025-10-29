@@ -1,7 +1,7 @@
 <template>
   <div class="home">
     <h2>Welcome to AI-Sihat</h2>
-    <p class="lead">Start a guided chat or try the API test page.</p>
+    <p class="lead">Healthcare assistant with AI-powered symptom guidance and pharmacy management.</p>
 
     <div class="cards">
       <router-link to="/chat" class="card">
@@ -10,8 +10,13 @@
       </router-link>
 
       <router-link to="/api-test" class="card">
-        <h3>🔌 API Test</h3>
-        <p>Ping GET /api/test and see the raw JSON response.</p>
+        <h3>🔌 API & DB Test</h3>
+        <p>Check API status and PostgreSQL database connection health.</p>
+      </router-link>
+
+      <router-link to="/database" class="card">
+        <h3>🗄️ Database Manager</h3>
+        <p>Add, view, and manage users, medicines, and orders in your database.</p>
       </router-link>
     </div>
   </div>
@@ -38,7 +43,7 @@
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 1rem;
   margin: 0 auto;
-  max-width: 700px;
+  max-width: 900px;
 }
 
 .card {

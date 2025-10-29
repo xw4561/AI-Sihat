@@ -17,7 +17,7 @@ let symptomsData = null;
  */
 function loadSymptomsData() {
   if (!symptomsData) {
-    symptomsData = JSON.parse(fs.readFileSync("./symptoms.json", "utf8"));
+    symptomsData = JSON.parse(fs.readFileSync("./data/symptoms.json", "utf8"));
   }
   return symptomsData;
 }

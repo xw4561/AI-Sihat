@@ -4,14 +4,14 @@
  */
 
 const bcrypt = require("bcrypt");
+const prisma = require("../prisma/client");
 
 /**
  * Create a new user with hashed password
- * @param {object} db - Sequelize db instance
  * @param {object} userData - { username, email, password }
  * @returns {Promise<object>} Created user (without password)
  */
-async function createUser(db, userData) {
+async function createUser(userData) {
   const { username, email, password } = userData;
 
   // Validate required fields
@@ -20,7 +20,7 @@ async function createUser(db, userData) {
   }
 
   // Check if email already exists
-  const existingUser = await db.user.findOne({ where: { email } });
+  const existingUser = await prisma.user.findUnique({ where: { email } });
   if (existingUser) {
     throw new Error("Email already registered");
   }
@@ -29,37 +29,52 @@ async function createUser(db, userData) {
   const hashedPassword = await bcrypt.hash(password, 10);
 
   // Create user
-  const newUser = await db.user.create({
-    username,
-    email,
-    password: hashedPassword,
+  const newUser = await prisma.user.create({
+    data: {
+      username,
+      email,
+      password: hashedPassword,
+    },
   });
 
   // Return user without password
-  const { password: _, ...userWithoutPassword } = newUser.toJSON();
+  const { password: _, ...userWithoutPassword } = newUser;
   return userWithoutPassword;
 }
 
 /**
  * Get all users (without passwords)
- * @param {object} db - Sequelize db instance
  * @returns {Promise<Array>} Array of users
  */
-async function getAllUsers(db) {
-  return await db.user.findAll({
-    attributes: ["user_id", "username", "email", "points"],
+async function getAllUsers() {
+  return await prisma.user.findMany({
+    select: {
+      userId: true,
+      username: true,
+      email: true,
+      points: true,
+      createdAt: true,
+      updatedAt: true,
+    },
   });
 }
 
 /**
  * Get user by ID (without password)
- * @param {object} db - Sequelize db instance
  * @param {number} userId - User ID
  * @returns {Promise<object|null>} User or null
  */
-async function getUserById(db, userId) {
-  const user = await db.user.findByPk(userId, {
-    attributes: ["user_id", "username", "email", "points"],
+async function getUserById(userId) {
+  const user = await prisma.user.findUnique({
+    where: { userId: parseInt(userId) },
+    select: {
+      userId: true,
+      username: true,
+      email: true,
+      points: true,
+      createdAt: true,
+      updatedAt: true,
+    },
   });
   
   if (!user) {
@@ -71,75 +86,78 @@ async function getUserById(db, userId) {
 
 /**
  * Update user points
- * @param {object} db - Sequelize db instance
  * @param {number} userId - User ID
  * @param {number} points - New points value
  * @returns {Promise<object>} Updated user
  */
-async function updateUserPoints(db, userId, points) {
+async function updateUserPoints(userId, points) {
   if (typeof points !== "number" || points < 0) {
     throw new Error("Invalid points value");
   }
 
-  const user = await db.user.findByPk(userId);
-  if (!user) {
-    throw new Error("User not found");
-  }
+  const user = await prisma.user.update({
+    where: { userId: parseInt(userId) },
+    data: { points },
+    select: {
+      userId: true,
+      username: true,
+      email: true,
+      points: true,
+      createdAt: true,
+      updatedAt: true,
+    },
+  });
 
-  user.points = points;
-  await user.save();
-
-  const { password: _, ...userWithoutPassword } = user.toJSON();
-  return userWithoutPassword;
+  return user;
 }
 
 /**
  * Add points to user (for rewards, orders, etc.)
- * @param {object} db - Sequelize db instance
  * @param {number} userId - User ID
  * @param {number} pointsToAdd - Points to add
  * @returns {Promise<object>} Updated user
  */
-async function addUserPoints(db, userId, pointsToAdd) {
+async function addUserPoints(userId, pointsToAdd) {
   if (typeof pointsToAdd !== "number" || pointsToAdd < 0) {
     throw new Error("Invalid points value");
   }
 
-  const user = await db.user.findByPk(userId);
-  if (!user) {
-    throw new Error("User not found");
-  }
+  const user = await prisma.user.update({
+    where: { userId: parseInt(userId) },
+    data: { points: { increment: pointsToAdd } },
+    select: {
+      userId: true,
+      username: true,
+      email: true,
+      points: true,
+      createdAt: true,
+      updatedAt: true,
+    },
+  });
 
-  user.points += pointsToAdd;
-  await user.save();
-
-  const { password: _, ...userWithoutPassword } = user.toJSON();
-  return userWithoutPassword;
+  return user;
 }
 
 /**
  * Delete a user
- * @param {object} db - Sequelize db instance
  * @param {number} userId - User ID
  * @returns {Promise<boolean>} True if deleted
  */
-async function deleteUser(db, userId) {
-  const deleted = await db.user.destroy({ where: { user_id: userId } });
-  if (!deleted) {
-    throw new Error("User not found");
-  }
+async function deleteUser(userId) {
+  await prisma.user.delete({
+    where: { userId: parseInt(userId) },
+  });
   return true;
 }
 
 /**
  * Authenticate user (for future login functionality)
- * @param {object} db - Sequelize db instance
  * @param {string} email - User email
  * @param {string} password - Plain text password
  * @returns {Promise<object>} User object (without password)
  */
-async function authenticateUser(db, email, password) {
-  const user = await db.user.findOne({ where: { email } });
+async function authenticateUser(email, password) {
+  const user = await prisma.user.findUnique({ where: { email } });
   if (!user) {
     throw new Error("Invalid credentials");
   }
@@ -149,7 +167,7 @@ async function authenticateUser(db, email, password) {
     throw new Error("Invalid credentials");
   }
 
-  const { password: _, ...userWithoutPassword } = user.toJSON();
+  const { password: _, ...userWithoutPassword } = user;
   return userWithoutPassword;
 }
 

@@ -16,8 +16,12 @@ AI-Sihat/
 │   │   └── medicineService.js   # Medicine business logic
 │   ├── controllers/ # Request/response handling
 │   ├── routes/      # Route definitions
-│   ├── models/      # Sequelize models
-│   ├── config/      # Configuration files
+│   ├── prisma/      # Prisma ORM configuration
+│   │   ├── schema.prisma        # Database schema
+│   │   └── client.js            # Prisma client singleton
+│   ├── data/        # Data schemas and content
+│   │   ├── database-schema.sql  # PostgreSQL schema documentation
+│   │   └── symptoms.json        # Chat flow data
 │   └── server.js    # Main Express app
 └── package.json     # Root package.json for running both
 ```
@@ -31,14 +35,15 @@ AI-Sihat/
 - **Axios** - HTTP client for API calls
 
 #### Client Routes
-- `/` → Home
-- `/api-test` → Simple UI to hit backend test endpoint(s)
+- `/` → Home (landing page with links)
+- `/api-test` → API & Database health checks
 - `/chat` → Chat experience powered by the server chat API (`/chat/*`)
+- `/database` → Database Manager (CRUD operations for users, medicines, orders)
 
 ### Backend (Server)
 - **Express** - Node.js web framework
-- **PostgreSQL** - Database (via Supabase or local)
-- **Sequelize** - ORM for database operations
+- **PostgreSQL** - Database (via Supabase)
+- **Prisma ORM** - Modern type-safe database toolkit
 - **Gemini AI** - Google's AI for symptom analysis
 - **bcrypt** - Password hashing
 - **JWT** - Authentication tokens
@@ -108,63 +113,152 @@ npm run dev
 
 ## API Endpoints
 
-Chat flow (session-based, in-memory):
-
+### Chat Flow (Session-based, in-memory)
 - `POST /chat/start` → Create a chat session and get first question
 - `POST /chat/ask` → Submit an answer and get next question
-- `POST /chat/recommend` → Get a simple recommendation for the session
-- `POST /chat/approve` → Simulate approval/confirmation
-- `GET /api/test` → Simple health check
+- `POST /chat/recommend` → Get AI-powered recommendation for the session
+- `POST /chat/approve` → Confirm/approve recommendation
 
-REST resources (Sequelize + MySQL):
+### Health & Testing
+- `GET /api/test` → API health check
+- `GET /api/db/health` → Database connection check
 
-- `POST /ai-sihat/user` → Create user
-- `GET /ai-sihat/user` → List users
-- `GET /ai-sihat/user/:id` → Get a user
+### REST API - Users (Prisma + PostgreSQL)
+- `POST /ai-sihat/user` → Create user (auto-hashes password)
+- `GET /ai-sihat/user` → List all users
+- `GET /ai-sihat/user/:id` → Get user by ID
 - `PUT /ai-sihat/user/:id/points` → Update user points
-- `POST /ai-sihat/user/delete` → Delete user (POST)
+- `DELETE /ai-sihat/user/:id` → Delete user
+
+### REST API - Medicines
 - `POST /ai-sihat/medicines` → Create medicine
-- `POST /ai-sihat/order` → Create order
+- `GET /ai-sihat/medicines` → List all medicines (supports ?type=X&inStock=true filters)
+- `GET /ai-sihat/medicines/:id` → Get medicine by ID
+- `PUT /ai-sihat/medicines/:id` → Update medicine
+- `DELETE /ai-sihat/medicines/:id` → Delete medicine
+
+### REST API - Orders
+- `POST /ai-sihat/order` → Create order (auto-calculates points, updates user)
+- `GET /ai-sihat/order` → List all orders
+- `GET /ai-sihat/order/:id` → Get order by ID with relations
+- `DELETE /ai-sihat/order/:id` → Delete order
 
 ## Environment Variables
 
-Create a `.env` file in the `server/` directory (see `.env.example` for the full list):
+Create a `.env` file in the `server/` directory (see `.env.example` for the template):
 
-```
+```env
+# Server Configuration
 PORT=3000
+NODE_ENV=development
 
-# Gemini (required for AI summary)
+# Gemini AI (Required for chat recommendations)
+# Get from: https://aistudio.google.com/app/apikey
 GEMINI_API_KEY=your_api_key_here
 
-# CORS (comma separated)
+# CORS (comma-separated origins)
 CORS_ORIGIN=http://localhost:5173
 
-# Database (PostgreSQL/Supabase - required for REST resources)
-# Option A: Use connection URL (recommended)
-DB_URL=postgresql://postgres:YOUR_PASSWORD@db.PROJECT_ID.supabase.co:5432/postgres
-DB_SSL=true
+# Database - PostgreSQL via Prisma (Required)
+# Get from: Supabase → Project Settings → Database → Connection string
+DATABASE_URL=postgresql://postgres:YOUR_PASSWORD@db.PROJECT_ID.supabase.co:5432/postgres
 
-# Option B: Use discrete params
-DB=postgres
-DB_USER=postgres
-DB_PASSWORD=your_password
-DB_HOST=db.your-project.supabase.co
-DB_PORT=5432
-DB_DIALECT=postgres
-DB_SSL=true
-TIMEZONE=+00:00
+# For Supabase Connection Pooling (Recommended):
+# DATABASE_URL=postgresql://postgres.PROJECT_ID:PASSWORD@aws-X-region.pooler.supabase.com:6543/postgres?pgbouncer=true
 ```
 
-Notes:
-- Get your Supabase connection string from: **Project Settings → Database → Connection string (URI)**
-- If DB variables are not provided, the REST endpoints will be mounted but database operations will fail; the chat endpoints still work.
-- On first run with a valid DB, tables will be created automatically via Sequelize `sync()`.
+### Database Setup
+
+**Option 1: Use Supabase (Recommended)**
+1. Create a free account at [supabase.com](https://supabase.com)
+2. Create a new project
+3. Go to **Project Settings → Database**
+4. Copy the **Connection string (URI)** or use the **Transaction pooler** string
+5. Paste it as `DATABASE_URL` in your `.env` file
+
+**Option 2: Local PostgreSQL**
+```env
+DATABASE_URL=postgresql://postgres:password@localhost:5432/ai_sihat
+```
+
+### Initialize Database
+
+After setting up your `DATABASE_URL`, run:
+
+```powershell
+cd server
+
+# Generate Prisma client
+npx prisma generate
+
+# Push schema to database (creates tables)
+npx prisma db push
+
+# Optional: Open Prisma Studio to view/edit data
+npx prisma studio
+```
+
+### Test Database Connection
+
+```powershell
+cd server
+node tests/test-db.js
+```
+
+Expected output:
+```
+✅ Database connected successfully!
+✅ Database query executed successfully!
+📊 Database Statistics:
+   Users: 0
+   Medicines: 0
+   Orders: 0
+✅ All tests passed! Prisma is ready to use.
+```
 
 ## Development
 
 - Frontend runs on port **5173** (Vite default)
 - Backend runs on port **3000**
-- API proxy is configured in `client/vite.config.js` to forward `/api/*` requests to the backend
+- API proxy is configured in `client/vite.config.js` to forward requests:
+  - `/api/*` → `http://localhost:3000/api/*`
+  - `/chat/*` → `http://localhost:3000/chat/*`
+  - `/ai-sihat/*` → `http://localhost:3000/ai-sihat/*`
+
+### Useful Commands
+
+**Database Management:**
+```powershell
+cd server
+
+# Generate Prisma client after schema changes
+npx prisma generate
+
+# Push schema changes to database
+npx prisma db push
+
+# Create a migration
+npx prisma migrate dev --name your_migration_name
+
+# Open Prisma Studio (GUI for database)
+npx prisma studio
+# Opens at http://localhost:5555
+
+# Test database connection
+node tests/test-db.js
+```
+
+**Development:**
+```powershell
+# Run both client and server
+npm run dev
+
+# Run only server
+npm run dev:server
+
+# Run only client
+npm run dev:client
+```
 
 ## Building for Production
 
@@ -183,8 +277,57 @@ npm start
 
 ## Next Steps
 
-1. Install dependencies: `npm run install:all`
-2. Start development: `npm run dev`
-3. Open http://localhost:5173 in your browser
-4. Start building your healthcare assistant features!
+1. **Install dependencies:**
+   ```powershell
+   npm run install:all
+   ```
+
+2. **Set up environment:**
+   - Copy `server/.env.example` to `server/.env`
+   - Add your `GEMINI_API_KEY`
+   - Add your `DATABASE_URL` from Supabase
+
+3. **Initialize database:**
+   ```powershell
+   cd server
+   npx prisma generate
+   npx prisma db push
+   ```
+
+4. **Start development:**
+   ```powershell
+   npm run dev
+   ```
+
+5. **Open in browser:**
+   - Frontend: http://localhost:5173
+   - Test APIs: http://localhost:5173/api-test
+   - Database Manager: http://localhost:5173/database
+   - Chat: http://localhost:5173/chat
+
+6. **Optional - View database:**
+   ```powershell
+   cd server
+   npm run studio
+   ```
+
+## Database Schema
+
+The application uses three main tables:
+
+- **users** - User accounts with authentication and loyalty points
+- **medicines** - Medicine inventory with name, type, quantity
+- **orders** - Order history with points tracking and AI consultation flag
+
+See `server/data/database-schema.sql` for the full schema documentation.
+
+## Features
+
+- 🤖 **AI-Powered Chat** - Symptom analysis using Google Gemini AI
+- 👤 **User Management** - Registration, authentication, points system
+- 💊 **Medicine Inventory** - Track medicines with types and quantities
+- 📦 **Order Management** - Create orders with automatic points calculation
+- 🎁 **Loyalty Points** - Earn points (quantity × 10, doubled with AI consultation)
+- 🔧 **Database Manager** - Admin UI for managing all records
+- ✅ **Health Checks** - API and database monitoring endpoints
 
