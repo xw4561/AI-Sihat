@@ -1,51 +1,41 @@
 const db = require("../models");
 const { validationResult } = require("express-validator");
-const bcrypt = require("bcrypt");
+const userService = require("../services/userService");
 
 exports.create = async (req, res) => {
   try {
     const errors = validationResult(req);
-    if (!errors.isEmpty()) throw { errors: errors.array() };
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
 
-    const { username, email, password } = req.body;
-
-    // Hash password before saving
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    const newUser = await db.user.create({
-      username,
-      email,
-      password: hashedPassword,
-    });
-
-    res.status(201).json(newUser);
+    const user = await userService.createUser(db, req.body);
+    res.status(201).json(user);
   } catch (error) {
-    console.log(error);
-    res.status(400).json(error);
+    console.error("Create user error:", error);
+    res.status(400).json({ error: error.message });
   }
 };
 
 exports.findAll = async (req, res) => {
   try {
-    const users = await db.user.findAll({
-      attributes: ["user_id", "username", "email", "points"],
-    });
+    const users = await userService.getAllUsers(db);
     res.status(200).json(users);
   } catch (error) {
-    res.status(400).json(error);
+    console.error("Get all users error:", error);
+    res.status(400).json({ error: error.message });
   }
 };
 
 exports.findOne = async (req, res) => {
   try {
     const { id } = req.params;
-    const user = await db.user.findByPk(id, {
-      attributes: ["user_id", "username", "email", "points"],
-    });
-    if (!user) return res.status(404).json({ message: "User not found" });
+    const user = await userService.getUserById(db, id);
     res.status(200).json(user);
   } catch (error) {
-    res.status(400).json(error);
+    console.error("Get user error:", error);
+    const status = error.message === "User not found" ? 404 : 400;
+    res.status(status).json({ error: error.message });
   }
 };
 
@@ -54,25 +44,23 @@ exports.updatePoints = async (req, res) => {
     const { id } = req.params;
     const { points } = req.body;
 
-    const user = await db.user.findByPk(id);
-    if (!user) return res.status(404).json({ message: "User not found" });
-
-    user.points = points;
-    await user.save();
-
+    const user = await userService.updateUserPoints(db, id, points);
     res.status(200).json({ message: "Points updated", user });
   } catch (error) {
-    res.status(400).json(error);
+    console.error("Update points error:", error);
+    const status = error.message === "User not found" ? 404 : 400;
+    res.status(status).json({ error: error.message });
   }
 };
 
 exports.delete = async (req, res) => {
   try {
     const { id } = req.params;
-    const deleted = await db.user.destroy({ where: { user_id: id } });
-    if (!deleted) return res.status(404).json({ message: "User not found" });
+    await userService.deleteUser(db, id);
     res.status(200).json({ message: "User deleted successfully" });
   } catch (error) {
-    res.status(400).json(error);
+    console.error("Delete user error:", error);
+    const status = error.message === "User not found" ? 404 : 400;
+    res.status(status).json({ error: error.message });
   }
 };

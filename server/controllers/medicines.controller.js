@@ -1,68 +1,68 @@
 const db = require("../models");
 const { validationResult } = require("express-validator");
+const medicineService = require("../services/medicineService");
 
 exports.create = async (req, res) => {
   try {
     const errors = validationResult(req);
-    if (!errors.isEmpty()) throw { errors: errors.array() };
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
 
-    const { medicine_name, medicine_type, medicine_quantity } = req.body;
-
-    const payload = {
-      medicine_name,
-      medicine_type,
-      medicine_quantity,
-    };
-
-    const medicine = await db.medicine.create(payload);
+    const medicine = await medicineService.createMedicine(db, req.body);
     res.status(201).json(medicine);
   } catch (error) {
-    console.log(error);
-    res.status(400).json(error);
+    console.error("Create medicine error:", error);
+    res.status(400).json({ error: error.message });
   }
 };
 
 exports.findAll = async (req, res) => {
   try {
-    const data = await db.medicine.findAll();
-    res.status(200).json(data);
+    const filters = {
+      type: req.query.type,
+      inStock: req.query.inStock === "true"
+    };
+    const medicines = await medicineService.getAllMedicines(db, filters);
+    res.status(200).json(medicines);
   } catch (error) {
-    res.status(400).json(error);
+    console.error("Get all medicines error:", error);
+    res.status(400).json({ error: error.message });
   }
 };
 
 exports.findOne = async (req, res) => {
   try {
     const { id } = req.params;
-    const data = await db.medicine.findByPk(id);
-    if (!data) return res.status(404).json({ message: "Medicine not found" });
-    res.status(200).json(data);
+    const medicine = await medicineService.getMedicineById(db, id);
+    res.status(200).json(medicine);
   } catch (error) {
-    res.status(400).json(error);
+    console.error("Get medicine error:", error);
+    const status = error.message === "Medicine not found" ? 404 : 400;
+    res.status(status).json({ error: error.message });
   }
 };
 
 exports.update = async (req, res) => {
   try {
     const { id } = req.params;
-    const [updated] = await db.medicine.update(req.body, {
-      where: { medicine_id: id },
-    });
-    if (!updated) return res.status(404).json({ message: "Not found" });
-    const updatedMedicine = await db.medicine.findByPk(id);
-    res.status(200).json(updatedMedicine);
+    const medicine = await medicineService.updateMedicine(db, id, req.body);
+    res.status(200).json(medicine);
   } catch (error) {
-    res.status(400).json(error);
+    console.error("Update medicine error:", error);
+    const status = error.message === "Medicine not found" ? 404 : 400;
+    res.status(status).json({ error: error.message });
   }
 };
 
 exports.delete = async (req, res) => {
   try {
     const { id } = req.params;
-    const deleted = await db.medicine.destroy({ where: { medicine_id: id } });
-    if (!deleted) return res.status(404).json({ message: "Not found" });
+    await medicineService.deleteMedicine(db, id);
     res.status(200).json({ message: "Deleted successfully" });
   } catch (error) {
-    res.status(400).json(error);
+    console.error("Delete medicine error:", error);
+    const status = error.message === "Medicine not found" ? 404 : 400;
+    res.status(status).json({ error: error.message });
   }
 };

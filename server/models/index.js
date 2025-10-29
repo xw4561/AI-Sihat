@@ -1,13 +1,18 @@
 const dbConfig = require("../config/db.config.js");
 const Sequelize = require("sequelize");
 
-// ✅ Create Sequelize instance
-const sequelize = new Sequelize(
-  dbConfig.database,      // corrected spelling (was databse)
-  dbConfig.user,
-  dbConfig.password,
-  dbConfig.config
-);
+// ✅ Create Sequelize instance (supports DB_URL or discrete params)
+let sequelize;
+if (dbConfig.url) {
+  sequelize = new Sequelize(dbConfig.url, dbConfig.config);
+} else {
+  sequelize = new Sequelize(
+    dbConfig.database,
+    dbConfig.user,
+    dbConfig.password,
+    dbConfig.config
+  );
+}
 
 // ✅ Create db object to hold all models
 const db = {};
