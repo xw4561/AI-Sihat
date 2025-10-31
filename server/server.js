@@ -54,6 +54,22 @@ try {
   console.warn("ℹ️ Chat routes mounting skipped:", e?.message || e);
 }
 
+// Log registered routes (helpful for debugging missing endpoints)
+try {
+  const routes = [];
+  if (app && app._router && app._router.stack) {
+    app._router.stack.forEach((layer) => {
+      if (layer.route && layer.route.path) {
+        const methods = Object.keys(layer.route.methods).join(',').toUpperCase();
+        routes.push(`${methods} ${layer.route.path}`);
+      }
+    });
+  }
+  console.log('Registered routes:\n', routes.join('\n'));
+} catch (err) {
+  console.warn('Could not list routes:', err && err.message);
+}
+
 // Mount REST routes (Users, Medicines, Orders)
 try {
   require("./routes/router.routes.js")(app);

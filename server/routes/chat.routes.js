@@ -10,7 +10,8 @@ module.exports = (app) => {
    * POST /chat/start
    * Create a new chat session
    */
-  app.post("/chat/start", (req, res) => {
+  app.post("/api/chat/start", (req, res) => {
+    console.log('[chat.routes] POST /api/chat/start', { body: req.body });
     try {
       const result = chatService.startChat();
       res.json(result);
@@ -24,7 +25,8 @@ module.exports = (app) => {
    * POST /chat/ask
    * Answer a question and get the next one
    */
-  app.post("/chat/ask", async (req, res) => {
+  app.post("/api/chat/ask", async (req, res) => {
+    console.log('[chat.routes] POST /api/chat/ask', { body: req.body });
     try {
       const { sessionId, answer } = req.body;
       
@@ -45,7 +47,8 @@ module.exports = (app) => {
    * POST /chat/recommend
    * Provide a simple recommendation based on answers
    */
-  app.post("/chat/recommend", (req, res) => {
+  app.post("/api/chat/recommend", (req, res) => {
+    console.log('[chat.routes] POST /api/chat/recommend', { body: req.body });
     try {
       const { sessionId } = req.body;
 
@@ -66,7 +69,8 @@ module.exports = (app) => {
    * POST /chat/approve
    * Simulate approval or confirmation
    */
-  app.post("/chat/approve", (req, res) => {
+  app.post("/api/chat/approve", (req, res) => {
+    console.log('[chat.routes] POST /api/chat/approve', { body: req.body });
     try {
       const { sessionId, approved } = req.body;
 

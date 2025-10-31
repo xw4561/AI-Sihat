@@ -3,6 +3,7 @@
 	{
         "id": "1",
         "prompt": "Select Your Preferred Language",
+		"prompt_my": "Pilih Bahasa Pilihan Anda",
         "type": "single_choice",
         "options": ["English", "Malay"],
         "next_logic": "2"
@@ -10,6 +11,7 @@
     {
       "id": "2",
       "prompt": "Can you describe your symptoms in your own words?",
+	  "prompt_my": "Boleh terangkan simptom anda dengan perkataan anda sendiri?",
       "type": "text_input",
       "useGemini": true,
 	  "next_logic": "3"
@@ -17,24 +19,28 @@
     {
       "id": "3",
       "prompt": "Please type patient’s name (as in IC)",
+	  "prompt_my": "Sila taip nama pesakit (seperti dalam IC)",
       "type": "text_input",
 	  "next_logic": "4"
     },
     {
       "id": "4",
       "prompt": "Patient’s age (assume above 18)",
+	  "prompt_my": "Umur pesakit (andaikan atas 18 tahun)",
       "type": "number_input",
 	  "next_logic": "5"
     },
     {
       "id": "5",
       "prompt": "Patient gender",
+	  "prompt_my": "Jantina pesakit",
       "type": "single_choice",
       "options": ["Male", "Female"]
     },
     {
       "id": "6",
       "prompt": "Is the patient pregnant or breastfeeding?",
+	  "prompt_my": "Adakah pesakit mengandung atau menyusu?",
       "type": "single_choice",
       "options": ["Yes, pregnant", "Yes, breastfeeding", "Not for both"],
 	  "next_logic": "7"
@@ -42,6 +48,7 @@
     {
       "id": "7",
       "prompt": "What are your symptoms? (Select one or more)",
+	  "prompt_my": "Apakah simptom anda? (Pilih satu atau lebih)",
       "type": "multiple_choice",
       "options": [
         "Fever",
@@ -68,6 +75,7 @@
 	 {
       "id": "8",
       "prompt": "How long do the symptoms persist?",
+	  "prompt_my": "Berapa lama simptom berterusan?",
       "type": "single_choice",
       "options": ["less than 1 day", "2 days", "3 days", "More than 3 days"],
       "next_logic": "9"
@@ -75,6 +83,7 @@
     {
       "id": "9",
       "prompt": "What is your body temperature? (degrees Celsius)",
+	  "prompt_my": "Berapakah suhu badan anda? (darjah Celsius)",
       "type": "number_input",
       "options": ["Enter Temperature"],
       "next_logic": "10"
@@ -82,6 +91,7 @@
     {
       "id": "10",
       "prompt": "Do you have allergies to any medication?",
+	  "prompt_my": "Adakah anda alah kepada sebarang ubat?",
       "type": "single_choice",
       "options": ["Yes (List down details)", "No"],
       "next_logic": "11"
@@ -89,6 +99,7 @@
     {
       "id": "11",
       "prompt": "Did you take any medication recently?",
+	  "prompt_my": "Adakah anda mengambil sebarang ubat baru-baru ini?",
       "type": "single_choice",
       "options": ["Yes (List down details)", "No"],
       "next_logic": "SYMPTOM_ROUTING"
@@ -99,6 +110,7 @@
     {
       "id": "F1",
       "prompt": "Do you experience flu symptoms before?",
+	  "prompt_my": "Adakah anda pernah mengalami simptom selesema sebelum ini?",
       "type": "single_choice",
       "options": ["Yes", "No"]
     },
@@ -106,6 +118,7 @@
       "id": "R1",
       "type": "recommendation",
       "prompt": "ANS for less than 1–2 days persistence",
+	  "prompt_my": "ANS untuk kegigihan kurang dari 1–2 hari",
       "details": [
         "Hurix's 600 Fluaway capsule improved: 3 tablets 4 times per day.",
         "If your condition becomes serious or does not improve, please refer to a doctor."
@@ -118,6 +131,7 @@
     {
       "id": "V1",
       "prompt": "Do you experience fever symptoms before?",
+	  "prompt_my": "Adakah anda pernah mengalami simptom demam sebelum ini?",
       "type": "single_choice",
       "options": ["Yes", "No"]
     },
@@ -125,6 +139,7 @@
       "id": "R1",
       "type": "recommendation",
       "prompt": "ANS for less than 1–2 days persistence",
+	  "prompt_my": "ANS untuk kegigihan kurang dari 1–2 hari",
       "details": [
         "Paracetamol (Panadol) 500mg: 2 tablets three times a day, max 8 tablets per day.",
         "If your condition becomes serious or does not improve, please refer to a doctor."
@@ -137,12 +152,14 @@
     {
       "id": "K1",
       "prompt": "Do you feel sore throat?",
+	  "prompt_my": "Adakah anda rasa sakit tekak?",
       "type": "single_choice",
       "options": ["Yes", "No"]
     },
     {
       "id": "K2",
       "prompt": "Do you experience this cough before?",
+	  "prompt_my": "Adakah anda pernah mengalami batuk ini sebelum ini?",
       "type": "single_choice",
       "options": ["Yes", "No"]
     },
@@ -150,6 +167,7 @@
       "id": "R1",
       "type": "recommendation",
       "prompt": "ANS for less than 1–2 days persistence",
+	  "prompt_my": "ANS untuk kegigihan kurang dari 1–2 hari",
       "details": [
         "Breacol Expectorant (Guaifenesin): 10–20ml every 4 hours.",
         "If your condition becomes serious or does not improve, please refer to a doctor."
@@ -162,12 +180,14 @@
     {
       "id": "D1",
       "prompt": "Do you experience diarrhoea before?",
+	  "prompt_my": "Adakah anda pernah mengalami cirit-birit sebelum ini?",
       "type": "single_choice",
       "options": ["Yes (Specify When)", "No"]
     },
     {
       "id": "D2",
       "prompt": "Do you have abdominal discomfort?",
+	  "prompt_my": "Adakah anda mengalami ketidakselesaan perut?",
       "type": "single_choice",
       "options": ["Yes", "No"]
     },
@@ -175,6 +195,7 @@
       "id": "R1",
       "type": "recommendation",
       "prompt": "ANS for less than 1–2 days persistence",
+	  "prompt_my": "ANS untuk kegigihan kurang dari 1–2 hari",
       "details": [
         "Lactul Solution (Lactulose): 15ml twice daily.",
         "If your condition becomes serious or does not improve, please refer to a doctor."
@@ -187,6 +208,7 @@
     {
       "id": "C1",
       "prompt": "Do you experience constipation before?",
+	  "prompt_my": "Adakah anda pernah mengalami sembelit sebelum ini?",
       "type": "single_choice",
       "options": ["Yes", "No"]
     },
@@ -194,6 +216,7 @@
       "id": "R1",
       "type": "recommendation",
       "prompt": "ANS for less than 1–2 days persistence",
+	  "prompt_my": "ANS untuk kegigihan kurang dari 1–2 hari",
       "details": [
         "Lactul Solution (Lactulose): 15ml twice daily.",
         "If your condition becomes serious or does not improve, please refer to a doctor."
@@ -206,6 +229,7 @@
     {
       "id": "A1",
       "prompt": "Do you want to purchase this medication?",
+	  "prompt_my": "Adakah anda mahu membeli ubat ini?",
       "type": "single_choice",
       "options": ["Yes", "No"],
       "next_logic": "A2"
@@ -213,6 +237,7 @@
     {
       "id": "A2",
       "prompt": "Choose your preferred method",
+	  "prompt_my": "Pilih kaedah pilihan anda",
       "type": "single_choice",
       "options": ["Pick Up", "Delivery"],
       "next_logic": null
@@ -220,22 +245,26 @@
     {
       "id": "A3",
       "prompt": "Purchase method (Pick Up)",
+	  "prompt_my": "Kaedah pembelian (Ambil Sendiri)",
       "type": "single_choice",
       "options": ["Online Banking", "Touch N Go", "Pay at counter"]
     },
     {
       "id": "A4",
       "prompt": "Type your address (Delivery)",
+	  "prompt_my": "Taip alamat anda (Penghantaran)",
       "type": "text_input"
     },
     {
       "id": "A5",
       "prompt": "Phone number (Delivery)",
+	  "prompt_my": "Nombor telefon (Penghantaran)",
       "type": "number_input"
     },
     {
       "id": "A6",
       "prompt": "Purchase method (Delivery)",
+	  "prompt_my": "Kaedah pembelian (Penghantaran)",
       "type": "single_choice",
       "options": ["Online Banking", "Touch N Go"]
     }

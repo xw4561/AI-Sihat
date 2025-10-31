@@ -1,58 +1,110 @@
 <template>
   <div id="app">
-    <header>
+    <header v-if="showNavbar">
       <h1>🏥 AI-Sihat</h1>
-      <nav>
-        <router-link to="/">Home</router-link>
-        <router-link to="/chat">Chat</router-link>
-        <router-link to="/api-test">API Test</router-link>
-      </nav>
     </header>
     <main>
       <router-view />
     </main>
+
+    <!-- Bottom navigation (app-style) - visible on all screen sizes -->
+    <footer v-if="showNavbar" class="bottom-nav" aria-hidden="false">
+      <router-link to="/" class="nav-item">Home</router-link>
+      <router-link to="/chat" class="nav-item">Chat</router-link>
+      <router-link to="/api-test" class="nav-item">API</router-link>
+      <button class="nav-item" @click="logout">Logout</button>
+    </footer>
   </div>
 </template>
 
 <script setup>
-// Add any global logic here
+import { computed } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+
+const route = useRoute();
+const router = useRouter();
+
+const showNavbar = computed(() => {
+  return !['/login', '/signup'].includes(route.path);
+});
+
+function logout() {
+  localStorage.removeItem('token');
+  router.push('/login');
+}
 </script>
 
 <style scoped>
 header {
-  background-color: #42b983;
-  padding: 2rem;
+  /* minimal white header with a thin branded accent */
+  background: #fff;
+  padding: 0.6rem 1rem;
   text-align: center;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+  position: sticky;
+  top: 0;
+  z-index: 40;
 }
 
 h1 {
-  color: white;
+  color: #2c3e50;
   margin: 0;
+  font-size: 1.15rem;
 }
 
-nav {
-  margin-top: 1rem;
-  display: flex;
-  gap: 1rem;
-  justify-content: center;
-}
+/* hide any unused top nav markup */
+.top-nav { display: none }
 
-nav a {
+button {
+  background: #f44336;
   color: white;
-  text-decoration: none;
-  background: rgba(255, 255, 255, 0.15);
-  padding: 0.4rem 0.8rem;
-  border-radius: 4px;
-}
-
-nav a.router-link-active {
-  background: rgba(255, 255, 255, 0.3);
+  border: none;
+  padding: 0.55rem 0.85rem;
+  border-radius: 999px;
+  cursor: pointer;
 }
 
 main {
-  max-width: 800px;
-  margin: 2rem auto;
-  padding: 0 1rem;
+  /* mobile-first container sizing */
+  max-width: 460px;
+  margin: 0 auto;
+  padding: 1rem;
+  padding-top: 1.2rem; /* leave room below sticky header */
+  padding-bottom: 4rem; /* ensure content not hidden by bottom nav */
+}
+
+/* Bottom navigation (app-style) - visible on all screen sizes */
+.bottom-nav {
+  display: flex;
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: #42b983;
+  padding: 0.45rem 0.5rem;
+  gap: 0.5rem;
+  justify-content: space-around;
+  align-items: center;
+  z-index: 60;
+  box-shadow: 0 -2px 8px rgba(0,0,0,0.08);
+}
+.bottom-nav .nav-item {
+  color: white;
+  background: rgba(255,255,255,0.08);
+  padding: 0.45rem 0.75rem;
+  border-radius: 999px;
+  text-decoration: none;
+  font-weight: 600;
+  border: none;
+}
+
+/* thin green accent at the top for branding */
+header::before { content: ''; display: block; height: 4px; background: linear-gradient(90deg,#42b983 0%, #48bb78 100%); position: absolute; left: 0; right: 0; top: 0 }
+
+/* desktop tweaks */
+@media (min-width: 900px) {
+  header { padding: 1rem 2rem }
+  h1 { font-size: 1.4rem }
+  main { max-width: 820px; padding: 2rem; padding-bottom: 2rem }
 }
 </style>

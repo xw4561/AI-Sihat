@@ -4,7 +4,8 @@
  */
 
 const fs = require("fs");
-const { v4: uuidv4 } = require("uuid");
+const { randomUUID } = require('crypto');
+const path = require('path');
 const sessionService = require("./sessionService");
 const { runGemini } = require("./geminiService");
 
@@ -12,12 +13,45 @@ const { runGemini } = require("./geminiService");
 let symptomsData = null;
 
 /**
+ * Get the prompt in the correct language from a question object.
+ * @param {object} question - The question object.
+ * @param {string} lang - The selected language ('English', 'Malay').
+ * @returns {string} The translated prompt.
+ */
+function getPrompt(question, lang) {
+  if (lang === 'Malay' && question.prompt_my) {
+    return question.prompt_my;
+  }
+  return question.prompt;
+}
+
+/**
+ * Create a question object with the correct language prompt.
+ * @param {object} question - The original question object.
+ * @param {string} lang - The selected language.
+ * @returns {object} A new question object with the correct prompt.
+ */
+function localizeQuestion(question, lang) {
+  if (!question) return null;
+  return {
+    ...question,
+    prompt: getPrompt(question, lang),
+  };
+}
+
+/**
  * Load symptoms data from JSON file
  * @returns {object} Symptoms data
  */
 function loadSymptomsData() {
   if (!symptomsData) {
-    symptomsData = JSON.parse(fs.readFileSync("./data/symptoms.json", "utf8"));
+  const dataPath = path.resolve(__dirname, '..', 'data', 'symptoms.json');
+    try {
+      const raw = fs.readFileSync(dataPath, 'utf8');
+      symptomsData = JSON.parse(raw);
+    } catch (err) {
+      throw new Error(`Failed to load symptoms data from ${dataPath}: ${err.message}`);
+    }
   }
   return symptomsData;
 }
@@ -171,16 +205,17 @@ function startChat() {
   const section = "CommonIntake"; // Always start here
   const firstQ = getFirstQuestion(section);
 
-  const sessionId = uuidv4();
+  const sessionId = randomUUID();
   sessionService.createSession(sessionId, {
     section,
     answers: {},
-    currentId: firstQ?.id
+    currentId: firstQ?.id,
+    lang: 'English', // Default language
   });
 
   return {
     sessionId,
-    currentQuestion: firstQ
+    currentQuestion: localizeQuestion(firstQ, 'English'),
   };
 }
 
@@ -215,6 +250,11 @@ async function answerQuestion(sessionId, answer) {
   const processed = await processAnswer(currentQ, normalizedAnswer);
   session.answers[currentId] = processed;
 
+  // Handle language selection
+  if (currentId === "1") {
+    session.lang = processed;
+  }
+
   let nextQ = null;
 
   // CASE 1: Handle next_logic that points to another section
@@ -226,8 +266,8 @@ async function answerQuestion(sessionId, answer) {
 
     return {
       sessionId,
-      answered: { id: currentId, prompt: currentQ.prompt, answer: processed },
-      nextQuestion: nextQ,
+      answered: { id: currentId, prompt: getPrompt(currentQ, session.lang), answer: processed },
+      nextQuestion: localizeQuestion(nextQ, session.lang),
     };
   }
 
@@ -254,8 +294,8 @@ async function answerQuestion(sessionId, answer) {
 
           return {
             sessionId,
-            answered: { id: currentId, prompt: currentQ.prompt, answer: processed },
-            nextQuestion: data[firstSymptom][0],
+            answered: { id: currentId, prompt: getPrompt(currentQ, session.lang), answer: processed },
+            nextQuestion: localizeQuestion(data[firstSymptom][0], session.lang),
           };
         }
       }
@@ -276,8 +316,8 @@ async function answerQuestion(sessionId, answer) {
 
   return {
     sessionId,
-    answered: { id: currentId, prompt: currentQ.prompt, answer: processed },
-    nextQuestion: nextQ || null,
+    answered: { id: currentId, prompt: getPrompt(currentQ, session.lang), answer: processed },
+    nextQuestion: localizeQuestion(nextQ, session.lang) || null,
   };
 }
 
