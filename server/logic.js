@@ -1,4 +1,3 @@
-// logic.js
 import { runGemini } from "./gemini.js";
 import fs from "fs";
 
