@@ -9,9 +9,9 @@
 
     <!-- Bottom navigation (app-style) - visible on all screen sizes -->
     <footer v-if="showNavbar" class="bottom-nav" aria-hidden="false">
-      <router-link to="/" class="nav-item">Home</router-link>
-      <router-link to="/chat" class="nav-item">Chat</router-link>
-      <router-link to="/api-test" class="nav-item">API</router-link>
+      <router-link to="/customer" class="nav-item">Customer</router-link>
+      <router-link to="/pharmacist" class="nav-item">Pharmacist</router-link>
+      <router-link to="/admin" class="nav-item">Admin</router-link>
       <button class="nav-item" @click="logout">Logout</button>
     </footer>
   </div>

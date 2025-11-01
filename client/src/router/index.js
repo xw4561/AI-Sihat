@@ -4,10 +4,11 @@ import SignUp from '../views/SignUp.vue'
 import AdminHome from '../views/AdminHome.vue'
 import CustomerHome from '../views/CustomerHome.vue'
 import PharmacistHome from '../views/PharmacistHome.vue'
-import Chat from '../views/Chat.vue'
+import Chat from '../views/chat.vue'
 import APITest from '../views/APITest.vue'
 import DatabaseManager from '../views/DatabaseManager.vue'
 import RoleSelection from '../views/RoleSelection.vue'
+import Profile from '../views/Profile.vue'
 
 const routes = [
   {
@@ -64,6 +65,12 @@ const routes = [
     name: 'DatabaseManager',
     component: DatabaseManager,
     meta: { requiresAuth: true, role: 'admin' }
+  },
+  {
+    path: '/profile',
+    name: 'Profile',
+    component: Profile,
+    meta: { requiresAuth: true }
   }
 ]
 
@@ -73,6 +80,7 @@ const router = createRouter({
 })
 
 router.beforeEach((to, from, next) => {
+  /*
   const loggedIn = localStorage.getItem('token');
 
   if (to.matched.some(record => record.meta.requiresAuth) && !loggedIn) {
@@ -80,6 +88,8 @@ router.beforeEach((to, from, next) => {
   } else {
     next();
   }
+  */
+  next();
 });
 
 export default router
