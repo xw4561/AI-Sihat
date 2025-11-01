@@ -2,7 +2,9 @@
   <div class="profile-page">
     <div class="card">
       <h2>My Profile</h2>
-      <div v-if="user" class="profile-details">
+
+      <!-- Display Mode -->
+      <div v-if="!isEditing && user" class="profile-details">
         <div class="detail-item">
           <label>Name:</label>
           <span>{{ user.name }}</span>
@@ -15,13 +17,30 @@
           <label>Role:</label>
           <span class="role">{{ user.role }}</span>
         </div>
+        <div class="profile-actions">
+          <button class="btn" @click="editProfile">Edit Profile</button>
+          <button class="btn primary" @click="logout">Logout</button>
+        </div>
       </div>
-      <div v-else>
+
+      <!-- Edit Mode -->
+      <div v-if="isEditing && editableUser" class="profile-edit">
+        <div class="form-group">
+          <label for="name">Name:</label>
+          <input type="text" id="name" v-model="editableUser.name" />
+        </div>
+        <div class="form-group">
+          <label for="email">Email:</label>
+          <input type="email" id="email" v-model="editableUser.email" />
+        </div>
+        <div class="profile-actions">
+          <button class="btn" @click="cancelEdit">Cancel</button>
+          <button class="btn primary" @click="saveProfile">Save</button>
+        </div>
+      </div>
+
+      <div v-if="!user">
         <p>Could not load user details.</p>
-      </div>
-      <div class="profile-actions">
-        <button class="btn" @click="editProfile">Edit Profile</button>
-        <button class="btn primary" @click="logout">Logout</button>
       </div>
     </div>
   </div>
@@ -33,6 +52,8 @@ import { useRouter } from 'vue-router';
 
 const router = useRouter();
 const user = ref(null);
+const isEditing = ref(false);
+const editableUser = ref(null);
 
 onMounted(() => {
   const name = localStorage.getItem('userName');
@@ -49,7 +70,30 @@ onMounted(() => {
 });
 
 function editProfile() {
-  alert('Editing profile is not yet implemented.');
+  // Create a deep copy for editing to avoid mutating the original object
+  editableUser.value = JSON.parse(JSON.stringify(user.value));
+  isEditing.value = true;
+}
+
+function cancelEdit() {
+  isEditing.value = false;
+  editableUser.value = null;
+}
+
+function saveProfile() {
+  if (editableUser.value) {
+    // Update the main user object
+    user.value.name = editableUser.value.name;
+    user.value.email = editableUser.value.email;
+
+    // Update localStorage
+    localStorage.setItem('userName', editableUser.value.name);
+    localStorage.setItem('userEmail', editableUser.value.email);
+
+    // Exit edit mode
+    isEditing.value = false;
+    editableUser.value = null;
+  }
 }
 
 function logout() {
@@ -81,19 +125,19 @@ h2 {
   color: #2c3e50;
 }
 
-.profile-details {
+.profile-details, .profile-edit {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
 }
 
-.detail-item {
+.detail-item, .form-group {
   display: flex;
   align-items: center;
   font-size: 1.1rem;
 }
 
-.detail-item label {
+.detail-item label, .form-group label {
   font-weight: 600;
   color: #555;
   width: 100px;
@@ -107,6 +151,14 @@ h2 {
   text-transform: capitalize;
   font-weight: bold;
   color: #42b983;
+}
+
+.form-group input {
+  flex-grow: 1;
+  padding: 0.6rem;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-size: 1rem;
 }
 
 .profile-actions {
@@ -128,8 +180,14 @@ h2 {
 }
 
 .btn.primary {
-  background: #e74c3c;
+  background: #42b983;
   color: #fff;
-  border-color: #e74c3c;
+  border-color: #42b983;
+}
+
+/* Adjusting logout button color */
+.profile-details .btn.primary {
+    background: #e74c3c;
+    border-color: #e74c3c;
 }
 </style>

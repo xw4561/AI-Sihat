@@ -18,7 +18,9 @@ function go(role) {
   // during UI testing. Do NOT use for production authentication.
   try {
     localStorage.setItem('token', 'dev-fake-token');
-    localStorage.setItem('role', role);
+    localStorage.setItem('userRole', role);
+    localStorage.setItem('userName', role.charAt(0).toUpperCase() + role.slice(1)); // e.g., "Customer"
+    localStorage.setItem('userEmail', `${role}@example.com`);
   } catch (e) {
     // ignore storage errors in environments that block localStorage
     console.warn('localStorage unavailable for RoleSelection', e);
