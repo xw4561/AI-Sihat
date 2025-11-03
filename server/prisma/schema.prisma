@@ -11,11 +11,19 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+// Define roles
+enum Role {
+  ADMIN
+  PHARMACIST
+  USER
+}
+
 model User {
   userId    String   @id @default(cuid()) @map("user_id")
   username  String   @db.VarChar(50)
   email     String   @unique @db.VarChar(100)
   password  String   @db.VarChar(100)
+  role      Role     @default(USER)              // <-- new role field
   points    Int      @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -62,3 +70,4 @@ model Order {
   @@index([createdAt])
   @@map("orders")
 }
+
