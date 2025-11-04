@@ -23,12 +23,13 @@ model User {
   username  String   @db.VarChar(50)
   email     String   @unique @db.VarChar(100)
   password  String   @db.VarChar(100)
-  role      Role     @default(USER)              // <-- new role field
+  role      Role     @default(USER)
   points    Int      @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  
+
   orders    Order[]
+  chats     Chat[]   // optional: back-relation
 
   @@index([email])
   @@map("users")
@@ -41,7 +42,7 @@ model Medicine {
   medicineQuantity Int      @map("medicine_quantity")
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
-  
+
   orders           Order[]
 
   @@index([medicineName])
@@ -60,7 +61,7 @@ model Order {
   status      String   @default("pending") @db.VarChar(20)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  
+
   user        User     @relation(fields: [userId], references: [userId], onDelete: Cascade)
   medicine    Medicine @relation(fields: [medicineId], references: [medicineId], onDelete: Restrict)
 
@@ -71,3 +72,14 @@ model Order {
   @@map("orders")
 }
 
+model Chat {
+  id             Int      @id @default(autoincrement())
+  userId         String?  
+  sessionData    Json     
+  recommendation String?  
+  createdAt      DateTime @default(now())
+
+  user           User?    @relation(fields: [userId], references: [userId], onDelete: SetNull)
+
+  @@map("chats")  // optional, makes table name explicit
+}

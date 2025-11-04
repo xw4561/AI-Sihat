@@ -8,6 +8,9 @@ const { v4: uuidv4 } = require("uuid");
 const sessionService = require("./sessionService");
 const { runGemini } = require("./geminiService");
 
+const { PrismaClient } = require("@prisma/client");
+const prisma = new PrismaClient();
+
 // Load symptom data once on startup
 let symptomsData = null;
 
@@ -167,15 +170,25 @@ function normalizeMultipleChoice(answer) {
  * Start a new chat session
  * @returns {object} { sessionId, currentQuestion }
  */
-function startChat() {
-  const section = "CommonIntake"; // Always start here
+async function startChat(userId = null) {
+  const section = "CommonIntake";
   const firstQ = getFirstQuestion(section);
 
   const sessionId = uuidv4();
+
+  // Save session in memory
   sessionService.createSession(sessionId, {
     section,
     answers: {},
     currentId: firstQ?.id
+  });
+
+  // Save session in database
+  await prisma.chat.create({
+    data: {
+      userId,
+      sessionData: {},
+    },
   });
 
   return {
@@ -192,18 +205,13 @@ function startChat() {
  */
 async function answerQuestion(sessionId, answer) {
   const session = sessionService.getSession(sessionId);
-  if (!session) {
-    throw new Error("Invalid session");
-  }
+  if (!session) throw new Error("Invalid session");
 
   const data = loadSymptomsData();
   const { section, currentId } = session;
   const questions = data[section];
   const currentQ = questions.find(q => q.id === currentId);
-  
-  if (!currentQ) {
-    throw new Error("Question not found");
-  }
+  if (!currentQ) throw new Error("Question not found");
 
   // Normalize multiple_choice answers
   let normalizedAnswer = answer;
@@ -217,12 +225,39 @@ async function answerQuestion(sessionId, answer) {
 
   let nextQ = null;
 
-  // CASE 1: Handle next_logic that points to another section
+  // CASE 1: next_logic pointing to another section
   if (currentQ.next_logic && data[currentQ.next_logic]) {
     session.section = currentQ.next_logic;
     nextQ = getFirstQuestion(session.section);
     session.currentId = nextQ?.id;
     sessionService.updateSession(sessionId, session);
+
+    // Save chat record safely
+    const sectionData = data[session.section];
+    const recommendationObj = sectionData?.find(q => q.type === "recommendation");
+    const recommendation = recommendationObj ? recommendationObj.details : null;
+
+    if (session.userId) {
+      await prisma.chat.upsert({
+        where: { userId: session.userId },
+        update: {
+          sessionData: session.answers,
+          recommendation: recommendation,
+        },
+        create: {
+          userId: session.userId,
+          sessionData: session.answers,
+          recommendation: recommendation,
+        },
+      });
+    } else {
+      await prisma.chat.create({
+        data: {
+          sessionData: session.answers,
+          recommendation: recommendation,
+        },
+      });
+    }
 
     return {
       sessionId,
@@ -231,48 +266,60 @@ async function answerQuestion(sessionId, answer) {
     };
   }
 
-  // CASE 2: Handle CommonIntake flow with gender-based routing
+  // CASE 2: CommonIntake flow (gender-based / symptom routing)
   if (section === "CommonIntake") {
-    if (currentId === "3" && processed === "Male") {
-      // Skip pregnancy question (id 4) for males
-      nextQ = questions.find(q => q.id === "5");
-    } else if (currentId === "3" && processed === "Female") {
-      // Include pregnancy question for females
-      nextQ = questions.find(q => q.id === "4");
-    } else if (currentId === "4") {
-      // After pregnancy question → go to id 5
-      nextQ = questions.find(q => q.id === "5");
-    } else if (currentId === "10") {
-      // Route to symptom-specific flow after CommonIntake
+    if (currentId === "3" && processed === "Male") nextQ = questions.find(q => q.id === "5");
+    else if (currentId === "3" && processed === "Female") nextQ = questions.find(q => q.id === "4");
+    else if (currentId === "4") nextQ = questions.find(q => q.id === "5");
+    else if (currentId === "10") {
       const storedSymptoms = session.answers["5"];
       if (storedSymptoms && storedSymptoms.length > 0) {
         const firstSymptom = storedSymptoms[0];
         if (data[firstSymptom]) {
           session.section = firstSymptom;
           session.currentId = data[firstSymptom][0].id;
-          sessionService.updateSession(sessionId, session);
-
-          return {
-            sessionId,
-            answered: { id: currentId, prompt: currentQ.prompt, answer: processed },
-            nextQuestion: data[firstSymptom][0],
-          };
+          nextQ = data[firstSymptom][0];
         }
       }
     } else {
-      // Default next question in CommonIntake
       nextQ = getNextQuestion(section, currentId, session);
     }
   }
 
-  // CASE 3: For other sections (Flu, Fever, etc.)
-  if (!nextQ && data[section]) {
-    nextQ = getNextQuestion(section, currentId, session);
-  }
+  // CASE 3: Other sections
+  if (!nextQ && data[section]) nextQ = getNextQuestion(section, currentId, session);
 
-  // Update session with next question
+  // Update session
   session.currentId = nextQ ? nextQ.id : null;
   sessionService.updateSession(sessionId, session);
+
+  // Get recommendation if any
+  const sectionData = data[session.section];
+  const recommendationObj = sectionData?.find(q => q.type === "recommendation");
+  const recommendation = recommendationObj ? recommendationObj.details : null;
+
+  // Upsert or create chat record safely
+  if (session.userId) {
+    await prisma.chat.upsert({
+      where: { userId: session.userId },
+      update: { 
+        sessionData: session.answers,
+        recommendation: recommendation,
+      },
+      create: {
+        userId: session.userId,
+        sessionData: session.answers,
+        recommendation: recommendation,
+      },
+    });
+  } else {
+    await prisma.chat.create({
+      data: {
+        sessionData: session.answers,
+        recommendation: recommendation,
+      },
+    });
+  }
 
   return {
     sessionId,
@@ -281,26 +328,6 @@ async function answerQuestion(sessionId, answer) {
   };
 }
 
-/**
- * Get recommendation based on session answers
- * @param {string} sessionId - Session identifier
- * @returns {object} { sessionId, recommendation }
- */
-function getRecommendation(sessionId) {
-  const session = sessionService.getSession(sessionId);
-  if (!session) {
-    throw new Error("Session not found");
-  }
-
-  const data = loadSymptomsData();
-  const sectionData = data[session.section];
-  const rec = sectionData?.find(q => q.type === "recommendation");
-
-  return {
-    sessionId,
-    recommendation: rec ? rec.details : ["No recommendation available."]
-  };
-}
 
 /**
  * Handle approval/confirmation
@@ -308,6 +335,15 @@ function getRecommendation(sessionId) {
  * @param {boolean} approved - Whether user approved
  * @returns {object} { sessionId, message, approved }
  */
+
+function getRecommendation(sessionId) {
+  const session = sessionService.getSession(sessionId);
+  if (!session) throw new Error("Session not found");
+  
+  return session.recommendation || null;
+}
+
+
 function approveRecommendation(sessionId, approved) {
   const session = sessionService.getSession(sessionId);
   if (!session) {

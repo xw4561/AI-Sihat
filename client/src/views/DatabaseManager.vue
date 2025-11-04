@@ -191,6 +191,38 @@
       {{ statusMessage }}
     </div>
   </div>
+
+
+<!-- Chat Section -->
+<div class="section">
+  <h3>💬 AI Chat</h3>
+
+  <!-- Start Chat -->
+  <div class="form-card">
+    <button @click="startChat" class="btn-add">Start New Chat</button>
+    <p v-if="chatSessionId">Session ID: {{ chatSessionId }}</p>
+  </div>
+
+  <!-- Chat Messages -->
+  <div class="data-card" v-if="chatMessages.length > 0">
+    <h4>Conversation</h4>
+    <div class="chat-log">
+      <div v-for="msg in chatMessages" :key="msg.id" :class="['chat-message', msg.type]">
+        <strong>{{ msg.type === 'user' ? 'You' : 'AI' }}:</strong> {{ msg.text }}
+      </div>
+    </div>
+
+    <!-- Answer Input -->
+    <div class="form-row">
+      <input v-model="chatInput" type="text" placeholder="Type your answer..." @keyup.enter="sendChat" />
+      <button @click="sendChat" class="btn-add">Send</button>
+    </div>
+  </div>
+
+  <div v-else class="empty">
+    No chat started yet.
+  </div>
+</div>
 </template>
 
 <script setup>
@@ -217,6 +249,13 @@ const newOrder = ref({
   orderType: '', 
   useAi: false 
 })
+
+// Chat
+const chatSessionId = ref('')
+const chatMessages = ref([])
+const chatInput = ref('')
+
+
 
 // Status
 const statusMessage = ref('')
@@ -311,6 +350,62 @@ const loadOrders = async () => {
     showStatus(err.response?.data?.error || 'Failed to load orders', 'error')
   } finally {
     ordersLoading.value = false
+  }
+}
+
+
+// Chat API
+// Start a new chat session
+const startChat = async () => {
+  try {
+    const response = await axios.post('/ai-sihat/chat/start')
+    chatSessionId.value = response.data.sessionId
+    chatMessages.value = []
+    chatMessages.value.push({
+      id: Date.now(),
+      type: 'ai',
+      text: response.data.currentQuestion?.prompt || 'Chat started!'
+    })
+  } catch (err) {
+    showStatus(err.response?.data?.error || 'Failed to start chat', 'error')
+  }
+}
+
+// Send answer and get next question
+const sendChat = async () => {
+  if (!chatSessionId.value || !chatInput.value.trim()) return
+
+  const userAnswer = chatInput.value
+  chatMessages.value.push({
+    id: Date.now(),
+    type: 'user',
+    text: userAnswer
+  })
+  chatInput.value = ''
+
+  try {
+    const response = await axios.post('/ai-sihat/chat/ask', {
+      sessionId: chatSessionId.value,
+      answer: userAnswer
+    })
+
+    // Add AI response
+    const nextQ = response.data.nextQuestion
+    if (nextQ) {
+      chatMessages.value.push({
+        id: Date.now() + 1,
+        type: 'ai',
+        text: nextQ.prompt
+      })
+    } else {
+      chatMessages.value.push({
+        id: Date.now() + 1,
+        type: 'ai',
+        text: '✅ Chat complete! You can check recommendations.'
+      })
+    }
+  } catch (err) {
+    showStatus(err.response?.data?.error || 'Failed to send chat answer', 'error')
   }
 }
 
@@ -563,6 +658,33 @@ tbody tr:hover {
   color: #991b1b;
   border: 2px solid #ef4444;
 }
+
+.chat-log {
+  max-height: 300px;
+  overflow-y: auto;
+  padding: 0.5rem;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  margin-bottom: 0.5rem;
+  background: #f9fafb;
+}
+
+.chat-message {
+  margin-bottom: 0.5rem;
+  padding: 0.5rem;
+  border-radius: 4px;
+}
+
+.chat-message.user {
+  background-color: #d1fae5;
+  text-align: right;
+}
+
+.chat-message.ai {
+  background-color: #f3f4f6;
+  text-align: left;
+}
+
 
 @keyframes slideIn {
   from {
