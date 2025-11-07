@@ -1,3 +1,8 @@
+/**
+ * Chat Routes (Combined)
+ * Handles all chat-related endpoints
+ */
+
 const chatService = require("../services/chatService");
 const sessionService = require("../services/sessionService");
 const { PrismaClient } = require("@prisma/client");
@@ -35,8 +40,7 @@ module.exports = (app) => {
       res.json(result);
     } catch (error) {
       console.error("Answer question error:", error);
-      const status = error.message === "Invalid session" ? 404 : 500;
-      res.status(status).json({ error: error.message });
+      res.status(500).json({ error: error.message });
     }
   });
 
@@ -54,14 +58,13 @@ module.exports = (app) => {
       res.json(result);
     } catch (error) {
       console.error("Get recommendation error:", error);
-      const status = error.message === "Session not found" ? 404 : 500;
-      res.status(status).json({ error: error.message });
+      res.status(500).json({ error: error.message });
     }
   });
 
   /**
    * POST /chat/approve
-   * Simulate approval or confirmation
+   * Simulate pharmacist approval or confirmation
    */
   app.post("/api/chat/approve", async (req, res) => {
     console.log('[chat.routes] POST /api/chat/approve', { body: req.body });
@@ -73,8 +76,7 @@ module.exports = (app) => {
       res.json(result);
     } catch (error) {
       console.error("Approve recommendation error:", error);
-      const status = error.message === "Session not found" ? 404 : 500;
-      res.status(status).json({ error: error.message });
+      res.status(500).json({ error: error.message });
     }
   });
 
