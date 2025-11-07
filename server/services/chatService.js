@@ -1,5 +1,5 @@
 /**
- * Chat Service
+ * Chat Service (Merged)
  * Handles all chat flow logic, question routing, and answer processing
  */
 
@@ -14,10 +14,7 @@ const prisma = new PrismaClient();
 // Load symptom data once on startup
 let symptomsData = null;
 
-/**
- * Load symptoms data from JSON file
- * @returns {object} Symptoms data
- */
+/* -------------------- Data Loading -------------------- */
 function loadSymptomsData() {
   if (!symptomsData) {
     symptomsData = JSON.parse(fs.readFileSync("./data/symptoms.json", "utf8"));
@@ -25,11 +22,79 @@ function loadSymptomsData() {
   return symptomsData;
 }
 
-/**
- * Get the first question of a section
- * @param {string} section - Section name (e.g., "CommonIntake", "Fever")
- * @returns {object|null} First question or null
- */
+/* -------------------- Validation -------------------- */
+function validateAnswer(question, input) {
+  if (!question) return false;
+
+  switch (question.type) {
+    case "text_input":
+      return typeof input === "string" && input.trim() !== "";
+
+    case "number_input":
+      return input !== null && input !== undefined && !isNaN(Number(input));
+
+    case "single_choice":
+      if (typeof input === "string" && question.options?.includes(input)) return true;
+      if (!isNaN(input)) {
+        const idx = parseInt(input, 10) - 1;
+        return question.options && question.options[idx] !== undefined;
+      }
+      return false;
+
+    case "multiple_choice":
+      if (Array.isArray(input)) return input.length > 0;
+      if (typeof input === "string") return input.trim() !== "";
+      return false;
+
+    default:
+      return true;
+  }
+}
+
+/* -------------------- Process Answer -------------------- */
+async function processAnswer(question, userInput) {
+  if (!question) return userInput;
+
+  if (question.useGemini) {
+    const aiResponse = await runGemini(String(userInput));
+    return { userInput: String(userInput), aiResponse };
+  }
+
+  switch (question.type) {
+    case "single_choice":
+      if (typeof userInput === "string" && question.options?.includes(userInput)) return userInput;
+      if (!isNaN(userInput)) {
+        const idx = parseInt(userInput, 10) - 1;
+        return question.options ? question.options[idx] : null;
+      }
+      return userInput;
+
+    case "multiple_choice":
+      if (Array.isArray(userInput)) {
+        return userInput
+          .map(a => (question.options?.includes(a) ? a : null))
+          .filter(Boolean);
+      }
+      if (typeof userInput === "string") {
+        return userInput
+          .split(",")
+          .map(s => s.trim())
+          .filter(s => question.options?.includes(s));
+      }
+      return [];
+
+    case "number_input":
+      return Number(userInput);
+
+    case "text_input":
+      return String(userInput).trim();
+
+    default:
+      return userInput;
+  }
+}
+
+/* -------------------- Get First Question -------------------- */
 function getFirstQuestion(section) {
   const data = loadSymptomsData();
   const questions = data[section];
@@ -37,68 +102,17 @@ function getFirstQuestion(section) {
   return questions[0];
 }
 
-/**
- * Process and validate user's answer based on question type
- * @param {object} question - Question object
- * @param {any} userInput - User's raw input
- * @returns {Promise<any>} Processed answer
- */
-async function processAnswer(question, userInput) {
-  // If question requires Gemini AI processing
-  if (question.useGemini) {
-    const aiResponse = await runGemini(userInput);
-    return { userInput, aiResponse };
-  }
+/* -------------------- Get Duration Recommendation -------------------- */
+function getDurationRecommendation(answer) {
+  const short = ["less than 1 day", "2 days"];
+  const long = ["3 days", "more than 3 days"];
 
-  switch (question.type) {
-    case "single_choice":
-      if (question.options.includes(userInput)) return userInput;
-      // Support numeric index (e.g., "1" → first option)
-      if (!isNaN(userInput)) {
-        const idx = parseInt(userInput) - 1;
-        return question.options[idx] || "Invalid";
-      }
-      return "Invalid";
-
-    case "multiple_choice":
-      if (Array.isArray(userInput)) {
-        return userInput.map(a => {
-          if (question.options.includes(a)) return a;
-          if (!isNaN(a)) return question.options[parseInt(a) - 1];
-          return null;
-        }).filter(a => a); // remove nulls
-      }
-
-      if (typeof userInput === "string") {
-        // Allow comma-separated or single string
-        return userInput.split(",").map(a => {
-          const trimmed = a.trim();
-          if (question.options.includes(trimmed)) return trimmed;
-          if (!isNaN(trimmed)) return question.options[parseInt(trimmed) - 1];
-          return null;
-        }).filter(a => a);
-      }
-
-      return [];
-      
-    case "number_input":
-      return Number(userInput);
-      
-    case "text_input":
-      return String(userInput).trim();
-      
-    default:
-      return userInput;
-  }
+  if (short.includes(String(answer).toLowerCase())) return "R1";
+  if (long.includes(String(answer).toLowerCase())) return "R2";
+  return null;
 }
 
-/**
- * Get next question based on current question and session state
- * @param {string} section - Current section
- * @param {string} currentId - Current question ID
- * @param {object} sessionData - Full session data
- * @returns {object|null} Next question or null
- */
+/* -------------------- Get Next Question -------------------- */
 function getNextQuestion(section, currentId, sessionData) {
   const data = loadSymptomsData();
   const questions = data[section];
@@ -106,81 +120,140 @@ function getNextQuestion(section, currentId, sessionData) {
 
   const currentQ = questions.find(q => q.id === currentId);
   if (!currentQ) return null;
+  const answers = sessionData?.answers || {};
 
-  const nextLogic = currentQ.next_logic;
-
-  // 1️⃣ Sequential fallback (no next_logic defined)
-  if (nextLogic === undefined || nextLogic === null) {
-    const idx = questions.findIndex(q => q.id === currentId);
-    if (idx === -1 || idx === questions.length - 1) return null;
-    return questions[idx + 1];
+  // Direct string jump within same section
+  if (
+    currentQ.next_logic &&
+    typeof currentQ.next_logic === "string" &&
+    !["SYMPTOM_ROUTING", "BRANCH_ON_PHLEGM", "AppFlow"].includes(currentQ.next_logic) &&
+    !currentQ.next_logic.includes("_REC")
+  ) {
+    const target = questions.find(q => q.id === currentQ.next_logic);
+    if (target) return target;
   }
 
-  // 2️⃣ SYMPTOM ROUTING (after CommonIntake)
-  if (nextLogic === "SYMPTOM_ROUTING") {
-    const mainSymptoms = sessionData.answers["7"]; // user's main symptoms
-    if (!mainSymptoms || mainSymptoms.length === 0) return null;
+  // Object mapping (conditional)
+  if (typeof currentQ.next_logic === "object" && currentQ.next_logic !== null) {
+    const rawAns = answers[currentId];
+    const userAns = typeof rawAns === "object" && rawAns?.userInput ? rawAns.userInput : rawAns;
 
-    const firstSymptom = mainSymptoms[0].toLowerCase();
+    const nextId = currentQ.next_logic[userAns];
+    if (nextId) {
+      if (data[nextId]) {
+        sessionData.section = nextId;
+        return data[nextId][0];
+      }
+      const mapped = questions.find(q => q.id === nextId);
+      if (mapped) return mapped;
+    }
+  }
 
-    const symptomRoutes = {
+  // Symptom routing
+  if (currentQ.next_logic === "SYMPTOM_ROUTING") {
+    const storedSymptoms = answers["8"];
+    if (!storedSymptoms || storedSymptoms.length === 0) return null;
+
+    const first = String(storedSymptoms[0]).toLowerCase();
+    const routes = {
       fever: "Fever",
       cough: "Cough",
       flu: "Flu",
       cold: "Cold",
-      nausea: "Nausea",
-      vomiting: "Vomiting",
       diarrhoe: "Diarrhoe",
-      constipation: "Constipation"
+      constipation: "Constipation",
+      "nausea and vomiting": "Nausea and Vomiting",
+      indigestion: "Indigestion",
+      bloat: "Bloat",
+      "menstrual pain": "Menstrual Pain",
+      "joint pain": "Joint Pain",
+      "muscle pain": "Muscle Pain",
+      "itchy skin": "Itchy Skin"
     };
 
-    const nextFlow = symptomRoutes[firstSymptom];
-    if (!nextFlow) return null;
-
-    const nextSection = data[nextFlow];
-    return nextSection ? nextSection[0] : null;
+    const nextSection = routes[first];
+    if (!nextSection) return null;
+    sessionData.section = nextSection;
+    return data[nextSection] ? data[nextSection][0] : null;
   }
 
-  // 3️⃣ Direct ID match (e.g., next_logic: "5")
-  const nextQ = questions.find(q => q.id === nextLogic);
-  if (nextQ) return nextQ;
+  // Branch on phlegm (cough-specific)
+  if (currentQ.next_logic === "BRANCH_ON_PHLEGM") {
+    const rawAns = answers["CA2"];
+    const userAns = typeof rawAns === "object" && rawAns?.userInput ? rawAns.userInput : rawAns;
+    const targetId = String(userAns).toLowerCase() === "yes" ? "CA3_WET" : "CA3_DRY";
+    return data[section].find(q => q.id === targetId);
+  }
 
-  // 4️⃣ Fallback sequential
+  // Recommendation logic
+  if (currentQ.next_logic && currentQ.next_logic.includes("_REC")) {
+    const rawAns = answers["9"];
+    if (!rawAns) {
+      sessionData.section = "AppFlow";
+      return data["AppFlow"][0];
+    }
+
+    const durationValue =
+      typeof rawAns === "object" && rawAns?.userInput ? rawAns.userInput : rawAns;
+    const route = getDurationRecommendation(durationValue);
+    let targetId = route;
+
+    if (currentQ.next_logic === "CA4_REC_WET") {
+      targetId = route === "R1" ? "CA_R1_WET" : "CA_R2_WET";
+    } else if (currentQ.next_logic === "CA4_REC_DRY") {
+      targetId = route === "R1" ? "CA_R1_DRY" : "CA_R2_DRY";
+    }
+
+    return data[section].find(q => q.id === targetId);
+  }
+
+  // Sequential fallback
   const idx = questions.findIndex(q => q.id === currentId);
-  if (idx === -1 || idx === questions.length - 1) return null;
-  return questions[idx + 1];
-}
+  if (idx === -1) return null;
 
-/**
- * Normalize multiple choice answers into array format
- * @param {any} answer - Raw answer from request
- * @returns {Array} Normalized array of choices
- */
-function normalizeMultipleChoice(answer) {
-  let chosenSymptoms = [];
-  if (Array.isArray(answer)) {
-    chosenSymptoms = answer.filter(a => a);
-  } else if (typeof answer === "string" && answer.trim() !== "") {
-    chosenSymptoms = [answer];
+  let candidate = questions[idx + 1] || null;
+  if (!candidate) {
+    const symptomSections = [
+      "Fever", "Flu", "Cough", "Cold", "Diarrhoe", "Constipation",
+      "Nausea and Vomiting", "Indigestion", "Bloat", "Menstrual Pain",
+      "Joint Pain", "Muscle Pain", "Itchy Skin"
+    ];
+    if (symptomSections.includes(section)) {
+      sessionData.section = "AppFlow";
+      return data["AppFlow"][0];
+    }
+    return null;
   }
-  return chosenSymptoms;
+
+  // Skip pregnancy if male
+  if (candidate.id === "7") {
+    const genderRaw = answers["6"];
+    const gender = typeof genderRaw === "object" && genderRaw?.userInput ? genderRaw.userInput : genderRaw;
+    if (String(gender).toLowerCase() === "male") {
+      candidate = questions[idx + 2] || null;
+    }
+  }
+
+  return candidate;
 }
 
+/* -------------------- Chat Flow Methods -------------------- */
 /**
  * Start a new chat session
- * @returns {object} { sessionId, currentQuestion }
+ * @param {string|null} userId - Optional user ID
+ * @returns {Promise<object>} { sessionId, currentQuestion }
  */
 async function startChat(userId = null) {
   const section = "CommonIntake";
   const firstQ = getFirstQuestion(section);
-
   const sessionId = uuidv4();
 
   // Save session in memory
   sessionService.createSession(sessionId, {
     section,
     answers: {},
-    currentId: firstQ?.id
+    currentId: firstQ?.id,
+    userId
   });
 
   // Save session in database
@@ -197,12 +270,6 @@ async function startChat(userId = null) {
   };
 }
 
-/**
- * Handle answering a question and getting the next one
- * @param {string} sessionId - Session identifier
- * @param {any} answer - User's answer
- * @returns {Promise<object>} { sessionId, answered, nextQuestion }
- */
 async function answerQuestion(sessionId, answer) {
   const session = sessionService.getSession(sessionId);
   if (!session) throw new Error("Invalid session");
@@ -213,14 +280,11 @@ async function answerQuestion(sessionId, answer) {
   const currentQ = questions.find(q => q.id === currentId);
   if (!currentQ) throw new Error("Question not found");
 
-  // Normalize multiple_choice answers
-  let normalizedAnswer = answer;
-  if (currentQ.type === "multiple_choice") {
-    normalizedAnswer = normalizeMultipleChoice(answer);
+  if (!validateAnswer(currentQ, answer)) {
+    throw new Error("Invalid input for this question");
   }
 
-  // Process the answer
-  const processed = await processAnswer(currentQ, normalizedAnswer);
+  const processed = await processAnswer(currentQ, answer);
   session.answers[currentId] = processed;
 
   let nextQ = null;
@@ -324,10 +388,28 @@ async function answerQuestion(sessionId, answer) {
   return {
     sessionId,
     answered: { id: currentId, prompt: currentQ.prompt, answer: processed },
-    nextQuestion: nextQ || null,
+    nextQuestion: nextQ || null
   };
 }
 
+/**
+ * Get recommendation based on session answers
+ * @param {string} sessionId - Session identifier
+ * @returns {object} { sessionId, recommendation }
+ */
+function getRecommendation(sessionId) {
+  const session = sessionService.getSession(sessionId);
+  if (!session) throw new Error("Session not found");
+
+  const data = loadSymptomsData();
+  const sectionData = data[session.section];
+  const rec = sectionData?.find(q => q.type === "recommendation");
+
+  return {
+    sessionId,
+    recommendation: rec ? rec.details : ["No recommendation available."]
+  };
+}
 
 /**
  * Handle approval/confirmation
@@ -335,20 +417,9 @@ async function answerQuestion(sessionId, answer) {
  * @param {boolean} approved - Whether user approved
  * @returns {object} { sessionId, message, approved }
  */
-
-function getRecommendation(sessionId) {
-  const session = sessionService.getSession(sessionId);
-  if (!session) throw new Error("Session not found");
-  
-  return session.recommendation || null;
-}
-
-
 function approveRecommendation(sessionId, approved) {
   const session = sessionService.getSession(sessionId);
-  if (!session) {
-    throw new Error("Session not found");
-  }
+  if (!session) throw new Error("Session not found");
 
   session.approved = approved;
   sessionService.updateSession(sessionId, session);
@@ -362,14 +433,17 @@ function approveRecommendation(sessionId, approved) {
   };
 }
 
+/* -------------------- Exports -------------------- */
 module.exports = {
   startChat,
   answerQuestion,
   getRecommendation,
   approveRecommendation,
-  // Exported for testing or advanced usage
-  getFirstQuestion,
-  getNextQuestion,
+  // internal helpers
+  validateAnswer,
   processAnswer,
-  loadSymptomsData
+  getNextQuestion,
+  getFirstQuestion,
+  loadSymptomsData,
+  getDurationRecommendation
 };
