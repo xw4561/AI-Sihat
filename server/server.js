@@ -54,6 +54,13 @@ try {
   console.warn("ℹ️ Chat routes mounting skipped:", e?.message || e);
 }
 
+// Mount REST routes (Users, Medicines, Orders)
+try {
+  require("./routes/router.routes.js")(app);
+} catch (e) {
+  console.warn("ℹ️ API route mounting skipped:", e?.message || e);
+}
+
 // Log registered routes (helpful for debugging missing endpoints)
 try {
   const routes = [];
@@ -68,13 +75,6 @@ try {
   console.log('Registered routes:\n', routes.join('\n'));
 } catch (err) {
   console.warn('Could not list routes:', err && err.message);
-}
-
-// Mount REST routes (Users, Medicines, Orders)
-try {
-  require("./routes/router.routes.js")(app);
-} catch (e) {
-  console.warn("ℹ️ API route mounting skipped:", e?.message || e);
 }
 
 // 404 handler for unknown routes

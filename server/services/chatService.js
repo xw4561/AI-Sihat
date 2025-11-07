@@ -4,7 +4,6 @@
  */
 
 const fs = require("fs");
-const { v4: uuidv4 } = require("uuid");
 const path = require('path');
 const sessionService = require("./sessionService");
 const { runGemini } = require("./geminiService");
@@ -278,6 +277,7 @@ function getNextQuestion(section, currentId, sessionData) {
  * @returns {Promise<object>} { sessionId, currentQuestion }
  */
 async function startChat(userId = null) {
+  const { v4: uuidv4 } = await import('uuid');
   const section = "CommonIntake";
   const firstQ = getFirstQuestion(section);
   const sessionId = uuidv4();
