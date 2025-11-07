@@ -4,7 +4,7 @@
  */
 
 const fs = require("fs");
-const { randomUUID } = require('crypto');
+const { v4: uuidv4 } = require("uuid");
 const path = require('path');
 const sessionService = require("./sessionService");
 const { runGemini } = require("./geminiService");
