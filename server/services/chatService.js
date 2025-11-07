@@ -208,7 +208,7 @@ async function startChat(userId = null) {
   const section = "CommonIntake";
   const firstQ = getFirstQuestion(section);
 
-  const sessionId = uuidv4();
+  const sessionId = randomUUID();
 
   // Save session in memory
   sessionService.createSession(sessionId, {
@@ -217,15 +217,7 @@ async function startChat(userId = null) {
     currentId: firstQ?.id,
   });
 
-  // Save session in database
-  await prisma.chat.create({
-    data: {
-      userId,
-      sessionData: {},
-    },
-  });
-
-  // Save session in database
+  // Save session in database (single record)
   await prisma.chat.create({
     data: {
       userId,
@@ -339,34 +331,6 @@ async function answerQuestion(sessionId, answer) {
   // Update session
   session.currentId = nextQ ? nextQ.id : null;
   sessionService.updateSession(sessionId, session);
-
-  // Get recommendation if any
-  const sectionData = data[session.section];
-  const recommendationObj = sectionData?.find(q => q.type === "recommendation");
-  const recommendation = recommendationObj ? recommendationObj.details : null;
-
-  // Upsert or create chat record safely
-  if (session.userId) {
-    await prisma.chat.upsert({
-      where: { userId: session.userId },
-      update: { 
-        sessionData: session.answers,
-        recommendation: recommendation,
-      },
-      create: {
-        userId: session.userId,
-        sessionData: session.answers,
-        recommendation: recommendation,
-      },
-    });
-  } else {
-    await prisma.chat.create({
-      data: {
-        sessionData: session.answers,
-        recommendation: recommendation,
-      },
-    });
-  }
 
   // Get recommendation if any
   const sectionData = data[session.section];

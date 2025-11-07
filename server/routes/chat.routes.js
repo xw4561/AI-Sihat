@@ -1,4 +1,5 @@
 const chatService = require("../services/chatService");
+const sessionService = require("../services/sessionService");
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 
@@ -7,7 +8,7 @@ module.exports = (app) => {
    * POST /chat/start
    * Create a new chat session
    */
-  app.post("/api/chat/start", (req, res) => {
+  app.post("/api/chat/start", async (req, res) => {
     console.log('[chat.routes] POST /api/chat/start', { body: req.body });
     try {
       const body = req.body || {};
@@ -43,13 +44,13 @@ module.exports = (app) => {
    * POST /chat/recommend
    * Provide a recommendation
    */
-  app.post("/api/chat/recommend", (req, res) => {
+  app.post("/api/chat/recommend", async (req, res) => {
     console.log('[chat.routes] POST /api/chat/recommend', { body: req.body });
     try {
       const { sessionId } = req.body;
       if (!sessionId) return res.status(400).json({ error: "sessionId is required" });
 
-      const result = chatService.getRecommendation(sessionId);
+      const result = await chatService.getRecommendation(sessionId);
       res.json(result);
     } catch (error) {
       console.error("Get recommendation error:", error);
@@ -62,13 +63,13 @@ module.exports = (app) => {
    * POST /chat/approve
    * Simulate approval or confirmation
    */
-  app.post("/api/chat/approve", (req, res) => {
+  app.post("/api/chat/approve", async (req, res) => {
     console.log('[chat.routes] POST /api/chat/approve', { body: req.body });
     try {
       const { sessionId, approved } = req.body;
       if (!sessionId) return res.status(400).json({ error: "sessionId is required" });
 
-      const result = chatService.approveRecommendation(sessionId, approved);
+      const result = await chatService.approveRecommendation(sessionId, approved);
       res.json(result);
     } catch (error) {
       console.error("Approve recommendation error:", error);
@@ -84,7 +85,7 @@ module.exports = (app) => {
   app.get("/chat/:sessionId", async (req, res) => {
     try {
       const { sessionId } = req.params;
-      const session = chatService.getSession(sessionId); // ensure chatService exports getSession
+      const session = sessionService.getSession(sessionId);
       if (!session) return res.status(404).json({ error: "Session not found" });
 
       const chatRecord = await prisma.chat.findFirst({
