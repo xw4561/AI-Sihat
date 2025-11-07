@@ -4,7 +4,8 @@
  */
 
 const fs = require("fs");
-const { v4: uuidv4 } = require("uuid");
+const { randomUUID } = require('crypto');
+const path = require('path');
 const sessionService = require("./sessionService");
 const { runGemini } = require("./geminiService");
 
@@ -15,12 +16,45 @@ const prisma = new PrismaClient();
 let symptomsData = null;
 
 /**
+ * Get the prompt in the correct language from a question object.
+ * @param {object} question - The question object.
+ * @param {string} lang - The selected language ('English', 'Malay').
+ * @returns {string} The translated prompt.
+ */
+function getPrompt(question, lang) {
+  if (lang === 'Malay' && question.prompt_my) {
+    return question.prompt_my;
+  }
+  return question.prompt;
+}
+
+/**
+ * Create a question object with the correct language prompt.
+ * @param {object} question - The original question object.
+ * @param {string} lang - The selected language.
+ * @returns {object} A new question object with the correct prompt.
+ */
+function localizeQuestion(question, lang) {
+  if (!question) return null;
+  return {
+    ...question,
+    prompt: getPrompt(question, lang),
+  };
+}
+
+/**
  * Load symptoms data from JSON file
  * @returns {object} Symptoms data
  */
 function loadSymptomsData() {
   if (!symptomsData) {
-    symptomsData = JSON.parse(fs.readFileSync("./data/symptoms.json", "utf8"));
+  const dataPath = path.resolve(__dirname, '..', 'data', 'symptoms.json');
+    try {
+      const raw = fs.readFileSync(dataPath, 'utf8');
+      symptomsData = JSON.parse(raw);
+    } catch (err) {
+      throw new Error(`Failed to load symptoms data from ${dataPath}: ${err.message}`);
+    }
   }
   return symptomsData;
 }
@@ -180,7 +214,15 @@ async function startChat(userId = null) {
   sessionService.createSession(sessionId, {
     section,
     answers: {},
-    currentId: firstQ?.id
+    currentId: firstQ?.id,
+  });
+
+  // Save session in database
+  await prisma.chat.create({
+    data: {
+      userId,
+      sessionData: {},
+    },
   });
 
   // Save session in database
@@ -193,7 +235,7 @@ async function startChat(userId = null) {
 
   return {
     sessionId,
-    currentQuestion: firstQ
+    currentQuestion: localizeQuestion(firstQ, 'English'),
   };
 }
 
@@ -222,6 +264,11 @@ async function answerQuestion(sessionId, answer) {
   // Process the answer
   const processed = await processAnswer(currentQ, normalizedAnswer);
   session.answers[currentId] = processed;
+
+  // Handle language selection
+  if (currentId === "1") {
+    session.lang = processed;
+  }
 
   let nextQ = null;
 
@@ -261,8 +308,8 @@ async function answerQuestion(sessionId, answer) {
 
     return {
       sessionId,
-      answered: { id: currentId, prompt: currentQ.prompt, answer: processed },
-      nextQuestion: nextQ,
+      answered: { id: currentId, prompt: getPrompt(currentQ, session.lang), answer: processed },
+      nextQuestion: localizeQuestion(nextQ, session.lang),
     };
   }
 
@@ -321,10 +368,38 @@ async function answerQuestion(sessionId, answer) {
     });
   }
 
+  // Get recommendation if any
+  const sectionData = data[session.section];
+  const recommendationObj = sectionData?.find(q => q.type === "recommendation");
+  const recommendation = recommendationObj ? recommendationObj.details : null;
+
+  // Upsert or create chat record safely
+  if (session.userId) {
+    await prisma.chat.upsert({
+      where: { userId: session.userId },
+      update: { 
+        sessionData: session.answers,
+        recommendation: recommendation,
+      },
+      create: {
+        userId: session.userId,
+        sessionData: session.answers,
+        recommendation: recommendation,
+      },
+    });
+  } else {
+    await prisma.chat.create({
+      data: {
+        sessionData: session.answers,
+        recommendation: recommendation,
+      },
+    });
+  }
+
   return {
     sessionId,
-    answered: { id: currentId, prompt: currentQ.prompt, answer: processed },
-    nextQuestion: nextQ || null,
+    answered: { id: currentId, prompt: getPrompt(currentQ, session.lang), answer: processed },
+    nextQuestion: localizeQuestion(nextQ, session.lang) || null,
   };
 }
 

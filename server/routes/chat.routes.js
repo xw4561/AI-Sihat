@@ -7,7 +7,8 @@ module.exports = (app) => {
    * POST /chat/start
    * Create a new chat session
    */
-  app.post("/chat/start", async (req, res) => {
+  app.post("/api/chat/start", (req, res) => {
+    console.log('[chat.routes] POST /api/chat/start', { body: req.body });
     try {
       const body = req.body || {};
       const { userId } = body; // optional, pass userId if available
@@ -23,7 +24,8 @@ module.exports = (app) => {
    * POST /chat/ask
    * Answer a question and get the next one
    */
-  app.post("/chat/ask", async (req, res) => {
+  app.post("/api/chat/ask", async (req, res) => {
+    console.log('[chat.routes] POST /api/chat/ask', { body: req.body });
     try {
       const { sessionId, answer } = req.body;
       if (!sessionId) return res.status(400).json({ error: "sessionId is required" });
@@ -41,7 +43,8 @@ module.exports = (app) => {
    * POST /chat/recommend
    * Provide a recommendation
    */
-  app.post("/chat/recommend", async (req, res) => {
+  app.post("/api/chat/recommend", (req, res) => {
+    console.log('[chat.routes] POST /api/chat/recommend', { body: req.body });
     try {
       const { sessionId } = req.body;
       if (!sessionId) return res.status(400).json({ error: "sessionId is required" });
@@ -59,7 +62,8 @@ module.exports = (app) => {
    * POST /chat/approve
    * Simulate approval or confirmation
    */
-  app.post("/chat/approve", async (req, res) => {
+  app.post("/api/chat/approve", (req, res) => {
+    console.log('[chat.routes] POST /api/chat/approve', { body: req.body });
     try {
       const { sessionId, approved } = req.body;
       if (!sessionId) return res.status(400).json({ error: "sessionId is required" });
