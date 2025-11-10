@@ -67,6 +67,27 @@ function validateAnswer(question, input) {
       return input !== null && input !== undefined && !isNaN(Number(input));
 
     case "single_choice":
+      // For questions where a text input is expected for a "yes" answer,
+      // the input will be the free text itself. We should not validate
+      // it against the options list.
+      const hasOpenTextOption = question.options.some(o => 
+        o.toLowerCase().includes('yes') || o.toLowerCase().includes('other')
+      );
+
+      if (hasOpenTextOption) {
+        // If the user selected "No", it's a valid option.
+        if (typeof input === "string" && question.options?.includes(input)) {
+          return true;
+        }
+        // If the user selected "Yes" and typed something, it's also valid.
+        // The input will be the typed string.
+        if (typeof input === "string" && input.trim() !== "") {
+          return true;
+        }
+        return false;
+      }
+
+      // For standard single-choice questions, perform the original validation.
       if (typeof input === "string" && question.options?.includes(input)) return true;
       if (!isNaN(input)) {
         const idx = parseInt(input, 10) - 1;
@@ -184,7 +205,7 @@ function getNextQuestion(section, currentId, sessionData) {
 
   // Symptom routing
   if (currentQ.next_logic === "SYMPTOM_ROUTING") {
-    const storedSymptoms = answers["8"];
+    const storedSymptoms = answers["7"]; // Corrected from "8" to "7"
     if (!storedSymptoms || storedSymptoms.length === 0) return null;
 
     const first = String(storedSymptoms[0]).toLowerCase();
@@ -220,7 +241,7 @@ function getNextQuestion(section, currentId, sessionData) {
 
   // Recommendation logic
   if (currentQ.next_logic && currentQ.next_logic.includes("_REC")) {
-    const rawAns = answers["9"];
+    const rawAns = answers["8"];
     if (!rawAns) {
       sessionData.section = "AppFlow";
       return data["AppFlow"][0];
@@ -338,7 +359,7 @@ async function answerQuestion(sessionId, answer) {
     // Save chat record safely
     const sectionData = data[session.section];
     const recommendationObj = sectionData?.find(q => q.type === "recommendation");
-    const recommendation = recommendationObj ? recommendationObj.details : null;
+    const recommendation = recommendationObj ? recommendationObj.details.join("\n") : null;
 
     if (session.userId) {
       await prisma.chat.upsert({
@@ -399,7 +420,7 @@ async function answerQuestion(sessionId, answer) {
   // Get recommendation if any
   const sectionData = data[session.section];
   const recommendationObj = sectionData?.find(q => q.type === "recommendation");
-  const recommendation = recommendationObj ? recommendationObj.details : null;
+  const recommendation = recommendationObj ? recommendationObj.details.join("\n") : null;
 
   // Upsert or create chat record safely
   if (session.userId) {

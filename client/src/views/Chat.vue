@@ -30,7 +30,7 @@
 
       <!-- Quick replies for choice questions: render below the question bubble for better mobile layout -->
       <div v-if="currentQuestion && !isLanguageQuestion(currentQuestion) && currentQuestion.type === 'single_choice'" class="quick-replies below">
-        <button v-for="opt in currentQuestion.options" :key="opt" class="chip" @click="selectQuick(opt)">{{ opt }}</button>
+        <button v-for="opt in currentQuestion.options" :key="opt" :class="['chip', {selected: singleChoice === opt}]" @click="selectQuick(opt)">{{ opt }}</button>
       </div>
 
       <div v-else-if="currentQuestion && !isLanguageQuestion(currentQuestion) && currentQuestion.type === 'multiple_choice'" class="quick-replies below">
@@ -43,7 +43,7 @@
     <!-- Composer -->
     <div class="composer">
       <!-- Show input whenever session exists (bot asks first). Send button remains disabled until canSubmit is true. -->
-      <input v-if="sessionId && !loading" v-model="textAnswer" :type="currentQuestion && currentQuestion.type === 'number_input' ? 'number' : 'text'" placeholder="Type your answer..." @keydown.enter.prevent="sendAnswer" />
+      <input v-if="sessionId && !loading && ((currentQuestion.type !== 'multiple_choice' && currentQuestion.type !== 'single_choice') || otherSymptomSelected || yesSelected)" v-model="textAnswer" :type="currentQuestion && currentQuestion.type === 'number_input' ? 'number' : 'text'" placeholder="Type your answer..." @keydown.enter.prevent="sendAnswer" />
 
       <div v-if="currentQuestion && currentQuestion.type === 'single_choice'" class="composer-hint">Tap a quick reply or type to override</div>
 
@@ -63,6 +63,8 @@ const currentQuestion = ref(null)
 const loading = ref(false)
 const error = ref('')
 const history = ref([])
+const otherSymptomSelected = ref(false)
+const yesSelected = ref(false)
 
 // form state
 const singleChoice = ref('')
@@ -86,13 +88,29 @@ const resetInput = () => {
   singleChoice.value = ''
   multiChoice.value = []
   textAnswer.value = ''
+  otherSymptomSelected.value = false
+  yesSelected.value = false
 }
 
 const canSubmit = computed(() => {
   if (!currentQuestion.value) return false
   const t = currentQuestion.value.type
-  if (t === 'single_choice') return !!singleChoice.value
-  if (t === 'multiple_choice') return multiChoice.value.length > 0
+  if (t === 'single_choice') {
+    // If 'Yes' is selected, textAnswer must not be empty.
+    if (yesSelected.value) {
+      return textAnswer.value.trim().length > 0
+    }
+    // Otherwise, a choice must be made (for 'No' or other options).
+    return !!singleChoice.value
+  }
+  if (t === 'multiple_choice') {
+    // If 'Other' is selected, textAnswer must not be empty.
+    if (otherSymptomSelected.value) {
+      return textAnswer.value.trim().length > 0
+    }
+    // Otherwise, at least one option must be selected.
+    return multiChoice.value.length > 0
+  }
   return String(textAnswer.value).length > 0 || t === 'number_input'
 })
 
@@ -135,8 +153,26 @@ function refreshChat() {
 
 function buildAnswerPayload() {
   const t = currentQuestion.value.type
-  if (t === 'single_choice') return singleChoice.value
-  if (t === 'multiple_choice') return [...multiChoice.value]
+  if (t === 'single_choice') {
+    // For 'Yes' with details, send just the text. Otherwise, send the selected option.
+    if (yesSelected.value) {
+      return textAnswer.value
+    }
+    return singleChoice.value
+  }
+  if (t === 'multiple_choice') {
+    // Combine selected chips and the text input if 'Other' was selected
+    const payload = [...multiChoice.value]
+    if (otherSymptomSelected.value && textAnswer.value) {
+      // Remove 'Other (Specify)' and add the actual text
+      const otherIndex = payload.indexOf('Other (Specify)')
+      if (otherIndex > -1) {
+        payload.splice(otherIndex, 1)
+      }
+      payload.push(textAnswer.value)
+    }
+    return payload
+  }
   if (t === 'number_input') return Number(textAnswer.value)
   return String(textAnswer.value)
 }
@@ -185,13 +221,30 @@ onMounted(() => {
 })
 
 function selectQuick(opt) {
-  // for single choice, set textAnswer and send immediately
-  singleChoice.value = opt
-  textAnswer.value = opt
-  sendAnswer()
+  singleChoice.value = opt;
+  if (opt.toLowerCase().startsWith('yes')) {
+    yesSelected.value = true;
+    // Don't send answer immediately, wait for user input
+  } else {
+    yesSelected.value = false; // Ensure yesSelected is false for "No"
+    textAnswer.value = opt;
+    sendAnswer();
+  }
 }
 
 function toggleMulti(opt) {
+  if (opt === 'Other (Specify)') {
+    otherSymptomSelected.value = !otherSymptomSelected.value
+    // also add/remove from multichoice to show visual selection
+    const idx = multiChoice.value.indexOf(opt)
+    if (idx === -1 && otherSymptomSelected.value) {
+      multiChoice.value.push(opt)
+    } else if (idx > -1 && !otherSymptomSelected.value) {
+      multiChoice.value.splice(idx, 1)
+    }
+    return
+  }
+
   const idx = multiChoice.value.indexOf(opt)
   if (idx === -1) multiChoice.value.push(opt)
   else multiChoice.value.splice(idx, 1)
