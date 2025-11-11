@@ -5,7 +5,7 @@
 
     <div class="cards">
       <router-link to="/chat" class="card">
-        <h3>💬 Chat Demo</h3>
+        <h3>💬 AI_SIHAT CHAT</h3>
         <p>Start a session and answer questions using /chat/start and /chat/ask.</p>
       </router-link>
 

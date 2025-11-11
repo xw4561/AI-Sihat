@@ -1,7 +1,7 @@
 <template>
   <div class="chat card">
     <div class="chat-header">
-      <div class="title">Chat Demo</div>
+      <div class="title">AI_SIHAT CHAT</div>
       <div class="controls">
         <button class="btn" @click="refreshChat" :disabled="loading">Start New Chat</button>
       </div>
@@ -13,10 +13,21 @@
   <div v-if="!sessionId && !loading" class="empty">Initializing chat...</div>
       <div v-if="loading" class="status">Loading...</div>
 
-      <!-- Render history as alternating bot/user bubbles -->
-      <template v-for="(item, idx) in history" :key="idx">
+      <!-- Render history as alternating bot/user bubbles (filter out standalone recommendation heading) -->
+      <template v-for="(item, idx) in filteredHistory" :key="idx">
         <div class="bubble bot">
-          <div class="bubble-content">{{ item.q.prompt }}</div>
+          <div class="bubble-content">
+            <!-- Format recommendation prompts nicely in history -->
+            <template v-if="Array.isArray(item.q.prompt)">
+              <div class="recommendation-heading">Based on your symptoms, here are our recommendations:</div>
+              <div v-for="(line, lineIdx) in item.q.prompt" :key="lineIdx" class="recommendation-line">
+                {{ line }}
+              </div>
+            </template>
+            <template v-else>
+              {{ item.q.prompt }}
+            </template>
+          </div>
         </div>
         <div class="bubble user">
           <div class="bubble-content">{{ formatAnswer(item.a) }}</div>
@@ -24,8 +35,19 @@
       </template>
 
       <!-- Current question from bot (if any) -->
-      <div v-if="currentQuestion && !isLanguageQuestion(currentQuestion)" class="bubble bot current">
-        <div class="bubble-content">{{ currentQuestion.prompt }}</div>
+      <div v-if="currentQuestion && !isLanguageQuestion(currentQuestion) && !isRecommendationHeading(currentQuestion.prompt)" class="bubble bot current">
+        <div class="bubble-content">
+          <!-- Format recommendation prompts nicely -->
+          <template v-if="Array.isArray(currentQuestion.prompt)">
+            <div class="recommendation-heading">Based on your symptoms, here are our recommendations:</div>
+            <div v-for="(line, idx) in currentQuestion.prompt" :key="idx" class="recommendation-line">
+              {{ line }}
+            </div>
+          </template>
+          <template v-else>
+            {{ currentQuestion.prompt }}
+          </template>
+        </div>
       </div>
 
       <!-- Quick replies for choice questions: render below the question bubble for better mobile layout -->
@@ -37,15 +59,21 @@
         <button v-for="opt in currentQuestion.options" :key="opt" :class="['chip', {selected: multiChoice.includes(opt)}]" @click="toggleMulti(opt)">{{ opt }}</button>
       </div>
 
+      <!-- Continue button only for array recommendation bubble (after auto-skipping heading) -->
+      <div v-if="currentQuestion && Array.isArray(currentQuestion.prompt)" class="quick-replies below centered">
+        <button class="chip continue-btn" @click="continueFromRecommendation" :disabled="loading">
+          <span>Continue</span>
+          <span class="arrow">→</span>
+        </button>
+      </div>
+
       <div v-if="sessionId && !currentQuestion && !loading" class="done">No further questions. Conversation complete.</div>
     </div>
 
-    <!-- Composer -->
-    <div class="composer">
+  <!-- Composer - Hide completely when showing recommendation array -->
+  <div v-if="currentQuestion && !Array.isArray(currentQuestion.prompt)" class="composer">
       <!-- Show input whenever session exists (bot asks first). Send button remains disabled until canSubmit is true. -->
-      <input v-if="sessionId && !loading && ((currentQuestion.type !== 'multiple_choice' && currentQuestion.type !== 'single_choice') || otherSymptomSelected || yesSelected)" v-model="textAnswer" :type="currentQuestion && currentQuestion.type === 'number_input' ? 'number' : 'text'" placeholder="Type your answer..." @keydown.enter.prevent="sendAnswer" />
-
-      <div v-if="currentQuestion && currentQuestion.type === 'single_choice'" class="composer-hint">Tap a quick reply or type to override</div>
+      <input v-if="sessionId && !loading && currentQuestion && ((currentQuestion.type !== 'multiple_choice' && currentQuestion.type !== 'single_choice') || otherSymptomSelected || yesSelected)" v-model="textAnswer" :type="currentQuestion && currentQuestion.type === 'number_input' ? 'number' : 'text'" placeholder="Type your answer..." @keydown.enter.prevent="sendAnswer" />
 
       <div class="composer-actions">
         <button class="btn primary" @click="sendAnswer" :disabled="loading || !canSubmit">Send</button>
@@ -92,9 +120,24 @@ const resetInput = () => {
   yesSelected.value = false
 }
 
+// Identify the standalone heading prompt sent by backend
+function isRecommendationHeading(prompt) {
+  if (typeof prompt !== 'string') return false
+  return prompt.toLowerCase().includes('based on your symptoms')
+}
+
+// Filter out heading-only items from history to avoid duplicates
+const filteredHistory = computed(() => {
+  return history.value.filter(it => !isRecommendationHeading(it.q?.prompt))
+})
+
 const canSubmit = computed(() => {
   if (!currentQuestion.value) return false
   const t = currentQuestion.value.type
+  // Allow proceeding when recommendation is being displayed, either by type or by array prompt
+  if (t === 'recommendation_display' || Array.isArray(currentQuestion.value?.prompt)) {
+    return true // Always allow proceeding from recommendation display
+  }
   if (t === 'single_choice') {
     // If 'Yes' is selected, textAnswer must not be empty.
     if (yesSelected.value) {
@@ -220,6 +263,14 @@ onMounted(() => {
   startSession()
 })
 
+// Auto-advance past heading-only prompt so user only sees the combined recommendation bubble
+watch(currentQuestion, (q) => {
+  if (q && isRecommendationHeading(q.prompt)) {
+    // silently proceed
+    continueFromRecommendation()
+  }
+})
+
 function selectQuick(opt) {
   singleChoice.value = opt;
   if (opt.toLowerCase().startsWith('yes')) {
@@ -248,6 +299,13 @@ function toggleMulti(opt) {
   const idx = multiChoice.value.indexOf(opt)
   if (idx === -1) multiChoice.value.push(opt)
   else multiChoice.value.splice(idx, 1)
+}
+
+function continueFromRecommendation() {
+  // For recommendation_display type, proceed with a dummy answer
+  if (loading.value) return
+  textAnswer.value = 'Continue'
+  sendAnswer()
 }
 
 function formatAnswer(a) {
@@ -296,6 +354,31 @@ function formatAnswer(a) {
 .bubble.user .bubble-content { background: #42b983; color:#fff }
 .bubble.current .bubble-content { box-shadow: 0 2px 8px rgba(0,0,0,0.06) }
 
+/* Make recommendation bubbles wider */
+.bubble.bot .bubble-content:has(.recommendation-line) {
+  max-width: 90%;
+  padding: 1rem 1.2rem;
+}
+
+/* Recommendation line formatting */
+.recommendation-line {
+  margin-bottom: 0.5rem;
+  line-height: 1.5;
+}
+.recommendation-line:last-child {
+  margin-bottom: 0;
+}
+.recommendation-line:first-child {
+  font-weight: 600;
+  color: #42b983;
+  font-size: 1.05em;
+}
+
+.recommendation-heading {
+  font-weight: 700;
+  margin-bottom: 0.6rem;
+}
+
 .quick-replies {
   display: flex;
   flex-wrap: wrap;
@@ -308,6 +391,9 @@ function formatAnswer(a) {
   margin-top: 0.5rem;
   margin-bottom: 0.6rem;
   justify-content: flex-start;
+}
+.quick-replies.centered {
+  justify-content: center;
 }
 .chip {
   background: #f3f4f6; /* light neutral */
@@ -328,6 +414,30 @@ function formatAnswer(a) {
   background: #42b983;
   color: #fff;
   border-color: rgba(0,0,0,0.06);
+}
+.chip.continue-btn {
+  background: #42b983;
+  color: #fff;
+  padding: 0.6rem 1.05rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  border: 1px solid rgba(0,0,0,0.06);
+  box-shadow: 0 2px 6px rgba(2,6,23,0.06);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  transition: transform .12s ease, box-shadow .12s ease, background .12s ease;
+}
+.chip.continue-btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(2,6,23,0.12);
+}
+.chip.continue-btn .arrow {
+  font-size: 1.05rem;
+  transition: transform .2s ease;
+}
+.chip.continue-btn:hover .arrow {
+  transform: translateX(3px);
 }
 
 .composer { display:flex; gap:0.5rem; margin-top:0.6rem; align-items:center }

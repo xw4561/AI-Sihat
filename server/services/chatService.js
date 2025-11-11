@@ -65,6 +65,10 @@ function validateAnswer(question, input) {
 
     case "number_input":
       return input !== null && input !== undefined && !isNaN(Number(input));
+    
+    case "recommendation_display":
+      // Recommendation display doesn't need validation, any input proceeds
+      return true;
 
     case "single_choice":
       // For questions where a text input is expected for a "yes" answer,
@@ -181,7 +185,7 @@ function getNextQuestion(section, currentId, sessionData) {
     currentQ.next_logic &&
     typeof currentQ.next_logic === "string" &&
     !["SYMPTOM_ROUTING", "BRANCH_ON_PHLEGM", "AppFlow"].includes(currentQ.next_logic) &&
-    !currentQ.next_logic.includes("_REC")
+    !(typeof currentQ.next_logic === "string" && currentQ.next_logic.includes("_REC"))
   ) {
     const target = questions.find(q => q.id === currentQ.next_logic);
     if (target) return target;
@@ -208,7 +212,16 @@ function getNextQuestion(section, currentId, sessionData) {
     const storedSymptoms = answers["7"]; // Corrected from "8" to "7"
     if (!storedSymptoms || storedSymptoms.length === 0) return null;
 
-    const first = String(storedSymptoms[0]).toLowerCase();
+    // Store all symptoms in the queue if not already done
+    if (!sessionData.symptomQueue || sessionData.symptomQueue.length === 0) {
+      sessionData.symptomQueue = storedSymptoms.map(s => String(s).toLowerCase());
+      sessionData.currentSymptomIndex = 0;
+      sessionData.allRecommendations = [];
+    }
+
+    // Get the current symptom to process
+    const currentSymptom = sessionData.symptomQueue[sessionData.currentSymptomIndex];
+    
     const routes = {
       fever: "Fever",
       cough: "Cough",
@@ -225,7 +238,7 @@ function getNextQuestion(section, currentId, sessionData) {
       "itchy skin": "Itchy Skin"
     };
 
-    const nextSection = routes[first];
+    const nextSection = routes[currentSymptom];
     if (!nextSection) return null;
     sessionData.section = nextSection;
     return data[nextSection] ? data[nextSection][0] : null;
@@ -240,7 +253,7 @@ function getNextQuestion(section, currentId, sessionData) {
   }
 
   // Recommendation logic
-  if (currentQ.next_logic && currentQ.next_logic.includes("_REC")) {
+  if (typeof currentQ.next_logic === "string" && currentQ.next_logic.includes("_REC")) {
     const rawAns = answers["8"];
     if (!rawAns) {
       sessionData.section = "AppFlow";
@@ -272,16 +285,62 @@ function getNextQuestion(section, currentId, sessionData) {
       "Nausea and Vomiting", "Indigestion", "Bloat", "Menstrual Pain",
       "Joint Pain", "Muscle Pain", "Itchy Skin"
     ];
+    
+    // If we're at the end of a symptom section
     if (symptomSections.includes(section)) {
+      // Collect the recommendation for this symptom
+      const sectionData = data[section];
+      const recommendationObj = sectionData?.find(q => q.type === "recommendation");
+      if (recommendationObj && recommendationObj.prompt) {
+        if (!sessionData.allRecommendations) {
+          sessionData.allRecommendations = [];
+        }
+        sessionData.allRecommendations.push({
+          symptom: section,
+          details: recommendationObj.prompt
+        });
+      }
+      
+      // Check if there are more symptoms to process
+      if (sessionData.symptomQueue && 
+          sessionData.currentSymptomIndex < sessionData.symptomQueue.length - 1) {
+        // Move to next symptom
+        sessionData.currentSymptomIndex++;
+        const nextSymptom = sessionData.symptomQueue[sessionData.currentSymptomIndex];
+        
+        const routes = {
+          fever: "Fever",
+          cough: "Cough",
+          flu: "Flu",
+          cold: "Cold",
+          diarrhoe: "Diarrhoe",
+          constipation: "Constipation",
+          "nausea and vomiting": "Nausea and Vomiting",
+          indigestion: "Indigestion",
+          bloat: "Bloat",
+          "menstrual pain": "Menstrual Pain",
+          "joint pain": "Joint Pain",
+          "muscle pain": "Muscle Pain",
+          "itchy skin": "Itchy Skin"
+        };
+        
+        const nextSection = routes[nextSymptom];
+        if (nextSection && data[nextSection]) {
+          sessionData.section = nextSection;
+          return data[nextSection][0];
+        }
+      }
+      
+      // All symptoms processed, go to AppFlow
       sessionData.section = "AppFlow";
       return data["AppFlow"][0];
     }
     return null;
   }
 
-  // Skip pregnancy if male
-  if (candidate.id === "7") {
-    const genderRaw = answers["6"];
+  // Skip pregnancy question (id "6") if male
+  if (candidate && candidate.id === "6") {
+    const genderRaw = answers["5"];
     const gender = typeof genderRaw === "object" && genderRaw?.userInput ? genderRaw.userInput : genderRaw;
     if (String(gender).toLowerCase() === "male") {
       candidate = questions[idx + 2] || null;
@@ -308,7 +367,10 @@ async function startChat(userId = null) {
     section,
     answers: {},
     currentId: firstQ?.id,
-    userId
+    userId,
+    symptomQueue: [], // Queue to track multiple symptoms
+    currentSymptomIndex: 0, // Track which symptom we're currently on
+    allRecommendations: [] // Collect all recommendations
   });
 
   // Save session in database (single record)
@@ -359,7 +421,7 @@ async function answerQuestion(sessionId, answer) {
     // Save chat record safely
     const sectionData = data[session.section];
     const recommendationObj = sectionData?.find(q => q.type === "recommendation");
-    const recommendation = recommendationObj ? recommendationObj.details.join("\n") : null;
+    const recommendation = recommendationObj ? (Array.isArray(recommendationObj.prompt) ? recommendationObj.prompt.join("\n") : recommendationObj.prompt) : null;
 
     if (session.userId) {
       await prisma.chat.upsert({
@@ -390,22 +452,35 @@ async function answerQuestion(sessionId, answer) {
     };
   }
 
+  // Handle recommendation display type - inject actual recommendations into the question
+  if (nextQ && nextQ.type === "recommendation_display") {
+    // Combine all collected recommendations
+    if (session.allRecommendations && session.allRecommendations.length > 0) {
+      const recsText = session.allRecommendations.map(rec => {
+        return `\n--- ${rec.symptom} ---\n` + rec.details.join("\n");
+      }).join("\n\n");
+      nextQ = {
+        ...nextQ,
+        prompt: nextQ.prompt + "\n\n" + recsText
+      };
+    }
+  }
+
   // CASE 2: CommonIntake flow (gender-based / symptom routing)
   if (section === "CommonIntake") {
-    if (currentId === "3" && processed === "Male") nextQ = questions.find(q => q.id === "5");
-    else if (currentId === "3" && processed === "Female") nextQ = questions.find(q => q.id === "4");
-    else if (currentId === "4") nextQ = questions.find(q => q.id === "5");
-    else if (currentId === "10") {
-      const storedSymptoms = session.answers["5"];
-      if (storedSymptoms && storedSymptoms.length > 0) {
-        const firstSymptom = storedSymptoms[0];
-        if (data[firstSymptom]) {
-          session.section = firstSymptom;
-          session.currentId = data[firstSymptom][0].id;
-          nextQ = data[firstSymptom][0];
-        }
-      }
-    } else {
+    if (currentId === "5" && processed === "Male") {
+      // Skip pregnancy question for males, go directly to symptoms
+      nextQ = questions.find(q => q.id === "7");
+    }
+    else if (currentId === "5" && processed === "Female") {
+      // Ask pregnancy question for females
+      nextQ = questions.find(q => q.id === "6");
+    }
+    else if (currentId === "6") {
+      // After pregnancy question, go to symptoms
+      nextQ = questions.find(q => q.id === "7");
+    }
+    else {
       nextQ = getNextQuestion(section, currentId, session);
     }
   }
@@ -420,7 +495,19 @@ async function answerQuestion(sessionId, answer) {
   // Get recommendation if any
   const sectionData = data[session.section];
   const recommendationObj = sectionData?.find(q => q.type === "recommendation");
-  const recommendation = recommendationObj ? recommendationObj.details.join("\n") : null;
+  
+  // Combine all collected recommendations for multi-symptom cases
+  let recommendation = null;
+  if (session.allRecommendations && session.allRecommendations.length > 0) {
+    // Format all recommendations from multiple symptoms
+    const allRecsText = session.allRecommendations.map(rec => {
+      return `\n--- ${rec.symptom} ---\n` + rec.details.join("\n");
+    }).join("\n\n");
+    recommendation = allRecsText;
+  } else if (recommendationObj) {
+    // Single symptom recommendation
+    recommendation = Array.isArray(recommendationObj.prompt) ? recommendationObj.prompt.join("\n") : recommendationObj.prompt;
+  }
 
   // Upsert or create chat record safely
   if (session.userId) {
@@ -467,7 +554,7 @@ function getRecommendation(sessionId) {
 
   return {
     sessionId,
-    recommendation: rec ? rec.details : ["No recommendation available."]
+    recommendation: rec ? rec.prompt : ["No recommendation available."]
   };
 }
 

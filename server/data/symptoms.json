@@ -128,8 +128,8 @@
     {
       "id": "R1",
       "type": "recommendation",
-      "prompt": "ANS for Less than 1 days, 2 days",
-      "details": [
+      "comment": "ANS for Less than 1 days, 2 days",
+      "prompt": [
         "Hurix's 600 Fluaway capsule improved: 3 tablets 4 times per days",
         "If your conditin become serious or do not get well ,pls refer to doctor for deeper check up",
         "Please have a good rest,drink enough water. Thank you for your time ."
@@ -139,8 +139,8 @@
     {
       "id": "R2",
       "type": "recommendation",
-      "prompt": "ANS for More than 3 days",
-      "details": [
+      "comment": "ANS for More than 3 days",
+      "prompt": [
         "Hurix's 600 Fluaway capsule improved :3 tablets 4 times per days",
         "I recommand your refer to doctor for deeper check up because your condition persist too many days",
         "Please have a good rest,drink enough water. Thank you for your time ."
@@ -161,8 +161,8 @@
     {
       "id": "R1",
       "type": "recommendation",
-      "prompt": "ANS for Less than 1 days, 2 days",
-      "details": [
+      "comment": "ANS for Less than 1 days, 2 days",
+      "prompt": [
         "Paracetamol ( Panadol ) 500mg : 2 tablets three times a day, max 8 tablets per day",
         "If your conditin become serious or do not get well ,pls refer to doctor for deeper check up",
         "S/E : dizzy",
@@ -173,8 +173,8 @@
     {
       "id": "R2",
       "type": "recommendation",
-      "prompt": "ANS for More than 3 days",
-      "details": [
+      "comment": "ANS for More than 3 days",
+      "prompt": [
         "Paracetamol ( Panadol ) 500mg : 2 tablets three times a day, max 8 tablets per day",
         "I recommand your refer to doctor for deeper check up because your condition persist too many days",
         "S/E : dizzy",
@@ -217,8 +217,8 @@
     {
       "id": "CA_R1_WET",
       "type": "recommendation",
-      "prompt": "ANS for Less than 1 days, 2 days (Wet Cough)",
-      "details": [
+      "comment": "ANS for Less than 1 days, 2 days (Wet Cough)",
+      "prompt": [
         "Breacol Expectorant (Guaifenesin) : 10-20ml every 4 hours",
         "If your conditin become serious or do not get well ,pls refer to doctor for deeper check up",
         "Avoid spicy,greasy and fast food as they might worsen the constipation",
@@ -229,8 +229,8 @@
     {
       "id": "CA_R2_WET",
       "type": "recommendation",
-      "prompt": "ANS for More than 3 days (Wet Cough)",
-      "details": [
+      "comment": "ANS for More than 3 days (Wet Cough)",
+      "prompt": [
         "Breacol Expectorant (Guaifenesin) : 10-20ml every 4 hours",
         "I recommand your refer to doctor for deeper check up because your condition persist too many days",
         "Avoid spicy,greasy and fast food as they might worsen the constipation",
@@ -241,8 +241,8 @@
     {
       "id": "CA_R1_DRY",
       "type": "recommendation",
-      "prompt": "ANS for Less than 1 days, 2 days (Dry Cough)",
-      "details": [
+      "comment": "ANS for Less than 1 days, 2 days (Dry Cough)",
+      "prompt": [
         "Duro Herb Dry Cough Syrup (Guaifenesin) : 15ml 4 times per day",
         "If your conditin become serious or do not get well ,pls refer to doctor for deeper check up",
         "Avoid spicy,greasy and fast food as they might worsen the constipation",
@@ -253,8 +253,8 @@
     {
       "id": "CA_R2_DRY",
       "type": "recommendation",
-      "prompt": "ANS for More than 3 days (Dry Cough)",
-      "details": [
+      "comment": "ANS for More than 3 days (Dry Cough)",
+      "prompt": [
         "Duro Herb Dry Cough Syrup (Guaifenesin) : 15ml 4 times per day",
         "I recommand your refer to doctor for deeper check up because your condition persist too many days",
         "Avoid spicy,greasy and fast food as they might worsen the constipation",
@@ -281,8 +281,8 @@
     {
       "id": "R1",
       "type": "recommendation",
-      "prompt": "ANS for Less than 1 days, 2 days",
-      "details": [
+      "comment": "ANS for Less than 1 days, 2 days",
+      "prompt": [
         "Hurix's 600 Fluaway capsule improved: 3 tablets 4 times per days",
         "If your conditin become serious or do not get well ,pls refer to doctor for deeper check up",
         "Please have a good rest,drink enough water. Thank you for your time ."
@@ -292,8 +292,8 @@
     {
       "id": "R2",
       "type": "recommendation",
-      "prompt": "ANS for More than 3 days",
-      "details": [
+      "comment": "ANS for More than 3 days",
+      "prompt": [
         "Hurix's 600 Fluaway capsule improved :3 tablets 4 times per days",
         "I recommand your refer to doctor for deeper check up because your condition persist too many days",
         "Please have a good rest,drink enough water. Thank you for your time ."
@@ -325,8 +325,8 @@
     {
       "id": "R1",
       "type": "recommendation",
-      "prompt": "ANS for Less than 1 days/ 2times per day",
-      "details": [
+      "comment": "ANS for Less than 1 days/ 2times per day",
+      "prompt": [
         "Oral rehydration salt ( B plus) : dissolve 1 sachet in 200ml of cold boiled water , 1-2 sachet for loose motion .",
         "Pharmacist suggestion: come to our pharmacy to get a more suitable medicine to solve ur problem",
         "If your conditin become serious or do not get well ,pls refer to doctor for deeper check up",
@@ -338,8 +338,8 @@
     {
       "id": "R2",
       "type": "recommendation",
-      "prompt": "ANS for More than 1 days , 3times per day",
-      "details": [
+      "comment": "ANS for More than 1 days , 3times per day",
+      "prompt": [
         "Oral rehydration salt ( B plus) : dissolve 1 sachet in 200ml of cold boiled water , 1-2 sachet for loose motion .",
         "I recommand your refer to doctor for deeper check up because your condition persist too many days",
         "S/E : dizzy",
@@ -373,8 +373,8 @@
     {
       "id": "R1",
       "type": "recommendation",
-      "prompt": "ANS for Less than 1 days, 2 days",
-      "details": [
+      "comment": "ANS for Less than 1 days, 2 days",
+      "prompt": [
         "Antacid (Gasviscon) : 1 sachet ( 10-20ml) 1 hour after food , if you take other medication one hour before or after taking antacid",
         "If your conditin become serious or do not get well ,pls refer to doctor for deeper check up",
         "S/E : No",
@@ -386,8 +386,8 @@
     {
       "id": "R2",
       "type": "recommendation",
-      "prompt": "ANS for More than 3 days , 3times per day",
-      "details": [
+      "comment": "ANS for More than 3 days , 3times per day",
+      "prompt": [
         "Antacid (Gasviscon) : 1 sachet (10-20ml) 1 hour after food , if you take other medication one hour before or after taking antacid",
         "I recommand your refer to doctor for deeper check up because your condition persist too many days",
         "S/E : No",
@@ -455,8 +455,8 @@
     {
       "id": "R1",
       "type": "recommendation",
-      "prompt": "ANS for Less than 1 days, 2 days / less than 3 stools per day, no blood in stool",
-      "details": [
+      "comment": "ANS for Less than 1 days, 2 days / less than 3 stools per day, no blood in stool",
+      "prompt": [
         "Activated Charcoal ( Norit): 2 tablets every 4 hours per day , you should not take activated charcoal with other drug, I will suggest you to take it at least 2 hours befor or after taking other medicine because it will remove your medicine together with the diarrhea-causing toxin",
         "Oral rehydration salt ( B plus) : dissolve 1 sachet in 200ml of cold boiled water , 1-2 sachet for loose motion .",
         "If your conditin become serious or do not get well ,pls refer to doctor for deeper check up",
@@ -470,8 +470,8 @@
     {
       "id": "R2",
       "type": "recommendation",
-      "prompt": "ANS for More than 3 days , more than 3 stools per day , got blood in stool",
-      "details": [
+      "comment": "ANS for More than 3 days , more than 3 stools per day , got blood in stool",
+      "prompt": [
         "Activated Charcoal ( Norit): 2 tablets every 4 hours per day , you should not take activated charcoal with other drug, I will suggest you to take it at least 2 hours befor or after taking other medicine because it will remove your medicine together with the diarrhea-causing toxin",
         "Oral rehydration salt ( B plus) : dissolve 1 sachet in 200ml of cold boiled water , 1-2 sachet for loose motion .",
         "I recommand your refer to doctor for deeper check up because your condition persist too many days",
@@ -521,8 +521,8 @@
     {
       "id": "R1",
       "type": "recommendation",
-      "prompt": "ANS for Less than 1 days, 2 days",
-      "details": [
+      "comment": "ANS for Less than 1 days, 2 days",
+      "prompt": [
         "Lactul Solution (Lactulose) :15ml twice daily",
         "If your conditin become serious or do not get well ,pls refer to doctor for deeper check up",
         "S/E : You might feel abdominal pain but this is the normal side effects for this Lactul",
@@ -534,8 +534,8 @@
     {
       "id": "R2",
       "type": "recommendation",
-      "prompt": "ANS for More than 3 days",
-      "details": [
+      "comment": "ANS for More than 3 days",
+      "prompt": [
         "Lactul Solution (Lactulose) :15ml twice daily ,l",
         "I recommand your refer to doctor for deeper check up because your condition persist too many days",
         "S/E : You might feel abdominal pain but this is the normal side effects for this Lactul",
@@ -562,8 +562,8 @@
     {
       "id": "R1",
       "type": "recommendation",
-      "prompt": "ANS for Less than 1 days, 2 days , pain rate less than 7",
-      "details": [
+      "comment": "ANS for Less than 1 days, 2 days , pain rate less than 7",
+      "prompt": [
         "Paracetamol ( Panadol) 500mg and Caffeine 65mg : 2 tablets every 4 hours , max 8 tablets per day",
         "If your conditin become serious or do not get well ,pls refer to doctor for deeper check up",
         "S/E : uncomfortable chest, difficulty to sleep, shaking ",
@@ -574,8 +574,8 @@
     {
       "id": "R2",
       "type": "recommendation",
-      "prompt": "ANS for More than 3 days, pain level more than 7",
-      "details": [
+      "comment": "ANS for More than 3 days, pain level more than 7",
+      "prompt": [
         "Paracetamol ( Panadol) 500mg and Caffeine 65mg : 2 tablets every 4 hours , max 8 tablets per day",
         "I recommand your refer to doctor for deeper check up because your condition persist too many days",
         "S/E : uncomfortable chest, difficulty to sleep, shaking ",
@@ -607,8 +607,8 @@
     {
       "id": "R1",
       "type": "recommendation",
-      "prompt": "ANS for Less than 1 days, 2 days , pain rate less than 7",
-      "details": [
+      "comment": "ANS for Less than 1 days, 2 days , pain rate less than 7",
+      "prompt": [
         "Paracetamol ( Panadol Extend ) 665mg: 2 tablets every 8 hours , max 6 tablets per day",
         "If your conditin become serious or do not get well ,pls refer to doctor for deeper check up",
         "S/E : No",
@@ -619,8 +619,8 @@
     {
       "id": "R2",
       "type": "recommendation",
-      "prompt": "ANS for More than 3 days, pain level more than 7",
-      "details": [
+      "comment": "ANS for More than 3 days, pain level more than 7",
+      "prompt": [
         "Paracetamol ( Panadol Extend ) 665mg: 2 tablets every 8 hours , max 6 tablets per day",
         "I recommand your refer to doctor for deeper check up because your condition persist too many days",
         "S/E : No",
@@ -659,8 +659,8 @@
     {
       "id": "R1",
       "type": "recommendation",
-      "prompt": "ANS for Less than 1 days, 2 days , pain rate less than 7",
-      "details": [
+      "comment": "ANS for Less than 1 days, 2 days , pain rate less than 7",
+      "prompt": [
         "Paracetamol ( Panadol Extend for muscle and joint ) 665mg: 2 tablets every 8 hours , max 6 tablets per day",
         "If your conditin become serious or do not get well ,pls refer to doctor for deeper check up",
         "S/E : No",
@@ -671,8 +671,8 @@
     {
       "id": "R2",
       "type": "recommendation",
-      "prompt": "ANS for More than 3 days, pain level more than 7",
-      "details": [
+      "comment": "ANS for More than 3 days, pain level more than 7",
+      "prompt": [
         "Paracetamol ( Panadol Extend for muscle and joint ) 665mg: 2 tablets every 8 hours , max 6 tablets per day",
         "I recommand your refer to doctor for deeper check up because your condition persist too many days",
         "S/E : No",
@@ -713,8 +713,8 @@
     {
       "id": "R1",
       "type": "recommendation",
-      "prompt": "ANS for Less than 1 days, 2 days",
-      "details": [
+      "comment": "ANS for Less than 1 days, 2 days",
+      "prompt": [
         "Simethicone (Gazgo ) 200mg : 1 softgel 3 to 4 times daily , after meal or before bed",
         "If your conditin become serious or do not get well ,pls refer to doctor for deeper check up",
         "S/E : No",
@@ -726,8 +726,8 @@
     {
       "id": "R2",
       "type": "recommendation",
-      "prompt": "ANS for More than 3 days , 3times per day",
-      "details": [
+      "comment": "ANS for More than 3 days , 3times per day",
+      "prompt": [
         "Simethicone (Gazgo ) 200mg : 1 softgel 3 to 4 times daily , after meal or before bed",
         "I recommand your refer to doctor for deeper check up because your condition persist too many days",
         "S/E : No",
@@ -761,8 +761,8 @@
     {
       "id": "R1",
       "type": "recommendation",
-      "prompt": "ANS for Less than 2 days",
-      "details": [
+      "comment": "ANS for Less than 2 days",
+      "prompt": [
         "Bepanthen Itchy Relief Cream : Apply on skin only , avoid sensitive area such as lips, vagina .",
         "If your conditin become serious or do not get well ,pls refer to doctor for deeper check up",
         "S/E : No",
@@ -773,8 +773,8 @@
     {
       "id": "R2",
       "type": "recommendation",
-      "prompt": "ANS for More than 3 days",
-      "details": [
+      "comment": "ANS for More than 3 days",
+      "prompt": [
         "Bepanthen Itchy Relief Cream : Apply on skin only",
         "I recommand your refer to doctor for deeper check up because your condition persist too many days",
         "S/E : No",
@@ -785,6 +785,13 @@
   ],
 
   "AppFlow": [
+    {
+      "id": "A0",
+      "prompt": "Based on your symptoms, here are our recommendations:",
+      "prompt_my": "Berdasarkan simptom anda, berikut adalah cadangan kami:",
+      "type": "recommendation_display",
+      "next_logic": "A1"
+    },
     {
       "id": "A1",
       "prompt": "Do you want to purchase this medication?",
