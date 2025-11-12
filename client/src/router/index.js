@@ -10,6 +10,9 @@ import APITest from '../views/APITest.vue'
 import DatabaseManager from '../views/DatabaseManager.vue'
 import RoleSelection from '../views/RoleSelection.vue'
 import Profile from '../views/Profile.vue'
+import Shop from '../views/Shop.vue'
+import Checkout from '../views/Checkout.vue'
+import OrderConfirmed from '../views/OrderConfirmed.vue'
 
 const routes = [
   {
@@ -41,6 +44,24 @@ const routes = [
     path: '/customer',
     name: 'CustomerHome',
     component: CustomerHome,
+    meta: { requiresAuth: true, role: 'customer' }
+  },
+  {
+    path: '/shop',
+    name: 'Shop',
+    component: Shop,
+    meta: { requiresAuth: true, role: 'customer' }
+  },
+  {
+    path: '/checkout',
+    name: 'Checkout',
+    component: Checkout,
+    meta: { requiresAuth: true, role: 'customer' }
+  },
+  {
+    path: '/order-confirmed',
+    name: 'OrderConfirmed',
+    component: OrderConfirmed,
     meta: { requiresAuth: true, role: 'customer' }
   },
   {
@@ -78,7 +99,8 @@ const routes = [
     name: 'Profile',
     component: Profile,
     meta: { requiresAuth: true }
-  }
+  },
+
 ]
 
 const router = createRouter({

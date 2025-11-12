@@ -12,6 +12,11 @@
       <router-link to="/customer" class="nav-item">Customer</router-link>
       <router-link to="/pharmacist" class="nav-item">Pharmacist</router-link>
       <router-link to="/admin" class="nav-item">Admin</router-link>
+
+      <router-link to="/cart" class="nav-item cart-link">
+        🛒 Cart <span v-if="cart.totalItems > 0" class="badge">{{ cart.totalItems }}</span>
+      </router-link>
+
       <button class="nav-item" @click="logout">Logout</button>
     </footer>
   </div>
@@ -20,9 +25,11 @@
 <script setup>
 import { computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { useCartStore } from './store/cart'; 
 
 const route = useRoute();
 const router = useRouter();
+const cart = useCartStore(); 
 
 const showNavbar = computed(() => {
   return !['/login', '/signup'].includes(route.path);
@@ -106,5 +113,21 @@ header::before { content: ''; display: block; height: 4px; background: linear-gr
   header { padding: 1rem 2rem }
   h1 { font-size: 1.4rem }
   main { max-width: 820px; padding: 2rem; padding-bottom: 2rem }
+}
+
+.cart-link {
+  position: relative;
+}
+
+.badge {
+  background: red;
+  color: white;
+  font-size: 0.75rem;
+  font-weight: bold;
+  border-radius: 999px;
+  padding: 0.1rem 0.45rem;
+  position: absolute;
+  top: -6px;
+  right: -10px;
 }
 </style>
