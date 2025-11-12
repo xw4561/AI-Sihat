@@ -42,6 +42,11 @@
         </div>
       </template>
 
+      <!-- Placeholder user bubble to maintain width consistency before first reply -->
+      <div v-if="showPlaceholder" class="bubble user placeholder">
+        <div class="bubble-content">Can you describe your symptoms in your own words?</div>
+      </div>
+
       <!-- Current question from bot (if any) -->
       <div v-if="currentQuestion && !isRecommendationHeading(currentQuestion.prompt)" class="bubble bot current">
         <div class="bubble-content">
@@ -148,6 +153,7 @@ const history = ref([])
 const otherSymptomSelected = ref(false)
 const yesSelected = ref(false)
 const addedToCart = ref([]) // Track medications added to cart
+const showPlaceholder = ref(true) // Show placeholder bubble until first reply
 
 // form state
 const singleChoice = ref('')
@@ -241,6 +247,7 @@ async function startSession() {
 
 function refreshChat() {
   // clear history and restart
+  showPlaceholder.value = true // Reset placeholder for new chat
   startSession()
 }
 
@@ -280,6 +287,9 @@ async function sendAnswer() {
       sessionId: sessionId.value,
       answer: buildAnswerPayload()
     }
+
+    // Hide placeholder after first answer
+    showPlaceholder.value = false
 
     // Store previous question type to determine if we should add to history
     const previousQuestionType = currentQuestion.value.type
@@ -520,10 +530,12 @@ function formatAnswer(a) {
 <style scoped>
 .chat {
   max-width: 800px;
+  width: 100%;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  height: 70vh;
+  height: calc(100vh - 200px);
+  min-height: 400px;
 }
 
 .chat-header {
@@ -545,18 +557,33 @@ function formatAnswer(a) {
   padding: 1rem;
   overflow-y: auto;
   border-radius: 10px;
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Push content to bottom when there's not enough to fill the container */
+.messages > :first-child {
+  margin-top: auto;
 }
 
 .empty { color:#666; text-align:center; padding:1.2rem }
 .status { color:#666; font-style:italic; text-align:center; padding:0.6rem }
 
-.bubble { display: flex; margin: 0.5rem 0 }
+.bubble { display: flex; margin: 0.5rem 0; width: 100%; }
 .bubble .bubble-content { max-width: 75%; padding:0.6rem 0.9rem; border-radius:12px }
 .bubble.bot { justify-content: flex-start }
 .bubble.bot .bubble-content { background: #fff; color:#2c3e50; border:1px solid #eee }
 .bubble.user { justify-content: flex-end }
 .bubble.user .bubble-content { background: #42b983; color:#fff }
 .bubble.current .bubble-content { box-shadow: 0 2px 8px rgba(0,0,0,0.06) }
+
+/* Placeholder bubble - transparent to maintain width without being obvious */
+.bubble.placeholder .bubble-content {
+  opacity: 0;
+  pointer-events: none;
+}
 
 /* Make recommendation bubbles wider */
 .bubble.bot .bubble-content:has(.recommendation-line) {
