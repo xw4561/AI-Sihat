@@ -291,12 +291,16 @@ async function startChat(userId = null) {
   });
 
   // Save session in database (single record)
-  await prisma.chat.create({
-    data: {
-      userId,
-      sessionData: {},
-    },
-  });
+  try {
+    await prisma.chat.create({
+      data: {
+        userId,
+        sessionData: {},
+      },
+    });
+  } catch (err) {
+    console.error('Failed to create chat record:', err);
+  }
 
   return {
     sessionId,
@@ -340,26 +344,30 @@ async function answerQuestion(sessionId, answer) {
     const recommendationObj = sectionData?.find(q => q.type === "recommendation");
     const recommendation = recommendationObj ? recommendationObj.details : null;
 
-    if (session.userId) {
-      await prisma.chat.upsert({
-        where: { userId: session.userId },
-        update: {
-          sessionData: session.answers,
-          recommendation: recommendation,
-        },
-        create: {
-          userId: session.userId,
-          sessionData: session.answers,
-          recommendation: recommendation,
-        },
-      });
-    } else {
-      await prisma.chat.create({
-        data: {
-          sessionData: session.answers,
-          recommendation: recommendation,
-        },
-      });
+    try {
+      if (session.userId) {
+        await prisma.chat.upsert({
+          where: { userId: session.userId },
+          update: {
+            sessionData: session.answers,
+            recommendation: recommendation,
+          },
+          create: {
+            userId: session.userId,
+            sessionData: session.answers,
+            recommendation: recommendation,
+          },
+        });
+      } else {
+        await prisma.chat.create({
+          data: {
+            sessionData: session.answers,
+            recommendation: recommendation,
+          },
+        });
+      }
+    } catch (err) {
+      console.error('Failed to save chat record:', err);
     }
 
     return {
@@ -402,26 +410,30 @@ async function answerQuestion(sessionId, answer) {
   const recommendation = recommendationObj ? recommendationObj.details : null;
 
   // Upsert or create chat record safely
-  if (session.userId) {
-    await prisma.chat.upsert({
-      where: { userId: session.userId },
-      update: { 
-        sessionData: session.answers,
-        recommendation: recommendation,
-      },
-      create: {
-        userId: session.userId,
-        sessionData: session.answers,
-        recommendation: recommendation,
-      },
-    });
-  } else {
-    await prisma.chat.create({
-      data: {
-        sessionData: session.answers,
-        recommendation: recommendation,
-      },
-    });
+  try {
+    if (session.userId) {
+      await prisma.chat.upsert({
+        where: { userId: session.userId },
+        update: { 
+          sessionData: session.answers,
+          recommendation: recommendation,
+        },
+        create: {
+          userId: session.userId,
+          sessionData: session.answers,
+          recommendation: recommendation,
+        },
+      });
+    } else {
+      await prisma.chat.create({
+        data: {
+          sessionData: session.answers,
+          recommendation: recommendation,
+        },
+      });
+    }
+  } catch (err) {
+    console.error('Failed to save chat record:', err);
   }
 
   return {
