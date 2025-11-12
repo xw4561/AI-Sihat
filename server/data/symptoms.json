@@ -55,18 +55,14 @@
         "Flu",
         "Cold",
         "Nausea and Vomiting",
-        "Diarrhoe",
-        "Indigestion",
-        "Bloat",
-        "Gastritis",
-        "Stomach Pain",
         "Constipation",
+        "Diarrhoea",
+        "Indigestion/Heartburn",
         "Menstrual Pain",
         "Joint Pain",
         "Muscle Pain",
+        "Bloat",
         "Itchy Skin",
-        "Sunburn",
-        "Cut",
         "Other (Specify)"
       ],
       "next_logic": "8"
@@ -202,14 +198,14 @@
     },
     {
       "id": "CA3_WET",
-      "prompt": "Do you experience it before?",
+      "prompt": "Do you experience phlegm before?",
       "type": "single_choice",
       "options": ["Yes", "No"],
       "next_logic": "CA4_REC_WET"
     },
     {
       "id": "CA3_DRY",
-      "prompt": "Do you experience it before?",
+      "prompt": "Do you experience phlegm before?",
       "type": "single_choice",
       "options": ["Yes", "No"],
       "next_logic": "CA4_REC_DRY"
@@ -348,7 +344,7 @@
       "next_logic": "AppFlow"
     }
   ],
-  "Indigestion": [
+  "Indigestion/Heartburn": [
     {
       "id": "IH1",
       "prompt": "Do you experience it before?",
@@ -397,7 +393,7 @@
       "next_logic": "AppFlow"
     }
   ],
-  "Diarrhoe": [
+  "Diarrhoea": [
     {
       "id": "DI1",
       "prompt": "Do you experience it before?",
@@ -786,65 +782,16 @@
 
   "AppFlow": [
     {
-      "id": "A0",
-      "prompt": "Based on your symptoms, here are our recommendations:",
-      "prompt_my": "Berdasarkan simptom anda, berikut adalah cadangan kami:",
-      "type": "recommendation_display",
-      "next_logic": "A1"
-    },
-    {
       "id": "A1",
-      "prompt": "Do you want to purchase this medication?",
-	  "prompt_my": "Adakah anda mahu membeli ubat ini?",
-      "type": "single_choice",
-      "options": ["Yes", "No"],
-      "next_logic": {
-        "Yes": "A2",
-        "No": "A7"
-      }
+      "prompt": "Would you like to add these medications to your cart?",
+      "type": "medication_cart",
+      "medications": [],
+      "next_logic": "A2"
     },
     {
       "id": "A2",
-      "prompt": "Choose your preferred method",
-	  "prompt_my": "Pilih kaedah pilihan anda",
-      "type": "single_choice",
-      "options": ["Pick Up", "Delivery"],
-      "next_logic": {
-        "Pick Up": "A3",
-        "Delivery": "A4"
-      }
-    },
-    {
-      "id": "A3",
-      "prompt": "Purchase method (Pick Up)",
-	  "prompt_my": "Kaedah pembelian (Ambil Sendiri)",
-      "type": "single_choice",
-      "options": ["Online Banking", "Touch N Go", "Pay at counter"],
-      "next_logic": "A7"
-    },
-    {
-      "id": "A4",
-      "prompt": "Type your address (Delivery)",
-      "type": "text_input",
-      "next_logic": "A5"
-    },
-    {
-      "id": "A5",
-      "prompt": "Phone number (Delivery)",
-      "type": "number_input",
-      "next_logic": "A6"
-    },
-    {
-      "id": "A6",
-      "prompt": "Purchase method (Delivery)",
-	  "prompt_my": "Kaedah pembelian (Penghantaran)",
-      "type": "single_choice",
-      "options": ["Online Banking", "Touch N Go"],
-      "next_logic": "A7"
-    },
-    {
-      "id": "A7",
-      "prompt": "Thanks for using AI Sihat Health Assistant. Wish you a speedy recovery!",
+      "prompt": "Thank you for using AI-Sihat! Your medications have been added to cart. You can proceed to checkout from the cart page. Wish you a speedy recovery!",
+      "type": "completion_message",
       "next_logic": null
     }
   ]

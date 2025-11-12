@@ -227,10 +227,10 @@ function getNextQuestion(section, currentId, sessionData) {
       cough: "Cough",
       flu: "Flu",
       cold: "Cold",
-      diarrhoe: "Diarrhoe",
+      diarrhoea: "Diarrhoea",
       constipation: "Constipation",
       "nausea and vomiting": "Nausea and Vomiting",
-      indigestion: "Indigestion",
+      "indigestion/heartburn": "Indigestion/Heartburn",
       bloat: "Bloat",
       "menstrual pain": "Menstrual Pain",
       "joint pain": "Joint Pain",
@@ -252,7 +252,7 @@ function getNextQuestion(section, currentId, sessionData) {
     return data[section].find(q => q.id === targetId);
   }
 
-  // Recommendation logic
+  // Recommendation logic based on duration
   if (typeof currentQ.next_logic === "string" && currentQ.next_logic.includes("_REC")) {
     const rawAns = answers["8"];
     if (!rawAns) {
@@ -271,40 +271,36 @@ function getNextQuestion(section, currentId, sessionData) {
       targetId = route === "R1" ? "CA_R1_DRY" : "CA_R2_DRY";
     }
 
-    return data[section].find(q => q.id === targetId);
-  }
-
-  // Sequential fallback
-  const idx = questions.findIndex(q => q.id === currentId);
-  if (idx === -1) return null;
-
-  let candidate = questions[idx + 1] || null;
-  if (!candidate) {
+    const recommendationObj = data[section].find(q => q.id === targetId);
+    
+    // Check if we're in multi-symptom flow
     const symptomSections = [
-      "Fever", "Flu", "Cough", "Cold", "Diarrhoe", "Constipation",
-      "Nausea and Vomiting", "Indigestion", "Bloat", "Menstrual Pain",
+      "Fever", "Flu", "Cough", "Cold", "Diarrhoea", "Constipation",
+      "Nausea and Vomiting", "Indigestion/Heartburn", "Bloat", "Menstrual Pain",
       "Joint Pain", "Muscle Pain", "Itchy Skin"
     ];
     
-    // If we're at the end of a symptom section
-    if (symptomSections.includes(section)) {
-      // Collect the recommendation for this symptom
-      const sectionData = data[section];
-      const recommendationObj = sectionData?.find(q => q.type === "recommendation");
+    if (symptomSections.includes(section) && sessionData.symptomQueue && sessionData.symptomQueue.length > 1) {
+      // Multi-symptom mode: collect recommendation and check for more symptoms
       if (recommendationObj && recommendationObj.prompt) {
         if (!sessionData.allRecommendations) {
           sessionData.allRecommendations = [];
         }
-        sessionData.allRecommendations.push({
-          symptom: section,
-          details: recommendationObj.prompt
-        });
+        
+        const alreadyCollected = sessionData.allRecommendations.some(
+          rec => rec.symptom === section
+        );
+        
+        if (!alreadyCollected) {
+          sessionData.allRecommendations.push({
+            symptom: section,
+            details: recommendationObj.prompt
+          });
+        }
       }
       
       // Check if there are more symptoms to process
-      if (sessionData.symptomQueue && 
-          sessionData.currentSymptomIndex < sessionData.symptomQueue.length - 1) {
-        // Move to next symptom
+      if (sessionData.currentSymptomIndex < sessionData.symptomQueue.length - 1) {
         sessionData.currentSymptomIndex++;
         const nextSymptom = sessionData.symptomQueue[sessionData.currentSymptomIndex];
         
@@ -313,10 +309,10 @@ function getNextQuestion(section, currentId, sessionData) {
           cough: "Cough",
           flu: "Flu",
           cold: "Cold",
-          diarrhoe: "Diarrhoe",
+          diarrhoea: "Diarrhoea",
           constipation: "Constipation",
           "nausea and vomiting": "Nausea and Vomiting",
-          indigestion: "Indigestion",
+          "indigestion/heartburn": "Indigestion/Heartburn",
           bloat: "Bloat",
           "menstrual pain": "Menstrual Pain",
           "joint pain": "Joint Pain",
@@ -331,9 +327,129 @@ function getNextQuestion(section, currentId, sessionData) {
         }
       }
       
-      // All symptoms processed, go to AppFlow
-      sessionData.section = "AppFlow";
-      return data["AppFlow"][0];
+      // All symptoms processed! Show combined recommendations
+      if (sessionData.allRecommendations && sessionData.allRecommendations.length > 0) {
+        const combinedPrompt = sessionData.allRecommendations.flatMap(rec => {
+          return [
+            `--- ${rec.symptom} ---`,
+            ...(Array.isArray(rec.details) ? rec.details : [rec.details])
+          ];
+        });
+        
+        // Extract medications from recommendations for cart
+        const medications = sessionData.allRecommendations.map(rec => {
+          // Get the first line which contains medication name and dosage
+          const details = Array.isArray(rec.details) ? rec.details : [rec.details];
+          const medicationLine = details.find(line => 
+            line && typeof line === 'string' && line.trim().length > 0
+          );
+          
+          return {
+            name: medicationLine || `Medication for ${rec.symptom}`,
+            symptom: rec.symptom,
+            imageUrl: null // Placeholder for now
+          };
+        }).filter(med => med.name); // Remove any invalid entries
+        
+        // Store medications in session for AppFlow
+        sessionData.medications = medications;
+        
+        return {
+          id: "COMBINED_REC",
+          type: "recommendation",
+          prompt: combinedPrompt,
+          next_logic: "AppFlow"
+        };
+      }
+    }
+    
+    // Single symptom or fallback: return recommendation directly
+    return recommendationObj;
+  }
+
+  // Sequential fallback
+  const idx = questions.findIndex(q => q.id === currentId);
+  if (idx === -1) return null;
+
+  let candidate = questions[idx + 1] || null;
+  if (!candidate) {
+    const symptomSections = [
+      "Fever", "Flu", "Cough", "Cold", "Diarrhoea", "Constipation",
+      "Nausea and Vomiting", "Indigestion/Heartburn", "Bloat", "Menstrual Pain",
+      "Joint Pain", "Muscle Pain", "Itchy Skin"
+    ];
+    
+    // If we're at the end of a symptom section in multi-symptom flow
+    if (symptomSections.includes(section)) {
+      const sectionData = data[section];
+      const recommendationObj = sectionData?.find(q => q.type === "recommendation");
+      
+      // Collect the recommendation silently
+      if (recommendationObj && recommendationObj.prompt) {
+        if (!sessionData.allRecommendations) {
+          sessionData.allRecommendations = [];
+        }
+        
+        // Check if already collected (avoid duplicates)
+        const alreadyCollected = sessionData.allRecommendations.some(
+          rec => rec.symptom === section
+        );
+        
+        if (!alreadyCollected) {
+          sessionData.allRecommendations.push({
+            symptom: section,
+            details: recommendationObj.prompt
+          });
+        }
+      }
+      
+      // Check if there are more symptoms to process
+      if (sessionData.symptomQueue && 
+          sessionData.currentSymptomIndex < sessionData.symptomQueue.length - 1) {
+        // Move to next symptom WITHOUT showing recommendation
+        sessionData.currentSymptomIndex++;
+        const nextSymptom = sessionData.symptomQueue[sessionData.currentSymptomIndex];
+        
+        const routes = {
+          fever: "Fever",
+          cough: "Cough",
+          flu: "Flu",
+          cold: "Cold",
+          diarrhoea: "Diarrhoea",
+          constipation: "Constipation",
+          "nausea and vomiting": "Nausea and Vomiting",
+          "indigestion/heartburn": "Indigestion/Heartburn",
+          bloat: "Bloat",
+          "menstrual pain": "Menstrual Pain",
+          "joint pain": "Joint Pain",
+          "muscle pain": "Muscle Pain",
+          "itchy skin": "Itchy Skin"
+        };
+        
+        const nextSection = routes[nextSymptom];
+        if (nextSection && data[nextSection]) {
+          sessionData.section = nextSection;
+          return data[nextSection][0];
+        }
+      }
+      
+      // All symptoms processed! Show combined recommendations
+      if (sessionData.allRecommendations && sessionData.allRecommendations.length > 0) {
+        const combinedPrompt = sessionData.allRecommendations.flatMap(rec => {
+          return [
+            `--- ${rec.symptom} ---`,
+            ...(Array.isArray(rec.details) ? rec.details : [rec.details])
+          ];
+        });
+        
+        // Return synthetic combined recommendation
+        return {
+          id: "COMBINED_REC",
+          type: "recommendation",
+          prompt: combinedPrompt,
+          next_logic: "AppFlow"
+        };
+      }
     }
     return null;
   }
@@ -393,6 +509,39 @@ async function answerQuestion(sessionId, answer) {
 
   const data = loadSymptomsData();
   const { section, currentId } = session;
+  
+  // Special handling for COMBINED_REC (dynamically created recommendation)
+  if (currentId === "COMBINED_REC") {
+    // Transition to AppFlow
+    session.section = "AppFlow";
+    const nextQ = data["AppFlow"][0];
+    session.currentId = nextQ?.id;
+    session.answers[currentId] = answer;
+    sessionService.updateSession(sessionId, session);
+    
+    // Inject medications into cart question
+    if (nextQ && nextQ.type === "medication_cart") {
+      if (session.medications && session.medications.length > 0) {
+        const medicationCartQ = {
+          ...nextQ,
+          medications: session.medications
+        };
+        
+        return {
+          sessionId,
+          answered: { id: currentId, prompt: "Based on your symptoms, here are our recommendations", answer },
+          nextQuestion: medicationCartQ
+        };
+      }
+    }
+    
+    return {
+      sessionId,
+      answered: { id: currentId, prompt: "Based on your symptoms, here are our recommendations", answer },
+      nextQuestion: nextQ
+    };
+  }
+  
   const questions = data[section];
   const currentQ = questions.find(q => q.id === currentId);
   if (!currentQ) throw new Error("Question not found");
@@ -530,6 +679,37 @@ async function answerQuestion(sessionId, answer) {
         recommendation: recommendation,
       },
     });
+  }
+
+  // Inject medications into AppFlow medication_cart question
+  if (nextQ && session.section === "AppFlow" && nextQ.type === "medication_cart") {
+    if (session.medications && session.medications.length > 0) {
+      nextQ = {
+        ...nextQ,
+        medications: session.medications
+      };
+    }
+  }
+
+  // Customize completion message based on cart activity
+  if (nextQ && nextQ.type === "completion_message") {
+    // Check if user added items to cart (from A1 answer)
+    const cartAnswer = session.answers["A1"];
+    const itemsAdded = cartAnswer && typeof cartAnswer === 'string' && cartAnswer.includes('Added') && !cartAnswer.includes('No items added');
+    
+    if (itemsAdded) {
+      // User added items - show success message
+      nextQ = {
+        ...nextQ,
+        prompt: "Thank you for using AI-Sihat! Your medications have been successfully added to cart. You can proceed to checkout from the cart page. Wish you a speedy recovery!"
+      };
+    } else {
+      // User didn't add items - show basic thank you
+      nextQ = {
+        ...nextQ,
+        prompt: "Thank you for using AI-Sihat! We hope our recommendations were helpful. Feel free to visit our pharmacy if you need assistance. Wish you a speedy recovery!"
+      };
+    }
   }
 
   return {
