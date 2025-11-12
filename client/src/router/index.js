@@ -13,6 +13,7 @@ import Profile from '../views/Profile.vue'
 import Shop from '../views/Shop.vue'
 import Checkout from '../views/Checkout.vue'
 import OrderConfirmed from '../views/OrderConfirmed.vue'
+import Cart from '../views/Cart.vue'
 
 const routes = [
   {
@@ -100,7 +101,12 @@ const routes = [
     component: Profile,
     meta: { requiresAuth: true }
   },
-
+  {
+    path: '/cart',
+    name: 'Cart',
+    component: Cart,
+    meta: { requiresAuth: true, role: 'customer' }
+  }
 ]
 
 const router = createRouter({

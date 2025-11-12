@@ -10,7 +10,7 @@
       />
     </div>
 
-    <router-link to="/checkout" class="cart-button">
+    <router-link to="/cart" class="cart-button">
       Go to Cart ({{ cart.totalItems }})
     </router-link>
   </div>

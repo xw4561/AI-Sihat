@@ -2,7 +2,7 @@
   <div class="order-confirmed">
     <h1>✅ Order Confirmed!</h1>
     <p>Your order has been placed successfully.</p>
-    <router-link to="/customer-home" class="home-btn">Go to Home
+    <router-link to="/customer" class="home-btn">Go to Home
     </router-link>
   </div>
 </template>

@@ -22,10 +22,42 @@
       <div class="total-price">
         <h3>Total Price: RM {{ cart.totalPrice.toFixed(2) }}</h3>
       </div>
-      <form @submit.prevent="submitOrder" class="checkout-form">
+
+      <!-- Pickup or Delivery selection -->
+      <div class="method-select">
+        <button
+          :class="{ active: orderType === 'pickup' }"
+          @click="orderType = 'pickup'"
+        >
+          Pickup
+        </button>
+        <button
+          :class="{ active: orderType === 'delivery' }"
+          @click="orderType = 'delivery'"
+        >
+          Delivery
+        </button>
+      </div>
+
+      <!-- Common form -->
+      <form @submit.prevent="submitOrder" class="checkout-form" v-if="orderType">
         <h3>Customer Information</h3>
         <input type="text" v-model="customerName" placeholder="Your Name" required />
         <input type="email" v-model="customerEmail" placeholder="Your Email" required />
+
+        <!-- Pickup fields -->
+        <template v-if="orderType === 'pickup'">
+          <input type="text" v-model="customerPhone" placeholder="Phone Number" required />
+          <input type="text" v-model="purchaseMethod" placeholder="Purchase Method (e.g. Cash/Online)" required />
+        </template>
+
+        <!-- Delivery fields -->
+        <template v-if="orderType === 'delivery'">
+          <input type="text" v-model="customerAddress" placeholder="Address" required />
+          <input type="text" v-model="customerPhone" placeholder="Phone Number" required />
+          <input type="text" v-model="purchaseMethod" placeholder="Purchase Method (e.g. Cash/Online)" required />
+        </template>
+
         <button type="submit" class="submit-order">Place Order</button>
       </form>
     </div>
@@ -33,21 +65,38 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
-import { useCartStore } from '../store/cart'
-import { useRouter } from 'vue-router'
+  import { ref } from 'vue'
+  import { useCartStore } from '../store/cart'
+  import { useRouter } from 'vue-router'
 
-const cart = useCartStore()
-const router = useRouter()
-const customerName = ref('')
-const customerEmail = ref('')
+  const cart = useCartStore()
+  const router = useRouter()
 
-function submitOrder() {
-  // Logic to handle order submission
-  //alert(`Order placed by ${customerName.value} (${customerEmail.value})`)
-  cart.clearCart() // Clear the cart after placing the order
-  router.push('/order-confirmed')
-}
+  const customerName = ref('')
+  const customerEmail = ref('')
+  const customerPhone = ref('')
+  const customerAddress = ref('')
+  const purchaseMethod = ref('')
+  const orderType = ref('') // 'pickup' or 'delivery'
+
+  function submitOrder() {
+    if (!orderType.value) {
+      alert('Please select Pickup or Delivery.')
+      return
+    }
+
+    if (orderType.value === 'pickup' && (!customerPhone.value || !purchaseMethod.value)) {
+      alert('Please fill in all required pickup details.')
+      return
+    }
+    if (orderType.value === 'delivery' && (!customerAddress.value || !customerPhone.value || !purchaseMethod.value)) {
+      alert('Please fill in all required delivery details.')
+      return
+    }
+
+    cart.clearCart()
+    router.push('/order-confirmed')
+  }
 </script>
 
 <style scoped>
@@ -103,5 +152,40 @@ function submitOrder() {
 }
 .submit-order:hover {
   background: #36976e;
+}
+.method-select {
+  display: flex;
+  justify-content: center;
+  gap: 1.5rem;
+  margin: 2rem 0;
+}
+
+.method-select button {
+  flex: 1;
+  max-width: 220px;
+  padding: 1rem 1.5rem;
+  border: 2px solid #42b983;
+  border-radius: 999px;
+  background: white;
+  color: #42b983;
+  font-weight: 600;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+}
+
+.method-select button:hover {
+  background: #e8f7f0;
+  transform: translateY(-2px);
+}
+
+.method-select button.active {
+  background: #42b983;
+  color: white;
+  box-shadow: 0 4px 12px rgba(66, 185, 131, 0.4);
 }
 </style>
