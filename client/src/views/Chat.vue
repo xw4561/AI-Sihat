@@ -20,11 +20,16 @@
             <!-- Format recommendation prompts nicely in history -->
             <template v-if="Array.isArray(item.q.prompt)">
               <div class="recommendation-heading">Based on your symptoms, here are our recommendations:</div>
-              <div v-for="section in parseRecommendationSections(item.q.prompt)" :key="section.title" class="recommendation-section">
-                <div v-if="section.title" class="section-title">{{ section.title }}</div>
-                <div v-for="(line, lineIdx) in section.lines" :key="lineIdx" :class="section.class">
-                  {{ line }}
-                </div>
+              <div v-for="(section, sIdx) in parseRecommendationSections(item.q.prompt)" :key="sIdx" class="recommendation-section">
+                <!-- Symptom header at top of card -->
+                <div class="recommendation-line symptom-header">{{ section.symptomHeader }}</div>
+                <!-- All subsections within the same card -->
+                <template v-for="(subsection, subIdx) in section.subsections" :key="subIdx">
+                  <div v-if="subsection.title" class="section-title">{{ subsection.title }}</div>
+                  <div v-for="(line, lineIdx) in subsection.lines" :key="lineIdx" :class="subsection.class">
+                    {{ line }}
+                  </div>
+                </template>
               </div>
             </template>
             <template v-else>
@@ -38,17 +43,21 @@
       </template>
 
       <!-- Current question from bot (if any) -->
-      <!-- Don't show regular bubble for medication_cart or completion_message (they have special rendering below) -->
-      <div v-if="currentQuestion && !isLanguageQuestion(currentQuestion) && !isRecommendationHeading(currentQuestion.prompt) && currentQuestion.type !== 'medication_cart' && currentQuestion.type !== 'completion_message'" class="bubble bot current">
+      <div v-if="currentQuestion && !isRecommendationHeading(currentQuestion.prompt)" class="bubble bot current">
         <div class="bubble-content">
           <!-- Format recommendation prompts nicely -->
           <template v-if="Array.isArray(currentQuestion.prompt)">
             <div class="recommendation-heading">Based on your symptoms, here are our recommendations:</div>
-            <div v-for="section in parseRecommendationSections(currentQuestion.prompt)" :key="section.title" class="recommendation-section">
-              <div v-if="section.title" class="section-title">{{ section.title }}</div>
-              <div v-for="(line, idx) in section.lines" :key="idx" :class="section.class">
-                {{ line }}
-              </div>
+            <div v-for="(section, sIdx) in parseRecommendationSections(currentQuestion.prompt)" :key="sIdx" class="recommendation-section">
+              <!-- Symptom header at top of card -->
+              <div class="recommendation-line symptom-header">{{ section.symptomHeader }}</div>
+              <!-- All subsections within the same card -->
+              <template v-for="(subsection, subIdx) in section.subsections" :key="subIdx">
+                <div v-if="subsection.title" class="section-title">{{ subsection.title }}</div>
+                <div v-for="(line, lineIdx) in subsection.lines" :key="lineIdx" :class="subsection.class">
+                  {{ line }}
+                </div>
+              </template>
             </div>
           </template>
           <template v-else>
@@ -58,12 +67,16 @@
       </div>
 
       <!-- Quick replies for choice questions: render below the question bubble for better mobile layout -->
-      <div v-if="currentQuestion && !isLanguageQuestion(currentQuestion) && currentQuestion.type === 'single_choice'" class="quick-replies below">
-        <button v-for="opt in currentQuestion.options" :key="opt" :class="['chip', {selected: singleChoice === opt}]" @click="selectQuick(opt)">{{ opt }}</button>
+      <div v-if="currentQuestion && currentQuestion.type === 'single_choice'" class="quick-replies-wrapper">
+        <div class="quick-replies below">
+          <button v-for="opt in currentQuestion.options" :key="opt" :class="['chip', {selected: singleChoice === opt}]" @click="selectQuick(opt)">{{ opt }}</button>
+        </div>
       </div>
 
-      <div v-else-if="currentQuestion && !isLanguageQuestion(currentQuestion) && currentQuestion.type === 'multiple_choice'" class="quick-replies below">
-        <button v-for="opt in currentQuestion.options" :key="opt" :class="['chip', {selected: multiChoice.includes(opt)}]" @click="toggleMulti(opt)">{{ opt }}</button>
+      <div v-else-if="currentQuestion && currentQuestion.type === 'multiple_choice'" class="quick-replies-wrapper">
+        <div class="quick-replies below">
+          <button v-for="opt in currentQuestion.options" :key="opt" :class="['chip', {selected: multiChoice.includes(opt)}]" @click="toggleMulti(opt)">{{ opt }}</button>
+        </div>
       </div>
 
       <!-- Continue button only for array recommendation bubble (after auto-skipping heading) -->
@@ -171,6 +184,7 @@ function isRecommendationHeading(prompt) {
 
 // Filter out heading-only items from history to avoid duplicates
 // Also filter out special types that have dedicated rendering (medication_cart, completion_message)
+// Also filter out language selection questions
 const filteredHistory = computed(() => {
   return history.value.filter(it => {
     const isHeading = isRecommendationHeading(it.q?.prompt)
@@ -214,20 +228,8 @@ async function startSession() {
     sessionId.value = res.data.sessionId
     currentQuestion.value = res.data.currentQuestion
 
-    // If backend asks to select a language, auto-respond with English (so user doesn't see the language prompt)
-    const defaultLangLabel = languages.value.find(l => l.code === 'en')?.label || 'English'
-    // consume language-selection questions automatically
-    while (currentQuestion.value && isLanguageQuestion(currentQuestion.value)) {
-      try {
-        const ansRes = await axios.post('/api/chat/ask', { sessionId: sessionId.value, answer: defaultLangLabel })
-        // do not push language-selection into history; just advance
-        currentQuestion.value = ansRes.data.nextQuestion
-      } catch (e) {
-        // if auto-answer fails, break and show the question so user can see it
-        console.error('Auto-select language failed', e)
-        break
-      }
-    }
+    // Language selection is now shown to user (not auto-selected)
+    // This provides consistent UX
 
     resetInput()
   } catch (e) {
@@ -279,8 +281,13 @@ async function sendAnswer() {
       answer: buildAnswerPayload()
     }
 
-    // Optimistic UI update: Add to history immediately (before backend response)
-    history.value.push({ q: currentQuestion.value, a: payload.answer })
+    // Store previous question type to determine if we should add to history
+    const previousQuestionType = currentQuestion.value.type
+    
+    // Only add to history if it's not a special type (medication_cart should not appear in history)
+    if (previousQuestionType !== 'medication_cart') {
+      history.value.push({ q: currentQuestion.value, a: payload.answer })
+    }
     
     // Clear current question to show "loading" state
     const previousQuestion = currentQuestion.value
@@ -294,6 +301,28 @@ async function sendAnswer() {
 
     // Update with next question from backend
     currentQuestion.value = res.data.nextQuestion
+    
+    // If completion_message, add it to history as a regular bot message instead of showing special UI
+    if (currentQuestion.value && currentQuestion.value.type === 'completion_message') {
+      // Add user's cart summary to history
+      history.value.push({ 
+        q: { prompt: "Cart Summary", type: "text" }, 
+        a: payload.answer 
+      })
+      // Add bot's thank you message to history
+      history.value.push({ 
+        q: { prompt: currentQuestion.value.prompt, type: "text" }, 
+        a: "acknowledged" 
+      })
+      // Clear current question so it doesn't show the special completion UI
+      currentQuestion.value = null
+    }
+    
+    // Debug: Log medication cart data
+    if (currentQuestion.value && currentQuestion.value.type === 'medication_cart') {
+      console.log('Received medication_cart question:', currentQuestion.value)
+      console.log('Medications array:', currentQuestion.value.medications)
+    }
   } catch (e) {
     error.value = e.response?.data?.error || e.message || 'Failed to send answer'
     // On error, restore the question so user can try again
@@ -398,71 +427,87 @@ function parseRecommendationSections(promptArray) {
   if (!Array.isArray(promptArray)) return []
   
   const sections = []
-  let currentSection = null
+  let currentSymptomSection = null
+  let currentSubsection = null
   
   promptArray.forEach(line => {
     const trimmedLine = line.trim()
     
-    // Check if this is a section header (starts with ---)
+    // Check if this is a symptom header (starts with ---)
     if (trimmedLine.startsWith('---') && trimmedLine.endsWith('---')) {
-      // Save previous section if exists
-      if (currentSection) sections.push(currentSection)
-      // Start new symptom section
-      currentSection = {
-        title: trimmedLine,
-        lines: [],
-        class: 'recommendation-line symptom-header'
+      // Save previous symptom section if exists
+      if (currentSymptomSection) {
+        if (currentSubsection) currentSymptomSection.subsections.push(currentSubsection)
+        sections.push(currentSymptomSection)
       }
+      // Start new symptom section
+      currentSymptomSection = {
+        symptomHeader: trimmedLine,
+        subsections: []
+      }
+      currentSubsection = null
       return
     }
     
-    // Detect section types by keywords
+    if (!currentSymptomSection) return
+    
+    // Detect subsection types by keywords
     if (trimmedLine.startsWith('S/E')) {
-      if (currentSection) sections.push(currentSection)
-      currentSection = {
+      if (currentSubsection) currentSymptomSection.subsections.push(currentSubsection)
+      currentSubsection = {
         title: '⚠️ Side Effects:',
         lines: [trimmedLine.replace('S/E :', '').replace('S/E:', '').trim()],
         class: 'recommendation-line side-effect'
       }
-    } else if (trimmedLine.toLowerCase().includes('if your condition') || trimmedLine.toLowerCase().includes('refer to doctor')) {
-      if (currentSection) sections.push(currentSection)
-      currentSection = {
+    } else if (trimmedLine.toLowerCase().includes('if your condition') || trimmedLine.toLowerCase().includes('refer to doctor') || trimmedLine.toLowerCase().includes('i recommend')) {
+      if (currentSubsection) currentSymptomSection.subsections.push(currentSubsection)
+      currentSubsection = {
         title: '🏥 When to See a Doctor:',
         lines: [trimmedLine],
         class: 'recommendation-line warning'
       }
-    } else if (trimmedLine.toLowerCase().startsWith('advise:') || trimmedLine.toLowerCase().includes('avoid')) {
-      if (currentSection) sections.push(currentSection)
-      currentSection = {
-        title: '💡 Advice:',
-        lines: [trimmedLine.replace(/^Advise:/i, '').trim()],
-        class: 'recommendation-line advice'
+    } else if (trimmedLine.toLowerCase().startsWith('advise:') || trimmedLine.toLowerCase().startsWith('advice:') || (trimmedLine.toLowerCase().includes('avoid') && !trimmedLine.toLowerCase().includes('medication')) || trimmedLine.toLowerCase().includes('drink enough water') || trimmedLine.toLowerCase().includes('have a good rest')) {
+      // Check if current subsection is already an advice section
+      if (currentSubsection && currentSubsection.class === 'recommendation-line advice') {
+        // Add to existing advice section instead of creating a new one
+        currentSubsection.lines.push(trimmedLine.replace(/^Advise:/i, '').replace(/^Advice:/i, '').trim())
+      } else {
+        // Create new advice section
+        if (currentSubsection) currentSymptomSection.subsections.push(currentSubsection)
+        currentSubsection = {
+          title: '💡 Advice:',
+          lines: [trimmedLine.replace(/^Advise:/i, '').replace(/^Advice:/i, '').trim()],
+          class: 'recommendation-line advice'
+        }
       }
-    } else if (trimmedLine.toLowerCase().includes('please have a good rest') || trimmedLine.toLowerCase().includes('thank you')) {
-      if (currentSection) sections.push(currentSection)
-      currentSection = {
+    } else if (trimmedLine.toLowerCase().includes('thank you for your time')) {
+      if (currentSubsection) currentSymptomSection.subsections.push(currentSubsection)
+      currentSubsection = {
         title: null,
         lines: [trimmedLine],
         class: 'recommendation-line greeting'
       }
-    } else {
-      // Regular medication/instruction line
-      if (!currentSection || currentSection.title === null) {
-        if (currentSection) sections.push(currentSection)
-        currentSection = {
+    } else if (trimmedLine.length > 0) {
+      // Regular line - could be medication or continuation
+      if (!currentSubsection) {
+        // Start medication subsection
+        currentSubsection = {
           title: '💊 Medication:',
           lines: [trimmedLine],
           class: 'recommendation-line medication'
         }
       } else {
-        // Add to current section
-        currentSection.lines.push(trimmedLine)
+        // Add to current subsection
+        currentSubsection.lines.push(trimmedLine)
       }
     }
   })
   
   // Push last section
-  if (currentSection) sections.push(currentSection)
+  if (currentSymptomSection) {
+    if (currentSubsection) currentSymptomSection.subsections.push(currentSubsection)
+    sections.push(currentSymptomSection)
+  }
   
   return sections
 }
@@ -527,83 +572,146 @@ function formatAnswer(a) {
   margin-bottom: 0;
 }
 
-.section-title {
-  font-weight: 700;
-  font-size: 0.95rem;
-  margin-bottom: 0.4rem;
-  color: #2c3e50;
-}
-
-.recommendation-line {
-  margin-bottom: 0.4rem;
-  line-height: 1.6;
-  padding-left: 0.5rem;
-}
-.recommendation-line:last-child {
-  margin-bottom: 0;
-}
-
-.recommendation-line.symptom-header {
-  font-weight: 700;
-  color: #42b983;
-  font-size: 1.05em;
-  padding-left: 0;
-  margin-top: 0.8rem;
-  margin-bottom: 0.5rem;
-}
-
-.recommendation-line.medication {
-  color: #2c3e50;
-  font-weight: 600;
-}
-
-.recommendation-line.side-effect {
-  color: #e67e22;
-  background: #fef5e7;
-  padding: 0.4rem 0.6rem;
-  border-radius: 6px;
-  border-left: 3px solid #e67e22;
-}
-
-.recommendation-line.warning {
-  color: #c0392b;
-  background: #fadbd8;
-  padding: 0.4rem 0.6rem;
-  border-radius: 6px;
-  border-left: 3px solid #c0392b;
-}
-
-.recommendation-line.advice {
-  color: #16a085;
-  background: #d5f4e6;
-  padding: 0.4rem 0.6rem;
-  border-radius: 6px;
-  border-left: 3px solid #16a085;
-}
-
-.recommendation-line.greeting {
-  color: #7f8c8d;
-  font-style: italic;
-  padding-left: 0;
-  margin-top: 0.6rem;
+/* Make recommendation bubbles wider and better structured */
+.bubble.bot .bubble-content:has(.recommendation-heading) {
+  max-width: 92%;
+  padding: 1.2rem 1.5rem;
+  background: #ffffff;
+  border: 1px solid #e0e0e0;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
 }
 
 .recommendation-heading {
   font-weight: 700;
-  margin-bottom: 0.6rem;
+  font-size: 1.1rem;
+  margin-bottom: 1.2rem;
+  color: #2c3e50;
+  padding-bottom: 0.8rem;
+  border-bottom: 2px solid #42b983;
+}
+
+/* Recommendation section formatting - Each symptom in its own card */
+.recommendation-section {
+  margin-bottom: 1.5rem;
+  background: #ffffff;
+  padding: 0;
+  border-radius: 10px;
+  border: 1px solid #e8e8e8;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  overflow: hidden;
+}
+.recommendation-section:last-child {
+  margin-bottom: 0;
+}
+
+.section-title {
+  font-weight: 700;
+  font-size: 1.05rem;
+  margin-bottom: 0.8rem;
+  color: #2c3e50;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0 1.2rem;
+}
+
+.recommendation-line {
+  margin-bottom: 0.7rem;
+  line-height: 1.7;
+  padding-left: 0;
+  padding-right: 0;
+  margin-left: 1.2rem;
+  margin-right: 1.2rem;
+}
+.recommendation-line:last-child {
+  margin-bottom: 1.2rem;
+}
+
+/* Symptom header styling - Green banner at top of each section */
+.recommendation-line.symptom-header {
+  font-weight: 700;
+  color: white;
+  font-size: 1.15rem;
+  padding: 0.8rem 1.2rem;
+  margin: 0 0 1rem 0;
+  background: linear-gradient(135deg, #42b983 0%, #35956a 100%);
+  border-radius: 0;
+  border-left: none;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Medication styling - Same style as doctor warning with green theme */
+.recommendation-line.medication {
+  color: #1b5e20;
+  font-weight: 600;
+  font-size: 0.95rem;
+  padding: 0.7rem 0.9rem;
+  background: #e8f5e9;
+  border-radius: 8px;
+  border-left: 4px solid #4caf50;
+  margin-bottom: 0.8rem;
+  line-height: 1.6;
+}
+
+/* Side Effects styling */
+.recommendation-line.side-effect {
+  color: #d84315;
+  background: #fff3e0;
+  padding: 0.7rem 0.9rem;
+  border-radius: 8px;
+  border-left: 4px solid #ff9800;
+  margin-bottom: 0.7rem;
+  font-size: 0.95rem;
+}
+
+/* Doctor Warning styling */
+.recommendation-line.warning {
+  color: #c62828;
+  background: #ffebee;
+  padding: 0.7rem 0.9rem;
+  border-radius: 8px;
+  border-left: 4px solid #f44336;
+  margin-bottom: 0.7rem;
+  font-weight: 500;
+  font-size: 0.95rem;
+}
+
+/* Advice styling */
+.recommendation-line.advice {
+  color: #00695c;
+  background: #e0f2f1;
+  padding: 0.7rem 0.9rem;
+  border-radius: 8px;
+  border-left: 4px solid #009688;
+  margin-bottom: 0.7rem;
+  font-size: 0.95rem;
+}
+
+/* Greeting styling */
+.recommendation-line.greeting {
+  color: #616161;
+  font-style: italic;
+  padding: 0.7rem 0.9rem;
+  margin-top: 0.8rem;
+  background: #f5f5f5;
+  border-radius: 8px;
+  border-left: 4px solid #9e9e9e;
+  font-size: 0.95rem;
+}
+
+.quick-replies-wrapper {
+  display: flex;
+  margin: 0.5rem 0;
 }
 
 .quick-replies {
   display: flex;
   flex-wrap: wrap;
   gap: 0.75rem;
-  margin-top: 0.8rem;
   align-items: center;
 }
 .quick-replies.below {
   /* make quick-replies sit visually below the question bubble with a bit of breathing room */
-  margin-top: 0.5rem;
-  margin-bottom: 0.6rem;
   justify-content: flex-start;
 }
 .quick-replies.centered {
@@ -667,35 +775,35 @@ function formatAnswer(a) {
 
 /* Medication Cart Styles */
 .medication-cart {
-  margin-top: 1rem;
-  padding: 1.5rem;
+  margin-top: 0.5rem;
+  padding: 1rem;
   background: #f8f9fa;
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.08);
 }
 
 .cart-title {
-  font-size: 1.3rem;
+  font-size: 1.2rem;
   font-weight: 700;
   color: #2c3e50;
-  margin-bottom: 1.2rem;
+  margin-bottom: 1rem;
   text-align: center;
 }
 
 .medications-grid {
   display: grid;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
+  gap: 0.8rem;
+  margin-bottom: 1rem;
 }
 
 .medication-card {
   background: white;
   border-radius: 10px;
-  padding: 1rem;
+  padding: 0.8rem;
   box-shadow: 0 2px 6px rgba(0,0,0,0.06);
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 0.8rem;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
@@ -705,8 +813,8 @@ function formatAnswer(a) {
 }
 
 .med-image-placeholder {
-  width: 80px;
-  height: 80px;
+  width: 60px;
+  height: 60px;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   border-radius: 8px;
   display: flex;
@@ -716,23 +824,25 @@ function formatAnswer(a) {
 }
 
 .image-icon {
-  font-size: 2.5rem;
+  font-size: 2rem;
 }
 
 .med-info {
   flex: 1;
+  min-width: 0;
 }
 
 .med-name {
-  font-size: 1rem;
+  font-size: 0.9rem;
   font-weight: 600;
   color: #2c3e50;
-  margin-bottom: 0.3rem;
-  line-height: 1.4;
+  margin-bottom: 0.25rem;
+  line-height: 1.3;
+  word-wrap: break-word;
 }
 
 .med-symptom {
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   color: #7f8c8d;
 }
 
@@ -740,12 +850,14 @@ function formatAnswer(a) {
   background: #42b983;
   color: white;
   border: none;
-  padding: 0.6rem 1.2rem;
+  padding: 0.5rem 0.9rem;
   border-radius: 8px;
   font-weight: 600;
+  font-size: 0.85rem;
   cursor: pointer;
   transition: all 0.2s ease;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .btn-add-cart:hover {
@@ -766,7 +878,7 @@ function formatAnswer(a) {
 .cart-actions {
   display: flex;
   justify-content: center;
-  margin-top: 1rem;
+  margin-top: 0.5rem;
 }
 
 /* Completion Message Styles */

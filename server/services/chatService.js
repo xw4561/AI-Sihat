@@ -351,6 +351,8 @@ function getNextQuestion(section, currentId, sessionData) {
           };
         }).filter(med => med.name); // Remove any invalid entries
         
+        console.log('Extracted medications:', medications);
+        
         // Store medications in session for AppFlow
         sessionData.medications = medications;
         
@@ -521,11 +523,14 @@ async function answerQuestion(sessionId, answer) {
     
     // Inject medications into cart question
     if (nextQ && nextQ.type === "medication_cart") {
+      console.log('Session medications:', session.medications);
       if (session.medications && session.medications.length > 0) {
         const medicationCartQ = {
           ...nextQ,
           medications: session.medications
         };
+        
+        console.log('Returning medication cart with medications:', medicationCartQ.medications);
         
         return {
           sessionId,
@@ -533,6 +538,7 @@ async function answerQuestion(sessionId, answer) {
           nextQuestion: medicationCartQ
         };
       }
+      console.log('No medications found in session!');
     }
     
     return {
@@ -683,11 +689,15 @@ async function answerQuestion(sessionId, answer) {
 
   // Inject medications into AppFlow medication_cart question
   if (nextQ && session.section === "AppFlow" && nextQ.type === "medication_cart") {
+    console.log('General injection - Session medications:', session.medications);
     if (session.medications && session.medications.length > 0) {
       nextQ = {
         ...nextQ,
         medications: session.medications
       };
+      console.log('General injection - Injected medications into cart question:', nextQ.medications);
+    } else {
+      console.log('General injection - No medications in session!');
     }
   }
 
