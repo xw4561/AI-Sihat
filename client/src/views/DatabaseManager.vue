@@ -67,6 +67,8 @@
             <input v-model="newMedicine.medicineName" type="text" placeholder="Medicine Name" required />
             <input v-model="newMedicine.medicineType" type="text" placeholder="Type" required />
             <input v-model.number="newMedicine.medicineQuantity" type="number" placeholder="Quantity" required min="0" />
+            <input v-model.number="newMedicine.price" type="number" placeholder="Price (e.g., 12.50)" required min="0" step="0.01" />
+            <input v-model="newMedicine.imageUrl" type="text" placeholder="Image URL (e.g., https://...)" required />
             <button type="submit" class="btn-add">Add Medicine</button>
           </div>
         </form>
@@ -88,7 +90,7 @@
                 <th>Name</th>
                 <th>Type</th>
                 <th>Quantity</th>
-                <th>Actions</th>
+                <th>Price</th>  <th>Image</th>  <th>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -97,6 +99,16 @@
                 <td>{{ medicine.medicineName }}</td>
                 <td>{{ medicine.medicineType }}</td>
                 <td>{{ medicine.medicineQuantity }}</td>
+                
+                <td>
+                  {{ medicine.price ? 'RM ' + parseFloat(medicine.price).toFixed(2) : 'N/A' }}
+                </td>
+                
+                <td>
+                  <img v-if="medicine.imageUrl" :src="medicine.imageUrl" :alt="medicine.medicineName" class="table-image-preview" />
+                  <span v-else>No Image</span>
+                </td>
+                
                 <td>
                   <button @click="deleteMedicine(medicine.medicineId)" class="btn-delete">Delete</button>
                 </td>
@@ -237,7 +249,13 @@ const newUser = ref({ username: '', email: '', password: '' })
 // Medicines
 const medicines = ref([])
 const medicinesLoading = ref(false)
-const newMedicine = ref({ medicineName: '', medicineType: '', medicineQuantity: 0 })
+const newMedicine = ref({ 
+  medicineName: '', 
+  medicineType: '', 
+  medicineQuantity: null, 
+  price: null, 
+  imageUrl: ''
+})
 
 // Orders
 const orders = ref([])
@@ -254,8 +272,6 @@ const newOrder = ref({
 const chatSessionId = ref('')
 const chatMessages = ref([])
 const chatInput = ref('')
-
-
 
 // Status
 const statusMessage = ref('')
@@ -320,12 +336,20 @@ const loadMedicines = async () => {
 
 const addMedicine = async () => {
   try {
-    await axios.post('/ai-sihat/medicines', newMedicine.value)
+    await axios.post('/ai-sihat/medicines', newMedicine.value) 
     showStatus('✅ Medicine added successfully!', 'success')
-    newMedicine.value = { medicineName: '', medicineType: '', medicineQuantity: 0 }
+    
+    newMedicine.value = { 
+      medicineName: '', 
+      medicineType: '', 
+      medicineQuantity: null, 
+      price: null, 
+      imageUrl: '' 
+    }
     await loadMedicines()
   } catch (err) {
-    showStatus(err.response?.data?.error || 'Failed to add medicine', 'error')
+    const errorMsg = err.response?.data?.error || 'Failed to add medicine'
+    showStatus(errorMsg, 'error')
   }
 }
 
@@ -352,7 +376,6 @@ const loadOrders = async () => {
     ordersLoading.value = false
   }
 }
-
 
 // Chat API
 // Start a new chat session
@@ -439,6 +462,13 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+.table-image-preview {
+  width: 60px;
+  height: 60px;
+  object-fit: contain;
+  border-radius: 4px;
+}
+
 .db-manager {
   padding: 2rem;
   max-width: 1400px;

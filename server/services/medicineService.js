@@ -11,16 +11,21 @@ const prisma = require("../prisma/client");
  * @returns {Promise<object>} Created medicine
  */
 async function createMedicine(medicineData) {
-  const { medicineName, medicineType, medicineQuantity } = medicineData;
+  const { medicineName, medicineType, medicineQuantity, price, imageUrl } = medicineData;
 
   // Validate required fields
-  if (!medicineName || !medicineType || medicineQuantity === undefined) {
-    throw new Error("Missing required fields: medicineName, medicineType, medicineQuantity");
+  if (!medicineName || !medicineType || medicineQuantity === undefined ||price === undefined || !imageUrl) {
+    throw new Error("Missing required fields: medicineName, medicineType, price, medicineQuantity");
   }
 
   // Validate quantity
   if (typeof medicineQuantity !== "number" || medicineQuantity < 0) {
     throw new Error("Quantity must be a non-negative number");
+  }
+
+  // Validate price
+  if (typeof price !== "number" || price < 0) { // Allow 0 for free items
+    throw new Error("Price must be a non-negative number");
   }
 
   // Check if medicine already exists
@@ -40,6 +45,8 @@ async function createMedicine(medicineData) {
       medicineName: medicineName,
       medicineType: medicineType,
       medicineQuantity: medicineQuantity,
+      price: price,
+      imageUrl:imageUrl
     }
   });
 
@@ -89,10 +96,15 @@ async function getMedicineById(medicineId) {
  * @returns {Promise<object>} Updated medicine
  */
 async function updateMedicine(medicineId, updates) {
-  // Validate quantity if provided
+  //validate
   if (updates.medicineQuantity !== undefined) {
     if (typeof updates.medicineQuantity !== "number" || updates.medicineQuantity < 0) {
       throw new Error("Quantity must be a non-negative number");
+    }
+  }
+  if (updates.price !== undefined) {
+    if (typeof updates.price !== "number" || updates.price < 0) {
+      throw new Error("Price must be a non-negative number");
     }
   }
 
@@ -101,6 +113,8 @@ async function updateMedicine(medicineId, updates) {
   if (updates.medicineName) data.medicineName = updates.medicineName;
   if (updates.medicineType) data.medicineType = updates.medicineType;
   if (updates.medicineQuantity !== undefined) data.medicineQuantity = updates.medicineQuantity;
+  if (updates.price !== undefined) data.price = updates.price;
+  if (updates.imageUrl) data.imageUrl = updates.imageUrl;
 
   const medicine = await prisma.medicine.update({
     where: { medicineId: medicineId },
