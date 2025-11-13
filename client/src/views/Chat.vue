@@ -19,8 +19,8 @@
           <div class="bubble-content">
             <!-- Format recommendation prompts nicely in history -->
             <template v-if="Array.isArray(item.q.prompt)">
-              <div class="recommendation-heading">Based on your symptoms, here are our recommendations:</div>
-              <div v-for="(section, sIdx) in parseRecommendationSections(item.q.prompt)" :key="sIdx" class="recommendation-section">
+            <div class="recommendation-heading">Based on your symptoms, here are our recommendations:</div>
+            <div v-for="(section, sIdx) in parseRecommendationSections(item.q.prompt, item.q.symptomName)" :key="sIdx" class="recommendation-section">
                 <!-- Symptom header at top of card -->
                 <div class="recommendation-line symptom-header">{{ section.symptomHeader }}</div>
                 <!-- All subsections within the same card -->
@@ -53,7 +53,7 @@
           <!-- Format recommendation prompts nicely -->
           <template v-if="Array.isArray(currentQuestion.prompt)">
             <div class="recommendation-heading">Based on your symptoms, here are our recommendations:</div>
-            <div v-for="(section, sIdx) in parseRecommendationSections(currentQuestion.prompt)" :key="sIdx" class="recommendation-section">
+            <div v-for="(section, sIdx) in parseRecommendationSections(currentQuestion.prompt, currentQuestion.symptomName)" :key="sIdx" class="recommendation-section">
               <!-- Symptom header at top of card -->
               <div class="recommendation-line symptom-header">{{ section.symptomHeader }}</div>
               <!-- All subsections within the same card -->
@@ -433,12 +433,25 @@ function continueFromCart() {
   sendAnswer()
 }
 
-function parseRecommendationSections(promptArray) {
+function parseRecommendationSections(promptArray, symptomName = null) {
   if (!Array.isArray(promptArray)) return []
   
   const sections = []
   let currentSymptomSection = null
   let currentSubsection = null
+  
+  // Check if prompt has symptom headers (multi-symptom) or not (single symptom)
+  const hasSymptomHeaders = promptArray.some(line => 
+    line.trim().startsWith('---') && line.trim().endsWith('---')
+  )
+  
+  // If no symptom headers, create a default section for single symptom
+  if (!hasSymptomHeaders) {
+    currentSymptomSection = {
+      symptomHeader: symptomName ? `--- ${symptomName} ---` : '--- Recommendation ---',
+      subsections: []
+    }
+  }
   
   promptArray.forEach(line => {
     const trimmedLine = line.trim()
