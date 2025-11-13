@@ -17,29 +17,29 @@
     },
     {
       "id": "3",
-      "prompt": "Please type patient’s name (as in IC)",
-	  "prompt_my": "Sila taip nama pesakit (seperti dalam IC)",
+      "prompt": "Please type your name (as in IC)",
+	  "prompt_my": "Sila taip nama anda (seperti dalam IC)",
       "type": "text_input",
 	  "next_logic": "4"
     },
     {
       "id": "4",
-      "prompt": "Patient’s age (assume above 18)",
-	  "prompt_my": "Umur pesakit (andaikan atas 18 tahun)",
+      "prompt": "Your age (assume above 18)",
+	  "prompt_my": "Umur anda (andaikan atas 18 tahun)",
       "type": "number_input",
 	  "next_logic": "5"
     },
     {
       "id": "5",
-      "prompt": "Patient gender",
-	  "prompt_my": "Jantina pesakit",
+      "prompt": "Your gender",
+	  "prompt_my": "Jantina anda",
       "type": "single_choice",
       "options": ["Male", "Female"]
     },
     {
       "id": "6",
-      "prompt": "Is the patient pregnant or breastfeeding?",
-	  "prompt_my": "Adakah pesakit mengandung atau menyusu?",
+      "prompt": "Are you pregnant or breastfeeding?",
+	  "prompt_my": "Adakah anda mengandung atau menyusu?",
       "type": "single_choice",
       "options": ["Yes, pregnant", "Yes, breastfeeding", "Not for both"],
 	  "next_logic": "7"
@@ -55,18 +55,14 @@
         "Flu",
         "Cold",
         "Nausea and Vomiting",
-        "Diarrhoe",
-        "Indigestion",
-        "Bloat",
-        "Gastritis",
-        "Stomach Pain",
         "Constipation",
+        "Diarrhoea",
+        "Indigestion/Heartburn",
         "Menstrual Pain",
         "Joint Pain",
         "Muscle Pain",
+        "Bloat",
         "Itchy Skin",
-        "Sunburn",
-        "Cut",
         "Other (Specify)"
       ],
       "next_logic": "8"
@@ -128,10 +124,10 @@
     {
       "id": "R1",
       "type": "recommendation",
-      "prompt": "ANS for Less than 1 days, 2 days",
-      "details": [
+      "comment": "ANS for Less than 1 days, 2 days",
+      "prompt": [
         "Hurix's 600 Fluaway capsule improved: 3 tablets 4 times per days",
-        "If your conditin become serious or do not get well ,pls refer to doctor for deeper check up",
+        "If your condition become serious or do not get well ,please refer to doctor for deeper check up",
         "Please have a good rest,drink enough water. Thank you for your time ."
       ],
       "next_logic": "AppFlow"
@@ -139,10 +135,10 @@
     {
       "id": "R2",
       "type": "recommendation",
-      "prompt": "ANS for More than 3 days",
-      "details": [
+      "comment": "ANS for More than 3 days",
+      "prompt": [
         "Hurix's 600 Fluaway capsule improved :3 tablets 4 times per days",
-        "I recommand your refer to doctor for deeper check up because your condition persist too many days",
+        "I recommend you refer to doctor for deeper check up because your condition persist too many days",
         "Please have a good rest,drink enough water. Thank you for your time ."
       ],
       "next_logic": "AppFlow"
@@ -161,10 +157,10 @@
     {
       "id": "R1",
       "type": "recommendation",
-      "prompt": "ANS for Less than 1 days, 2 days",
-      "details": [
+      "comment": "ANS for Less than 1 days, 2 days",
+      "prompt": [
         "Paracetamol ( Panadol ) 500mg : 2 tablets three times a day, max 8 tablets per day",
-        "If your conditin become serious or do not get well ,pls refer to doctor for deeper check up",
+        "If your condition become serious or do not get well ,please refer to doctor for deeper check up",
         "S/E : dizzy",
         "Please have a good rest,drink enough water. Thank you for your time ."
       ],
@@ -173,10 +169,10 @@
     {
       "id": "R2",
       "type": "recommendation",
-      "prompt": "ANS for More than 3 days",
-      "details": [
+      "comment": "ANS for More than 3 days",
+      "prompt": [
         "Paracetamol ( Panadol ) 500mg : 2 tablets three times a day, max 8 tablets per day",
-        "I recommand your refer to doctor for deeper check up because your condition persist too many days",
+        "I recommend you refer to doctor for deeper check up because your condition persist too many days",
         "S/E : dizzy",
         "Please have a good rest,drink enough water. Thank you for your time ."
       ],
@@ -202,14 +198,14 @@
     },
     {
       "id": "CA3_WET",
-      "prompt": "Do you experience it before?",
+      "prompt": "Do you experience phlegm before?",
       "type": "single_choice",
       "options": ["Yes", "No"],
       "next_logic": "CA4_REC_WET"
     },
     {
       "id": "CA3_DRY",
-      "prompt": "Do you experience it before?",
+      "prompt": "Do you experience phlegm before?",
       "type": "single_choice",
       "options": ["Yes", "No"],
       "next_logic": "CA4_REC_DRY"
@@ -217,8 +213,8 @@
     {
       "id": "CA_R1_WET",
       "type": "recommendation",
-      "prompt": "ANS for Less than 1 days, 2 days (Wet Cough)",
-      "details": [
+      "comment": "ANS for Less than 1 days, 2 days (Wet Cough)",
+      "prompt": [
         "Breacol Expectorant (Guaifenesin) : 10-20ml every 4 hours",
         "If your conditin become serious or do not get well ,pls refer to doctor for deeper check up",
         "Avoid spicy,greasy and fast food as they might worsen the constipation",
@@ -229,10 +225,10 @@
     {
       "id": "CA_R2_WET",
       "type": "recommendation",
-      "prompt": "ANS for More than 3 days (Wet Cough)",
-      "details": [
+      "comment": "ANS for More than 3 days (Wet Cough)",
+      "prompt": [
         "Breacol Expectorant (Guaifenesin) : 10-20ml every 4 hours",
-        "I recommand your refer to doctor for deeper check up because your condition persist too many days",
+        "I recommend you refer to doctor for deeper check up because your condition persist too many days",
         "Avoid spicy,greasy and fast food as they might worsen the constipation",
         "Please have a good rest,drink enough water. Thank you for your time ."
       ],
@@ -241,10 +237,10 @@
     {
       "id": "CA_R1_DRY",
       "type": "recommendation",
-      "prompt": "ANS for Less than 1 days, 2 days (Dry Cough)",
-      "details": [
+      "comment": "ANS for Less than 1 days, 2 days (Dry Cough)",
+      "prompt": [
         "Duro Herb Dry Cough Syrup (Guaifenesin) : 15ml 4 times per day",
-        "If your conditin become serious or do not get well ,pls refer to doctor for deeper check up",
+        "If your condition become serious or do not get well ,please refer to doctor for deeper check up",
         "Avoid spicy,greasy and fast food as they might worsen the constipation",
         "Please have a good rest,drink enough water. Thank you for your time ."
       ],
@@ -253,10 +249,10 @@
     {
       "id": "CA_R2_DRY",
       "type": "recommendation",
-      "prompt": "ANS for More than 3 days (Dry Cough)",
-      "details": [
+      "comment": "ANS for More than 3 days (Dry Cough)",
+      "prompt": [
         "Duro Herb Dry Cough Syrup (Guaifenesin) : 15ml 4 times per day",
-        "I recommand your refer to doctor for deeper check up because your condition persist too many days",
+        "I recommend you refer to doctor for deeper check up because your condition persist too many days",
         "Avoid spicy,greasy and fast food as they might worsen the constipation",
         "Please have a good rest,drink enough water. Thank you for your time ."
       ],
@@ -266,7 +262,7 @@
   "Cold": [
     {
       "id": "CO1",
-      "prompt": "Do you experience it before?",
+      "prompt": "Do you experience cold symptoms before?",
       "type": "single_choice",
       "options": ["Yes", "No"],
       "next_logic": "CO2"
@@ -281,10 +277,10 @@
     {
       "id": "R1",
       "type": "recommendation",
-      "prompt": "ANS for Less than 1 days, 2 days",
-      "details": [
+      "comment": "ANS for Less than 1 days, 2 days",
+      "prompt": [
         "Hurix's 600 Fluaway capsule improved: 3 tablets 4 times per days",
-        "If your conditin become serious or do not get well ,pls refer to doctor for deeper check up",
+        "If your condition become serious or do not get well ,please refer to doctor for deeper check up",
         "Please have a good rest,drink enough water. Thank you for your time ."
       ],
       "next_logic": "AppFlow"
@@ -292,10 +288,10 @@
     {
       "id": "R2",
       "type": "recommendation",
-      "prompt": "ANS for More than 3 days",
-      "details": [
+      "comment": "ANS for More than 3 days",
+      "prompt": [
         "Hurix's 600 Fluaway capsule improved :3 tablets 4 times per days",
-        "I recommand your refer to doctor for deeper check up because your condition persist too many days",
+        "I recommend you refer to doctor for deeper check up because your condition persist too many days",
         "Please have a good rest,drink enough water. Thank you for your time ."
       ],
       "next_logic": "AppFlow"
@@ -304,7 +300,7 @@
   "Nausea and Vomiting": [
     {
       "id": "NV1",
-      "prompt": "Do you experience it before?",
+      "prompt": "Do you experience nausea and vomiting before?",
       "type": "single_choice",
       "options": ["Yes", "No"],
       "next_logic": "NV2"
@@ -325,11 +321,11 @@
     {
       "id": "R1",
       "type": "recommendation",
-      "prompt": "ANS for Less than 1 days/ 2times per day",
-      "details": [
+      "comment": "ANS for Less than 1 days/ 2times per day",
+      "prompt": [
         "Oral rehydration salt ( B plus) : dissolve 1 sachet in 200ml of cold boiled water , 1-2 sachet for loose motion .",
         "Pharmacist suggestion: come to our pharmacy to get a more suitable medicine to solve ur problem",
-        "If your conditin become serious or do not get well ,pls refer to doctor for deeper check up",
+        "If your condition become serious or do not get well ,please refer to doctor for deeper check up",
         "S/E : dizzy",
         "Please have a good rest,drink enough water. Thank you for your time ."
       ],
@@ -338,20 +334,20 @@
     {
       "id": "R2",
       "type": "recommendation",
-      "prompt": "ANS for More than 1 days , 3times per day",
-      "details": [
+      "comment": "ANS for More than 1 days , 3times per day",
+      "prompt": [
         "Oral rehydration salt ( B plus) : dissolve 1 sachet in 200ml of cold boiled water , 1-2 sachet for loose motion .",
-        "I recommand your refer to doctor for deeper check up because your condition persist too many days",
+        "I recommend you refer to doctor for deeper check up because your condition persist too many days",
         "S/E : dizzy",
         "Please have a good rest,drink enough water. Thank you for your time ."
       ],
       "next_logic": "AppFlow"
     }
   ],
-  "Indigestion": [
+  "Indigestion/Heartburn": [
     {
       "id": "IH1",
-      "prompt": "Do you experience it before?",
+      "prompt": "Do you experience indigestion/heartburn before?",
       "type": "single_choice",
       "options": ["Yes", "No"],
       "next_logic": "IH2"
@@ -373,12 +369,12 @@
     {
       "id": "R1",
       "type": "recommendation",
-      "prompt": "ANS for Less than 1 days, 2 days",
-      "details": [
+      "comment": "ANS for Less than 1 days, 2 days",
+      "prompt": [
         "Antacid (Gasviscon) : 1 sachet ( 10-20ml) 1 hour after food , if you take other medication one hour before or after taking antacid",
-        "If your conditin become serious or do not get well ,pls refer to doctor for deeper check up",
+        "If your condition become serious or do not get well ,please refer to doctor for deeper check up",
         "S/E : No",
-        "Advise: Avoid spicy, greasy , caffine food . / Dont lie down right after eatoing",
+        "Advise: Avoid spicy, greasy , caffeine food . Dont lie down right after eating",
         "Please have a good rest,drink enough water. Thank you for your time ."
       ],
       "next_logic": "AppFlow"
@@ -386,10 +382,10 @@
     {
       "id": "R2",
       "type": "recommendation",
-      "prompt": "ANS for More than 3 days , 3times per day",
-      "details": [
+      "comment": "ANS for More than 3 days , 3times per day",
+      "prompt": [
         "Antacid (Gasviscon) : 1 sachet (10-20ml) 1 hour after food , if you take other medication one hour before or after taking antacid",
-        "I recommand your refer to doctor for deeper check up because your condition persist too many days",
+        "I recommend you refer to doctor for deeper check up because your condition persist too many days",
         "S/E : No",
         "Advise: Avoid spicy, greasy , caffine food . / Dont lie down right after eatoing",
         "Please have a good rest,drink enough water. Thank you for your time ."
@@ -397,10 +393,10 @@
       "next_logic": "AppFlow"
     }
   ],
-  "Diarrhoe": [
+  "Diarrhoea": [
     {
       "id": "DI1",
-      "prompt": "Do you experience it before?",
+      "prompt": "Do you experience diarrhoea before?",
       "type": "single_choice",
       "options": ["Yes , When___?", "No"],
       "next_logic": "DI2"
@@ -420,7 +416,7 @@
     },
     {
       "id": "DI4",
-      "prompt": "How is your stool frequency ?",
+      "prompt": "How is your stool frequency now?",
       "type": "number_input",
       "next_logic": "DI5"
     },
@@ -455,11 +451,11 @@
     {
       "id": "R1",
       "type": "recommendation",
-      "prompt": "ANS for Less than 1 days, 2 days / less than 3 stools per day, no blood in stool",
-      "details": [
+      "comment": "ANS for Less than 1 days, 2 days / less than 3 stools per day, no blood in stool",
+      "prompt": [
         "Activated Charcoal ( Norit): 2 tablets every 4 hours per day , you should not take activated charcoal with other drug, I will suggest you to take it at least 2 hours befor or after taking other medicine because it will remove your medicine together with the diarrhea-causing toxin",
         "Oral rehydration salt ( B plus) : dissolve 1 sachet in 200ml of cold boiled water , 1-2 sachet for loose motion .",
-        "If your conditin become serious or do not get well ,pls refer to doctor for deeper check up",
+        "If your condition become serious or do not get well ,please refer to doctor for deeper check up",
         "S/E : constipation and gastrointestinal disorder ( Norit)",
         "Avoid spicy,greasy and fast food because it might worsen the diarrhoe",
         "Maintain or increase fluid intake to prevent dehydration",
@@ -470,11 +466,11 @@
     {
       "id": "R2",
       "type": "recommendation",
-      "prompt": "ANS for More than 3 days , more than 3 stools per day , got blood in stool",
-      "details": [
+      "comment": "ANS for More than 3 days , more than 3 stools per day , got blood in stool",
+      "prompt": [
         "Activated Charcoal ( Norit): 2 tablets every 4 hours per day , you should not take activated charcoal with other drug, I will suggest you to take it at least 2 hours befor or after taking other medicine because it will remove your medicine together with the diarrhea-causing toxin",
         "Oral rehydration salt ( B plus) : dissolve 1 sachet in 200ml of cold boiled water , 1-2 sachet for loose motion .",
-        "I recommand your refer to doctor for deeper check up because your condition persist too many days",
+        "I recommend you refer to doctor for deeper check up because your condition persist too many days",
         "S/E : constipation and gastrointestinal disorder ( Norit)",
         "Avoid spicy,greasy and fast food because it might worsen the diarrhoe",
         "Maintain or increase fluid intake to prevent dehydration",
@@ -487,7 +483,7 @@
   "Constipation": [
     {
       "id": "CN1",
-      "prompt": "Do you experience it before?",
+      "prompt": "Do you experience constipation before?",
       "type": "single_choice",
       "options": ["Yes , When___?", "No"],
       "next_logic": "CN2"
@@ -507,7 +503,7 @@
     },
     {
       "id": "CN4",
-      "prompt": "How is your stool frequency ?",
+      "prompt": "How is your stool frequency now?",
       "type": "number_input",
       "next_logic": "CN5"
     },
@@ -521,10 +517,10 @@
     {
       "id": "R1",
       "type": "recommendation",
-      "prompt": "ANS for Less than 1 days, 2 days",
-      "details": [
+      "comment": "ANS for Less than 1 days, 2 days",
+      "prompt": [
         "Lactul Solution (Lactulose) :15ml twice daily",
-        "If your conditin become serious or do not get well ,pls refer to doctor for deeper check up",
+        "If your condition become serious or do not get well ,please refer to doctor for deeper check up",
         "S/E : You might feel abdominal pain but this is the normal side effects for this Lactul",
         "Avoid spicy,greasy and fast food because it might worsen the constipation",
         "Please have a good rest,drink enough water. Thank you for your time ."
@@ -534,10 +530,10 @@
     {
       "id": "R2",
       "type": "recommendation",
-      "prompt": "ANS for More than 3 days",
-      "details": [
+      "comment": "ANS for More than 3 days",
+      "prompt": [
         "Lactul Solution (Lactulose) :15ml twice daily ,l",
-        "I recommand your refer to doctor for deeper check up because your condition persist too many days",
+        "I recommend you refer to doctor for deeper check up because your condition persist too many days",
         "S/E : You might feel abdominal pain but this is the normal side effects for this Lactul",
         "Avoid spicy,greasy and fast food because it might worsen the constipation",
         "Please have a good rest,drink enough water. Thank you for your time ."
@@ -548,24 +544,24 @@
   "Menstrual Pain": [
     {
       "id": "MP1",
-      "prompt": "Do you experience it before?",
+      "prompt": "Do you experience menstrual pain before?",
       "type": "single_choice",
       "options": ["Yes", "No"],
       "next_logic": "MP2"
     },
     {
       "id": "MP2",
-      "prompt": "Can you rate your pain level ?",
+      "prompt": "Can you rate your pain level? （1-10）",
       "type": "number_input",
       "next_logic": "MP_REC"
     },
     {
       "id": "R1",
       "type": "recommendation",
-      "prompt": "ANS for Less than 1 days, 2 days , pain rate less than 7",
-      "details": [
+      "comment": "ANS for Less than 1 days, 2 days , pain rate less than 7",
+      "prompt": [
         "Paracetamol ( Panadol) 500mg and Caffeine 65mg : 2 tablets every 4 hours , max 8 tablets per day",
-        "If your conditin become serious or do not get well ,pls refer to doctor for deeper check up",
+        "If your condition become serious or do not get well ,please refer to doctor for deeper check up",
         "S/E : uncomfortable chest, difficulty to sleep, shaking ",
         "Please have a good rest,drink enough water. Thank you for your time ."
       ],
@@ -574,10 +570,10 @@
     {
       "id": "R2",
       "type": "recommendation",
-      "prompt": "ANS for More than 3 days, pain level more than 7",
-      "details": [
+      "comment": "ANS for More than 3 days, pain level more than 7",
+      "prompt": [
         "Paracetamol ( Panadol) 500mg and Caffeine 65mg : 2 tablets every 4 hours , max 8 tablets per day",
-        "I recommand your refer to doctor for deeper check up because your condition persist too many days",
+        "I recommend you refer to doctor for deeper check up because your condition persist too many days",
         "S/E : uncomfortable chest, difficulty to sleep, shaking ",
         "Please have a good rest,drink enough water. Thank you for your time ."
       ],
@@ -593,24 +589,24 @@
     },
     {
       "id": "JP2",
-      "prompt": "Do you experience it before?",
+      "prompt": "Do you experience joint pain before?",
       "type": "single_choice",
       "options": ["Yes", "No"],
       "next_logic": "JP3"
     },
     {
       "id": "JP3",
-      "prompt": "Can you rate your pain level ?",
+      "prompt": "Can you rate your pain level? (1-10)",
       "type": "number_input",
       "next_logic": "JP_REC"
     },
     {
       "id": "R1",
       "type": "recommendation",
-      "prompt": "ANS for Less than 1 days, 2 days , pain rate less than 7",
-      "details": [
+      "comment": "ANS for Less than 1 days, 2 days , pain rate less than 7",
+      "prompt": [
         "Paracetamol ( Panadol Extend ) 665mg: 2 tablets every 8 hours , max 6 tablets per day",
-        "If your conditin become serious or do not get well ,pls refer to doctor for deeper check up",
+        "If your condition become serious or do not get well ,please refer to doctor for deeper check up",
         "S/E : No",
         "Please have a good rest,drink enough water , avoid doing vigorous activity. Thank you for your time ."
       ],
@@ -619,10 +615,10 @@
     {
       "id": "R2",
       "type": "recommendation",
-      "prompt": "ANS for More than 3 days, pain level more than 7",
-      "details": [
+      "comment": "ANS for More than 3 days, pain level more than 7",
+      "prompt": [
         "Paracetamol ( Panadol Extend ) 665mg: 2 tablets every 8 hours , max 6 tablets per day",
-        "I recommand your refer to doctor for deeper check up because your condition persist too many days",
+        "I recommend you refer to doctor for deeper check up because your condition persist too many days",
         "S/E : No",
         "Please have a good rest,drink enough water , avoid doing vigorous activity. Thank you for your time ."
       ],
@@ -632,37 +628,37 @@
   "Muscle Pain": [
     {
       "id": "MU1",
-      "prompt": "Where is the locatio of muscle you feel pain?",
+      "prompt": "Where is the location of muscle you feel pain?",
       "type": "text_input",
       "next_logic": "MU2"
     },
     {
       "id": "MU2",
-      "prompt": "Do you experience it before?",
+      "prompt": "Do you experience muscle pain before?",
       "type": "single_choice",
       "options": ["Yes", "No"],
       "next_logic": "MU3"
     },
     {
       "id": "MU3",
-      "prompt": "Can you rate your pain level ?",
+      "prompt": "Can you rate your pain level? (1-10)",
       "type": "number_input",
       "next_logic": "MU4"
     },
     {
       "id": "MU4",
-      "prompt": "Did you do any vigirous activity recently ?",
+      "prompt": "Did you do any vigorous activity recently?",
       "type": "single_choice",
-      "options": ["Yes, What", "No"],
+      "options": ["Yes , What__?", "No"],
       "next_logic": "MU_REC"
     },
     {
       "id": "R1",
       "type": "recommendation",
-      "prompt": "ANS for Less than 1 days, 2 days , pain rate less than 7",
-      "details": [
+      "comment": "ANS for Less than 1 days, 2 days , pain rate less than 7",
+      "prompt": [
         "Paracetamol ( Panadol Extend for muscle and joint ) 665mg: 2 tablets every 8 hours , max 6 tablets per day",
-        "If your conditin become serious or do not get well ,pls refer to doctor for deeper check up",
+        "If your condition become serious or do not get well ,please refer to doctor for deeper check up",
         "S/E : No",
         "Please have a good rest,drink enough water , avoid doing vigorous activity. Thank you for your time ."
       ],
@@ -671,10 +667,10 @@
     {
       "id": "R2",
       "type": "recommendation",
-      "prompt": "ANS for More than 3 days, pain level more than 7",
-      "details": [
+      "comment": "ANS for More than 3 days, pain level more than 7",
+      "prompt": [
         "Paracetamol ( Panadol Extend for muscle and joint ) 665mg: 2 tablets every 8 hours , max 6 tablets per day",
-        "I recommand your refer to doctor for deeper check up because your condition persist too many days",
+        "I recommend you refer to doctor for deeper check up because your condition persist too many days",
         "S/E : No",
         "Please have a good rest,drink enough water , avoid doing vigorous activity. Thank you for your time ."
       ],
@@ -684,7 +680,7 @@
   "Bloat": [
     {
       "id": "BL1",
-      "prompt": "Do you experience it before?",
+      "prompt": "Do you experience bloat before?",
       "type": "single_choice",
       "options": ["Yes", "No"],
       "next_logic": "BL2"
@@ -713,12 +709,12 @@
     {
       "id": "R1",
       "type": "recommendation",
-      "prompt": "ANS for Less than 1 days, 2 days",
-      "details": [
+      "comment": "ANS for Less than 1 days, 2 days",
+      "prompt": [
         "Simethicone (Gazgo ) 200mg : 1 softgel 3 to 4 times daily , after meal or before bed",
-        "If your conditin become serious or do not get well ,pls refer to doctor for deeper check up",
+        "If your condition become serious or do not get well ,please refer to doctor for deeper check up",
         "S/E : No",
-        "Advise: Avoid spicy, greasy , caffine food . / Dont lie down right after eatoing",
+        "Advise: Avoid spicy, greasy , caffeine food . / Dont lie down right after eating",
         "Please have a good rest,drink enough water. Thank you for your time ."
       ],
       "next_logic": "AppFlow"
@@ -726,12 +722,12 @@
     {
       "id": "R2",
       "type": "recommendation",
-      "prompt": "ANS for More than 3 days , 3times per day",
-      "details": [
+      "comment": "ANS for More than 3 days , 3times per day",
+      "prompt": [
         "Simethicone (Gazgo ) 200mg : 1 softgel 3 to 4 times daily , after meal or before bed",
-        "I recommand your refer to doctor for deeper check up because your condition persist too many days",
+        "I recommend you refer to doctor for deeper check up because your condition persist too many days",
         "S/E : No",
-        "Advise: Avoid spicy, greasy , caffine food . / Dont lie down right after eatoing",
+        "Advise: Avoid spicy, greasy , caffeine food . / Dont lie down right after eating",
         "Please have a good rest,drink enough water. Thank you for your time ."
       ],
       "next_logic": "AppFlow"
@@ -746,7 +742,7 @@
     },
     {
       "id": "IS2",
-      "prompt": "Do you experience it before?",
+      "prompt": "Do you experience itchy skin before?",
       "type": "single_choice",
       "options": ["Yes", "No"],
       "next_logic": "IS3"
@@ -761,10 +757,10 @@
     {
       "id": "R1",
       "type": "recommendation",
-      "prompt": "ANS for Less than 2 days",
-      "details": [
+      "comment": "ANS for Less than 2 days",
+      "prompt": [
         "Bepanthen Itchy Relief Cream : Apply on skin only , avoid sensitive area such as lips, vagina .",
-        "If your conditin become serious or do not get well ,pls refer to doctor for deeper check up",
+        "If your condition become serious or do not get well ,please refer to doctor for deeper check up",
         "S/E : No",
         "Please have a good rest,drink enough water , avoid doing vigorous activity. Thank you for your time ."
       ],
@@ -773,10 +769,10 @@
     {
       "id": "R2",
       "type": "recommendation",
-      "prompt": "ANS for More than 3 days",
-      "details": [
+      "comment": "ANS for More than 3 days",
+      "prompt": [
         "Bepanthen Itchy Relief Cream : Apply on skin only",
-        "I recommand your refer to doctor for deeper check up because your condition persist too many days",
+        "I recommend you refer to doctor for deeper check up because your condition persist too many days",
         "S/E : No",
         "Please have a good rest,drink enough water , avoid doing vigorous activity. Thank you for your time ."
       ],
@@ -787,57 +783,15 @@
   "AppFlow": [
     {
       "id": "A1",
-      "prompt": "Do you want to purchase this medication?",
-	  "prompt_my": "Adakah anda mahu membeli ubat ini?",
-      "type": "single_choice",
-      "options": ["Yes", "No"],
-      "next_logic": {
-        "Yes": "A2",
-        "No": "A7"
-      }
+      "prompt": "Would you like to add these medications to your cart?",
+      "type": "medication_cart",
+      "medications": [],
+      "next_logic": "A2"
     },
     {
       "id": "A2",
-      "prompt": "Choose your preferred method",
-	  "prompt_my": "Pilih kaedah pilihan anda",
-      "type": "single_choice",
-      "options": ["Pick Up", "Delivery"],
-      "next_logic": {
-        "Pick Up": "A3",
-        "Delivery": "A4"
-      }
-    },
-    {
-      "id": "A3",
-      "prompt": "Purchase method (Pick Up)",
-	  "prompt_my": "Kaedah pembelian (Ambil Sendiri)",
-      "type": "single_choice",
-      "options": ["Online Banking", "Touch N Go", "Pay at counter"],
-      "next_logic": "A7"
-    },
-    {
-      "id": "A4",
-      "prompt": "Type your address (Delivery)",
-      "type": "text_input",
-      "next_logic": "A5"
-    },
-    {
-      "id": "A5",
-      "prompt": "Phone number (Delivery)",
-      "type": "number_input",
-      "next_logic": "A6"
-    },
-    {
-      "id": "A6",
-      "prompt": "Purchase method (Delivery)",
-	  "prompt_my": "Kaedah pembelian (Penghantaran)",
-      "type": "single_choice",
-      "options": ["Online Banking", "Touch N Go"],
-      "next_logic": "A7"
-    },
-    {
-      "id": "A7",
-      "prompt": "Thanks for using AI Sihat Health Assistant. Wish you a speedy recovery!",
+      "prompt": "Thank you for using AI-Sihat! Your medications have been added to cart. You can proceed to checkout from the cart page. Wish you a speedy recovery!",
+      "type": "completion_message",
       "next_logic": null
     }
   ]
