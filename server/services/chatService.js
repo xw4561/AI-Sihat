@@ -365,7 +365,13 @@ function getNextQuestion(section, currentId, sessionData) {
       }
     }
     
-    // Single symptom or fallback: return recommendation directly
+    // Single symptom or fallback: return recommendation directly with symptom name
+    if (recommendationObj && symptomSections.includes(section)) {
+      return {
+        ...recommendationObj,
+        symptomName: section
+      };
+    }
     return recommendationObj;
   }
 
