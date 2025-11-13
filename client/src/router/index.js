@@ -8,7 +8,6 @@ import PharmacistOrders from '../views/PharmacistOrders.vue'
 import Chat from '../views/chat.vue'
 import APITest from '../views/APITest.vue'
 import DatabaseManager from '../views/DatabaseManager.vue'
-import RoleSelection from '../views/RoleSelection.vue'
 import Profile from '../views/Profile.vue'
 import Shop from '../views/Shop.vue'
 import Checkout from '../views/Checkout.vue'
@@ -28,11 +27,6 @@ const routes = [
     path: '/signup',
     name: 'SignUp',
     component: SignUp
-  },
-  {
-    path: '/select-role',
-    name: 'RoleSelection',
-    component: RoleSelection
   },
   {
     path: '/admin',
