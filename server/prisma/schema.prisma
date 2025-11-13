@@ -77,9 +77,11 @@ model Chat {
   userId         String?  
   sessionData    Json     
   recommendation String?  
+  summary        Json?     // <-- add this line
   createdAt      DateTime @default(now())
 
   user           User?    @relation(fields: [userId], references: [userId], onDelete: SetNull)
 
   @@map("chats")  // optional, makes table name explicit
 }
+
