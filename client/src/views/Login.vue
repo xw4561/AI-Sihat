@@ -22,6 +22,7 @@
 <script setup>
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
+import axios from 'axios';
 
 const email = ref('');
 const password = ref('');
@@ -29,10 +30,31 @@ const loading = ref(false);
 const error = ref('');
 const router = useRouter();
 
-function handleLogin() {
-  // Bypass validation/auth for UI: navigate to role selection page.
-  // This lets the user choose Admin / Customer / Pharmacist after clicking Login.
-  router.push('/select-role');
+async function handleLogin() {
+  loading.value = true;
+  error.value = '';
+  try {
+    const response = await axios.post('/api/auth/login', {
+      email: email.value,
+      password: password.value,
+    });
+    
+    const user = response.data.user;
+    localStorage.setItem('user', JSON.stringify(user));
+    
+    // Redirect based on role
+    if (user.role === 'ADMIN') {
+      router.push('/admin');
+    } else if (user.role === 'PHARMACIST') {
+      router.push('/pharmacist');
+    } else {
+      router.push('/customer');
+    }
+  } catch (e) {
+    error.value = e.response?.data?.error || 'Login failed';
+  } finally {
+    loading.value = false;
+  }
 }
 </script>
 

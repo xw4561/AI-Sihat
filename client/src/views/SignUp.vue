@@ -36,11 +36,12 @@ async function handleSignUp() {
   loading.value = true;
   error.value = '';
   try {
-    await axios.post('/api/users/signup', {
-      name: name.value,
+    const response = await axios.post('/api/auth/register', {
+      username: name.value,
       email: email.value,
       password: password.value,
     });
+    alert('Registration successful! Please login.');
     router.push('/login');
   } catch (e) {
     error.value = e.response?.data?.error || 'Sign up failed';
