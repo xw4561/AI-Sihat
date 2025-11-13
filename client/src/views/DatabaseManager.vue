@@ -193,6 +193,81 @@
       </div>
     </div>
 
+    <!-- Chats Section -->
+    <div class="section">
+      <h3>💬 Chat History</h3>
+      
+      <!-- Chats List -->
+      <div class="data-card">
+        <div class="card-header">
+          <h4>All Chat Sessions</h4>
+          <button @click="loadChats" class="btn-refresh">🔄 Refresh</button>
+        </div>
+        <div v-if="chatsLoading" class="loading">Loading chats...</div>
+        <div v-else-if="chats.length === 0" class="empty">No chat sessions found</div>
+        <div v-else class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>User</th>
+                <th>Messages</th>
+                <th>Recommendation</th>
+                <th>Created</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="chat in chats" :key="chat.id">
+                <td>{{ chat.id }}</td>
+                <td>{{ chat.userId ? chat.userId.substring(0, 8) + '...' : 'Anonymous' }}</td>
+                <td>{{ getChatMessageCount(chat.sessionData) }}</td>
+                <td>
+                  <span v-if="chat.recommendation" class="has-recommendation">✅ Yes</span>
+                  <span v-else class="no-recommendation">❌ No</span>
+                </td>
+                <td>{{ formatDate(chat.createdAt) }}</td>
+                <td>
+                  <button @click="viewChatDetails(chat)" class="btn-view">View</button>
+                  <button @click="deleteChat(chat.id)" class="btn-delete">Delete</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Chat Details Modal -->
+      <div v-if="selectedChat" class="modal-overlay" @click="selectedChat = null">
+        <div class="modal-content" @click.stop>
+          <div class="modal-header">
+            <h3>Chat Session #{{ selectedChat.id }}</h3>
+            <button @click="selectedChat = null" class="btn-close">✕</button>
+          </div>
+          <div class="modal-body">
+            <div class="chat-details">
+              <p><strong>User ID:</strong> {{ selectedChat.userId || 'Anonymous' }}</p>
+              <p><strong>Created:</strong> {{ formatDate(selectedChat.createdAt) }}</p>
+              <div v-if="selectedChat.recommendation" class="recommendation-box">
+                <strong>Recommendation:</strong>
+                <p>{{ selectedChat.recommendation }}</p>
+              </div>
+              <div class="session-data">
+                <strong>Conversation:</strong>
+                <div v-if="Array.isArray(selectedChat.sessionData)" class="conversation-log">
+                  <div v-for="(msg, idx) in selectedChat.sessionData" :key="idx" class="conversation-item">
+                    <div class="question">Q: {{ msg.question || msg.prompt }}</div>
+                    <div class="answer">A: {{ msg.answer || 'No answer' }}</div>
+                  </div>
+                </div>
+                <pre v-else class="json-data">{{ JSON.stringify(selectedChat.sessionData, null, 2) }}</pre>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Status Messages -->
     <div v-if="statusMessage" :class="['status-message', statusType]">
       {{ statusMessage }}
@@ -200,7 +275,7 @@
   </div>
 
 
-<!-- Chat Section -->
+<!-- Chat Testing Section -->
 <div class="section">
   <h3>💬 AI Chat</h3>
 
@@ -257,7 +332,12 @@ const newOrder = ref({
   useAi: false 
 })
 
-// Chat
+// Chats (database records)
+const chats = ref([])
+const chatsLoading = ref(false)
+const selectedChat = ref(null)
+
+// Chat Testing
 const chatSessionId = ref('')
 const chatMessages = ref([])
 const chatInput = ref('')
@@ -380,8 +460,71 @@ const loadOrders = async () => {
   }
 }
 
+const addOrder = async () => {
+  try {
+    await axios.post('/ai-sihat/order', newOrder.value)
+    showStatus('✅ Order created successfully!', 'success')
+    newOrder.value = { userId: '', medicineId: '', quantity: 1, orderType: '', useAi: false }
+    await loadOrders()
+    await loadUsers() // Refresh to see updated points
+  } catch (err) {
+    showStatus(err.response?.data?.error || 'Failed to create order', 'error')
+  }
+}
 
-// Chat API
+const deleteOrder = async (id) => {
+  if (!confirm('Delete this order?')) return
+  try {
+    await axios.delete(`/ai-sihat/order/${id}`)
+    showStatus('✅ Order deleted successfully!', 'success')
+    await loadOrders()
+  } catch (err) {
+    showStatus(err.response?.data?.error || 'Failed to delete order', 'error')
+  }
+}
+
+// Chats API
+const loadChats = async () => {
+  chatsLoading.value = true
+  try {
+    const response = await axios.get('/ai-sihat/chats')
+    chats.value = response.data
+  } catch (err) {
+    showStatus(err.response?.data?.error || 'Failed to load chats', 'error')
+  } finally {
+    chatsLoading.value = false
+  }
+}
+
+const deleteChat = async (id) => {
+  if (!confirm('Delete this chat session?')) return
+  try {
+    await axios.delete(`/ai-sihat/chats/${id}`)
+    showStatus('✅ Chat deleted successfully!', 'success')
+    await loadChats()
+  } catch (err) {
+    showStatus(err.response?.data?.error || 'Failed to delete chat', 'error')
+  }
+}
+
+const viewChatDetails = (chat) => {
+  selectedChat.value = chat
+}
+
+const getChatMessageCount = (sessionData) => {
+  if (Array.isArray(sessionData)) {
+    return sessionData.length
+  }
+  return 'N/A'
+}
+
+const formatDate = (dateString) => {
+  const date = new Date(dateString)
+  return date.toLocaleString()
+}
+
+
+// Chat Testing API
 // Start a new chat session
 const startChat = async () => {
   try {
@@ -436,32 +579,9 @@ const sendChat = async () => {
   }
 }
 
-const addOrder = async () => {
-  try {
-    await axios.post('/ai-sihat/order', newOrder.value)
-    showStatus('✅ Order created successfully!', 'success')
-    newOrder.value = { userId: '', medicineId: '', quantity: 1, orderType: '', useAi: false }
-    await loadOrders()
-    await loadUsers() // Refresh to see updated points
-  } catch (err) {
-    showStatus(err.response?.data?.error || 'Failed to create order', 'error')
-  }
-}
-
-const deleteOrder = async (id) => {
-  if (!confirm('Delete this order?')) return
-  try {
-    await axios.delete(`/ai-sihat/order/${id}`)
-    showStatus('✅ Order deleted successfully!', 'success')
-    await loadOrders()
-  } catch (err) {
-    showStatus(err.response?.data?.error || 'Failed to delete order', 'error')
-  }
-}
-
 // Load all data on mount
 onMounted(async () => {
-  await Promise.all([loadUsers(), loadMedicines(), loadOrders()])
+  await Promise.all([loadUsers(), loadMedicines(), loadOrders(), loadChats()])
 })
 </script>
 
@@ -735,6 +855,158 @@ tbody tr:hover {
   text-align: left;
 }
 
+.btn-view {
+  background-color: #8b5cf6;
+  color: white;
+  border: none;
+  padding: 0.4rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  margin-right: 0.5rem;
+  transition: background-color 0.3s;
+}
+
+.btn-view:hover {
+  background-color: #7c3aed;
+}
+
+.has-recommendation {
+  color: #059669;
+  font-weight: 600;
+}
+
+.no-recommendation {
+  color: #9ca3af;
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 8px;
+  max-width: 700px;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.btn-close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #6b7280;
+  padding: 0;
+  width: 2rem;
+  height: 2rem;
+}
+
+.btn-close:hover {
+  color: #1f2937;
+}
+
+.modal-body {
+  padding: 1.5rem;
+}
+
+.chat-details p {
+  margin-bottom: 0.75rem;
+}
+
+.recommendation-box {
+  background-color: #d1fae5;
+  border: 1px solid #10b981;
+  padding: 1rem;
+  border-radius: 6px;
+  margin: 1rem 0;
+}
+
+.recommendation-box strong {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: #065f46;
+}
+
+.recommendation-box p {
+  margin: 0;
+  color: #047857;
+}
+
+.session-data {
+  margin-top: 1.5rem;
+}
+
+.session-data strong {
+  display: block;
+  margin-bottom: 0.75rem;
+  font-size: 1rem;
+}
+
+.conversation-log {
+  background-color: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 1rem;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.conversation-item {
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.conversation-item:last-child {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.question {
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 0.5rem;
+}
+
+.answer {
+  color: #4b5563;
+  padding-left: 1rem;
+}
+
+.json-data {
+  background-color: #1f2937;
+  color: #10b981;
+  padding: 1rem;
+  border-radius: 6px;
+  overflow-x: auto;
+  font-size: 0.875rem;
+}
 
 @keyframes slideIn {
   from {
