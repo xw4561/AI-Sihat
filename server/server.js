@@ -47,6 +47,14 @@ app.get("/api/db/health", async (req, res) => {
   }
 });
 
+// Mount auth routes
+try {
+  require("./routes/auth.routes.js")(app);
+  console.log("✅ Auth routes loaded");
+} catch (e) {
+  console.warn("ℹ️ Auth routes mounting skipped:", e?.message || e);
+}
+
 // Mount chat routes
 try {
   require("./routes/chat.routes.js")(app);

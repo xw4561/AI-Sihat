@@ -15,6 +15,11 @@
             <input v-model="newUser.username" type="text" placeholder="Username" required />
             <input v-model="newUser.email" type="email" placeholder="Email" required />
             <input v-model="newUser.password" type="password" placeholder="Password" required />
+            <select v-model="newUser.role" required>
+              <option value="USER">User</option>
+              <option value="PHARMACIST">Pharmacist</option>
+              <option value="ADMIN">Admin</option>
+            </select>
             <button type="submit" class="btn-add">Add User</button>
           </div>
         </form>
@@ -35,15 +40,17 @@
                 <th>ID</th>
                 <th>Username</th>
                 <th>Email</th>
+                <th>Role</th>
                 <th>Points</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody>
               <tr v-for="user in users" :key="user.userId">
-                <td>{{ user.userId }}</td>
+                <td>{{ user.userId.substring(0, 8) }}...</td>
                 <td>{{ user.username }}</td>
                 <td>{{ user.email }}</td>
+                <td><span :class="'role-badge role-' + user.role.toLowerCase()">{{ user.role }}</span></td>
                 <td>{{ user.points }}</td>
                 <td>
                   <button @click="deleteUser(user.userId)" class="btn-delete">Delete</button>
@@ -93,7 +100,7 @@
             </thead>
             <tbody>
               <tr v-for="medicine in medicines" :key="medicine.medicineId">
-                <td>{{ medicine.medicineId }}</td>
+                <td>{{ medicine.medicineId.substring(0, 8) }}...</td>
                 <td>{{ medicine.medicineName }}</td>
                 <td>{{ medicine.medicineType }}</td>
                 <td>{{ medicine.medicineQuantity }}</td>
@@ -168,9 +175,9 @@
             </thead>
             <tbody>
               <tr v-for="order in orders" :key="order.orderId">
-                <td>{{ order.orderId }}</td>
-                <td>{{ order.userId }}</td>
-                <td>{{ order.medicineId }}</td>
+                <td>{{ order.orderId.substring(0, 8) }}...</td>
+                <td>{{ order.userId.substring(0, 8) }}...</td>
+                <td>{{ order.medicineId.substring(0, 8) }}...</td>
                 <td>{{ order.quantity }}</td>
                 <td>{{ order.orderType }}</td>
                 <td>{{ order.useAi ? '✅' : '❌' }}</td>
@@ -232,7 +239,7 @@ import axios from 'axios'
 // Users
 const users = ref([])
 const usersLoading = ref(false)
-const newUser = ref({ username: '', email: '', password: '' })
+const newUser = ref({ username: '', email: '', password: '', role: 'USER' })
 
 // Medicines
 const medicines = ref([])
@@ -284,9 +291,29 @@ const loadUsers = async () => {
 
 const addUser = async () => {
   try {
-    await axios.post('/ai-sihat/user', newUser.value)
+    // Use auth route for registration
+    await axios.post('/api/auth/register', {
+      username: newUser.value.username,
+      email: newUser.value.email,
+      password: newUser.value.password
+    })
+    
+    // If role is not USER (default), change it using admin route
+    if (newUser.value.role !== 'USER') {
+      const allUsers = await axios.get('/ai-sihat/user')
+      const createdUser = allUsers.data.find(u => u.email === newUser.value.email)
+      if (createdUser) {
+        await axios.put('/api/auth/change-role', {
+          adminEmail: 'admin@gmail.com',
+          adminPassword: 'admin@123',
+          targetEmail: newUser.value.email,
+          newRole: newUser.value.role
+        })
+      }
+    }
+    
     showStatus('✅ User added successfully!', 'success')
-    newUser.value = { username: '', email: '', password: '' }
+    newUser.value = { username: '', email: '', password: '', role: 'USER' }
     await loadUsers()
   } catch (err) {
     showStatus(err.response?.data?.error || 'Failed to add user', 'error')
@@ -294,7 +321,7 @@ const addUser = async () => {
 }
 
 const deleteUser = async (id) => {
-  if (!confirm('Delete this user? This will also delete all their orders.')) return
+  if (!confirm('Delete this user? This will also delete all their orders and chats.')) return
   try {
     await axios.post('/ai-sihat/user/delete', { id })
     showStatus('✅ User deleted successfully!', 'success')
@@ -657,6 +684,29 @@ tbody tr:hover {
   background-color: #fee2e2;
   color: #991b1b;
   border: 2px solid #ef4444;
+}
+
+.role-badge {
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.role-admin {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+.role-pharmacist {
+  background-color: #dbeafe;
+  color: #1e40af;
+}
+
+.role-user {
+  background-color: #d1fae5;
+  color: #065f46;
 }
 
 .chat-log {
