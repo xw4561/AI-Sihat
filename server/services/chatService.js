@@ -740,10 +740,17 @@ async function answerQuestion(sessionId, answer) {
     }
   }
 
+  // --- Generate summary when chat ends ---
+let summary = null;
+if (!nextQ) {  // chat finished
+  summary = await generateSummary(sessionId);  // this will also save to DB
+}
+
   return {
     sessionId,
     answered: { id: currentId, prompt: currentQ.prompt, answer: processed },
-    nextQuestion: nextQ || null
+    nextQuestion: nextQ || null,
+    summary,
   };
 }
 
@@ -788,17 +795,45 @@ function approveRecommendation(sessionId, approved) {
   };
 }
 
-/* -------------------- Exports -------------------- */
-module.exports = {
-  startChat,
-  answerQuestion,
-  getRecommendation,
-  approveRecommendation,
-  // internal helpers
-  validateAnswer,
-  processAnswer,
-  getNextQuestion,
-  getFirstQuestion,
-  loadSymptomsData,
-  getDurationRecommendation
-};
+/**
+ * Generate summary report based on stored session answers
+ * @param {string} sessionId
+ * @returns {object} Summary report
+ */
+async function generateSummary(sessionId) {
+  const session = sessionService.getSession(sessionId);
+  if (!session) throw new Error("Session not found");
+
+  const answers = session.answers || {};
+  const data = loadSymptomsData();
+
+  // Build report
+  const report = {
+    name: answers["3"] || "N/A",
+    age: answers["4"] || "N/A",
+    gender: answers["5"] || "N/A",
+    symptoms: answers["7"] || [],
+    duration: answers["8"] || "N/A",
+    temperature: answers["9"] || "N/A",
+    allergies: answers["10"] || "N/A",
+    medication: answers["11"] || "N/A",
+    recommendation: null,
+  };
+
+  // Get recommendation if any
+  const sectionData = data[session.section];
+  const recommendationObj = sectionData?.find(q => q.type === "recommendation");
+  if (recommendationObj) {
+    report.recommendation = recommendationObj.details;
+  }
+
+  // Save summary to database
+  if (session.userId) {
+    await prisma.chat.update({
+      where: { userId: session.userId },  // or use chat id
+      data: { summary: report },
+    });
+  }
+
+  return report;
+}
