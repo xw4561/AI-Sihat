@@ -13,21 +13,15 @@
     <div v-else class="order-list">
       <div v-for="order in orders" :key="order.id" class="order-card" :class="order.status.toLowerCase()">
         <div class="order-header">
-          <h3>Order #{{ order.id }}</h3>
+          <h3>Order #{{ order.id.substring(0, 8) }}</h3>
           <span class="status">{{ order.status }}</span>
         </div>
         <p><strong>Customer:</strong> {{ order.customerName }}</p>
-        <div class="medicines">
-          <strong>Requested Medicines:</strong>
-          <ul>
-            <li v-for="med in order.requestedMedicines" :key="med.id">
-              {{ med.name }} (Quantity: {{ med.quantity }})
-            </li>
-          </ul>
-        </div>
+        <p><strong>Symptoms:</strong> {{ order.summary?.symptoms?.join(', ') || 'N/A' }}</p>
+        <p><strong>Date:</strong> {{ new Date(order.createdAt).toLocaleString() }}</p>
         <div class="actions">
           <button class="btn view-report" @click="viewReport(order)">View Report</button>
-          <button class="btn approve" @click="approveOrder(order)" :disabled="order.status !== 'Pending'">Approve</button>
+          <button class="btn approve" @click="openApproveModal(order)" :disabled="order.status !== 'Pending'">Approve</button>
           <button class="btn reject" @click="openRejectModal(order)" :disabled="order.status !== 'Pending'">Reject</button>
         </div>
       </div>
@@ -37,13 +31,72 @@
     <div v-if="showReportModal" class="modal-overlay" @click.self="closeReportModal">
       <div class="modal-content">
         <span class="close-btn" @click="closeReportModal">&times;</span>
-        <h4>Chat Report for Order #{{ selectedOrder.id }}</h4>
-        <div class="chat-history">
-          <div v-for="(msg, index) in selectedOrder.chatHistory" :key="index" class="chat-message" :class="msg.sender.toLowerCase()">
-            <p><strong>{{ msg.sender }}:</strong> {{ msg.text }}</p>
+        <h4>Chat Report for Order #{{ selectedOrder.id.substring(0, 8) }}</h4>
+        <div v-if="selectedOrder.summary" class="summary-report">
+          <div class="summary-section">
+            <h5>Patient Information</h5>
+            <p><strong>Name:</strong> {{ selectedOrder.summary.name }}</p>
+            <p><strong>Age:</strong> {{ selectedOrder.summary.age }}</p>
+            <p><strong>Gender:</strong> {{ selectedOrder.summary.gender }}</p>
+            <p v-if="selectedOrder.summary.pregnant && selectedOrder.summary.pregnant !== 'N/A'"><strong>Pregnant:</strong> {{ selectedOrder.summary.pregnant }}</p>
+          </div>
+          
+          <div class="summary-section">
+            <h5>Symptoms & Condition</h5>
+            <p><strong>Symptoms:</strong> {{ Array.isArray(selectedOrder.summary.symptoms) ? selectedOrder.summary.symptoms.join(', ') : selectedOrder.summary.symptoms }}</p>
+            <p><strong>Duration:</strong> {{ selectedOrder.summary.duration }}</p>
+            <p><strong>Temperature:</strong> {{ selectedOrder.summary.temperature }}°C</p>
+          </div>
+          
+          <div class="summary-section">
+            <h5>Medical History</h5>
+            <p><strong>Allergies:</strong> {{ selectedOrder.summary.allergies }}</p>
+            <p><strong>Current Medication:</strong> {{ selectedOrder.summary.medication }}</p>
+          </div>
+          
+          <div v-if="selectedOrder.summary.recommendationDetails || selectedOrder.summary.recommendation" class="summary-section">
+            <h5>AI Recommendation</h5>
+            <pre class="recommendation-text">{{ selectedOrder.summary.recommendationDetails?.fullText || selectedOrder.summary.recommendation }}</pre>
+          </div>
+          
+          <div v-if="selectedOrder.summary.allRecommendations && selectedOrder.summary.allRecommendations.length > 0" class="summary-section">
+            <h5>Detailed Recommendations</h5>
+            <div v-for="(rec, idx) in selectedOrder.summary.allRecommendations" :key="idx" class="recommendation-item">
+              <strong>{{ rec.symptom }}:</strong>
+              <pre class="recommendation-text">{{ rec.details.join('\n') }}</pre>
+            </div>
           </div>
         </div>
+        <div v-else>
+          <p>No report available for this order.</p>
+        </div>
       </div>
+    </div>
+
+    <!-- Approve Modal -->
+    <div v-if="showApproveModal" class="modal-overlay" @click.self="closeApproveModal">
+        <div class="modal-content">
+            <span class="close-btn" @click="closeApproveModal">&times;</span>
+            <h4>Approve Order #{{ selectedOrder?.id.substring(0, 8) }}</h4>
+            <p>Select medicine and quantity to approve:</p>
+            <div class="form-group">
+              <label>Medicine:</label>
+              <select v-model="selectedMedicineId" class="form-control">
+                <option value="">Select a medicine</option>
+                <option v-for="med in medicines" :key="med.medicineId" :value="med.medicineId">
+                  {{ med.medicineName }} ({{ med.medicineType }}) - Stock: {{ med.medicineQuantity }}
+                </option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Quantity:</label>
+              <input v-model.number="selectedQuantity" type="number" min="1" class="form-control" />
+            </div>
+            <div class="modal-actions">
+                <button class="btn" @click="closeApproveModal">Cancel</button>
+                <button class="btn approve" @click="submitApproval">Approve Order</button>
+            </div>
+        </div>
     </div>
 
     <!-- Reject Modal -->
@@ -65,61 +118,52 @@
 
 <script setup>
 import { ref, onMounted } from 'vue';
+import axios from 'axios';
 
 const orders = ref([]);
 const isLoading = ref(true);
 const showReportModal = ref(false);
 const showRejectModal = ref(false);
+const showApproveModal = ref(false);
 const selectedOrder = ref(null);
 const rejectionReason = ref('');
+const selectedMedicineId = ref('');
+const selectedQuantity = ref(1);
+const medicines = ref([]);
 
-// Mock data representing orders from customers
-const mockOrders = [
-  {
-    id: 'ORD-001',
-    customerName: 'John Doe',
-    status: 'Pending',
-    requestedMedicines: [
-      { id: 'med-1', name: 'Paracetamol', quantity: 20 },
-      { id: 'med-2', name: 'Ibuprofen', quantity: 10 },
-    ],
-    chatHistory: [
-      { sender: 'Customer', text: 'I have a severe headache and body aches.' },
-      { sender: 'AI-Sihat', text: 'Based on your symptoms, I recommend Paracetamol for pain relief and Ibuprofen to reduce inflammation. Would you like to order them?' },
-      { sender: 'Customer', text: 'Yes, please.' },
-    ],
-  },
-  {
-    id: 'ORD-002',
-    customerName: 'Jane Smith',
-    status: 'Pending',
-    requestedMedicines: [
-      { id: 'med-3', name: 'Loratadine', quantity: 30 },
-    ],
-    chatHistory: [
-      { sender: 'Customer', text: 'I have seasonal allergies, my nose is runny and I keep sneezing.' },
-      { sender: 'AI-Sihat', text: 'Loratadine is an effective antihistamine for seasonal allergies. I suggest one tablet per day. Would you like to proceed?' },
-      { sender: 'Customer', text: 'Yes, that sounds good.' },
-    ],
-  },
-    {
-    id: 'ORD-003',
-    customerName: 'Sam Wilson',
-    status: 'Approved',
-    requestedMedicines: [
-      { id: 'med-4', name: 'Amoxicillin', quantity: 14 },
-    ],
-    chatHistory: [],
-  },
-];
-
-onMounted(() => {
-  // Simulate fetching data from an API
-  setTimeout(() => {
-    orders.value = mockOrders;
-    isLoading.value = false;
-  }, 1000);
+onMounted(async () => {
+  await fetchOrders();
+  await fetchMedicines();
 });
+
+async function fetchOrders() {
+  try {
+    isLoading.value = true;
+    const response = await axios.get('/ai-sihat/order/pending-ai');
+    orders.value = response.data.map(order => ({
+      id: order.orderId,
+      customerName: order.user?.username || 'Unknown',
+      status: order.status.charAt(0).toUpperCase() + order.status.slice(1),
+      chatHistory: order.user?.chats?.[0] || null,
+      summary: order.user?.chats?.[0]?.summary || null,
+      userId: order.userId,
+      createdAt: order.createdAt
+    }));
+  } catch (error) {
+    console.error('Error fetching orders:', error);
+  } finally {
+    isLoading.value = false;
+  }
+}
+
+async function fetchMedicines() {
+  try {
+    const response = await axios.get('/ai-sihat/medicine');
+    medicines.value = response.data;
+  } catch (error) {
+    console.error('Error fetching medicines:', error);
+  }
+}
 
 function viewReport(order) {
   selectedOrder.value = order;
@@ -131,36 +175,68 @@ function closeReportModal() {
   selectedOrder.value = null;
 }
 
+function openApproveModal(order) {
+  selectedOrder.value = order;
+  showApproveModal.value = true;
+}
+
+function closeApproveModal() {
+  showApproveModal.value = false;
+  selectedOrder.value = null;
+  selectedMedicineId.value = '';
+  selectedQuantity.value = 1;
+}
+
 function openRejectModal(order) {
-    selectedOrder.value = order;
-    showRejectModal.value = true;
+  selectedOrder.value = order;
+  showRejectModal.value = true;
 }
 
 function closeRejectModal() {
-    showRejectModal.value = false;
-    selectedOrder.value = null;
-    rejectionReason.value = '';
+  showRejectModal.value = false;
+  selectedOrder.value = null;
+  rejectionReason.value = '';
 }
 
-function approveOrder(order) {
-  const index = orders.value.findIndex(o => o.id === order.id);
-  if (index !== -1) {
-    orders.value[index].status = 'Approved';
+async function submitApproval() {
+  if (!selectedMedicineId.value || selectedQuantity.value < 1) {
+    alert('Please select a medicine and valid quantity.');
+    return;
+  }
+
+  try {
+    await axios.put(`/ai-sihat/order/${selectedOrder.value.id}/approve`, {
+      medicineId: selectedMedicineId.value,
+      quantity: selectedQuantity.value
+    });
+    
+    alert('Order approved successfully!');
+    closeApproveModal();
+    await fetchOrders();
+  } catch (error) {
+    console.error('Error approving order:', error);
+    alert('Failed to approve order: ' + (error.response?.data?.error || error.message));
   }
 }
 
-function submitRejection() {
-    if (!rejectionReason.value.trim()) {
-        alert('Please provide a reason for rejection.');
-        return;
-    }
-    const index = orders.value.findIndex(o => o.id === selectedOrder.value.id);
-    if (index !== -1) {
-        orders.value[index].status = 'Rejected';
-        // Here you would also send the rejectionReason to the backend
-        console.log(`Order ${selectedOrder.value.id} rejected. Reason: ${rejectionReason.value}`);
-    }
+async function submitRejection() {
+  if (!rejectionReason.value.trim()) {
+    alert('Please provide a reason for rejection.');
+    return;
+  }
+
+  try {
+    await axios.put(`/ai-sihat/order/${selectedOrder.value.id}/reject`, {
+      reason: rejectionReason.value
+    });
+    
+    alert('Order rejected successfully.');
     closeRejectModal();
+    await fetchOrders();
+  } catch (error) {
+    console.error('Error rejecting order:', error);
+    alert('Failed to reject order: ' + (error.response?.data?.error || error.message));
+  }
 }
 </script>
 
@@ -331,6 +407,68 @@ h2 {
     border-radius: 8px;
     border: 1px solid #ccc;
     margin-top: 1rem;
+}
+
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.form-group label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: #2c3e50;
+}
+
+.form-control {
+    width: 100%;
+    padding: 0.6rem;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    font-size: 1rem;
+}
+
+.summary-report {
+    margin-top: 1rem;
+    line-height: 1.8;
+}
+
+.summary-section {
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    background: #f9f9f9;
+    border-radius: 8px;
+    border-left: 4px solid #42b983;
+}
+
+.summary-section h5 {
+    margin: 0 0 1rem 0;
+    color: #2c3e50;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.summary-report p {
+    margin-bottom: 0.8rem;
+}
+
+.recommendation-item {
+    margin-bottom: 1rem;
+    padding: 0.8rem;
+    background: white;
+    border-radius: 6px;
+}
+
+.recommendation-text {
+    background: #f5f5f5;
+    padding: 1rem;
+    border-radius: 8px;
+    border-left: 4px solid #42b983;
+    white-space: pre-wrap;
+    font-family: inherit;
+    line-height: 1.6;
+    max-height: 400px;
+    overflow-y: auto;
 }
 
 .modal-actions {

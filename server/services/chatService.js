@@ -796,6 +796,38 @@ function approveRecommendation(sessionId, approved) {
 }
 
 /**
+ * Create an order from chat session for pharmacist approval
+ * @param {string} sessionId
+ * @returns {object} Created order
+ */
+async function createOrderFromChat(sessionId) {
+  const session = sessionService.getSession(sessionId);
+  if (!session) throw new Error("Session not found");
+  if (!session.userId) throw new Error("User ID required to create order");
+
+  const answers = session.answers || {};
+  const symptoms = answers["7"] || [];
+  
+  // Generate summary first
+  const summary = await generateSummary(sessionId);
+  
+  // Create a pending order with chat data (no medicine selected yet)
+  const order = await prisma.order.create({
+    data: {
+      userId: session.userId,
+      medicineId: null, // Will be filled by pharmacist
+      quantity: 0, // Will be filled by pharmacist
+      orderType: "AI Consultation",
+      useAi: true,
+      status: "pending",
+      totalPoints: 0,
+    },
+  });
+
+  return { order, summary };
+}
+
+/**
  * Generate summary report based on stored session answers
  * @param {string} sessionId
  * @returns {object} Summary report
@@ -807,33 +839,65 @@ async function generateSummary(sessionId) {
   const answers = session.answers || {};
   const data = loadSymptomsData();
 
-  // Build report
+  // Build detailed report with all answers
   const report = {
     name: answers["3"] || "N/A",
     age: answers["4"] || "N/A",
     gender: answers["5"] || "N/A",
+    pregnant: answers["6"] || "N/A",
     symptoms: answers["7"] || [],
     duration: answers["8"] || "N/A",
     temperature: answers["9"] || "N/A",
     allergies: answers["10"] || "N/A",
     medication: answers["11"] || "N/A",
+    allAnswers: answers, // Include all answers for complete history
     recommendation: null,
+    recommendationDetails: null,
   };
 
-  // Get recommendation if any
+  // Get full recommendation details
   const sectionData = data[session.section];
   const recommendationObj = sectionData?.find(q => q.type === "recommendation");
   if (recommendationObj) {
-    report.recommendation = recommendationObj.details;
+    // Store both the summary and full details
+    report.recommendation = recommendationObj.details || recommendationObj.prompt;
+    report.recommendationDetails = {
+      symptom: recommendationObj.symptomName,
+      fullText: Array.isArray(recommendationObj.prompt) 
+        ? recommendationObj.prompt.join('\n') 
+        : recommendationObj.prompt,
+      details: recommendationObj.details
+    };
+  }
+  
+  // Include all collected recommendations if multi-symptom
+  if (session.allRecommendations && session.allRecommendations.length > 0) {
+    report.allRecommendations = session.allRecommendations;
   }
 
-  // Save summary to database
+  // Save summary to database - update the most recent chat for this user
   if (session.userId) {
-    await prisma.chat.update({
-      where: { userId: session.userId },  // or use chat id
-      data: { summary: report },
+    const latestChat = await prisma.chat.findFirst({
+      where: { userId: session.userId },
+      orderBy: { createdAt: 'desc' }
     });
+    
+    if (latestChat) {
+      await prisma.chat.update({
+        where: { id: latestChat.id },
+        data: { summary: report },
+      });
+    }
   }
 
   return report;
 }
+
+module.exports = {
+  startChat,
+  answerQuestion,
+  getRecommendation,
+  approveRecommendation,
+  generateSummary,
+  createOrderFromChat,
+};

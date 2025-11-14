@@ -56,7 +56,7 @@ model Medicine {
 model Order {
   orderId     String   @id @default(cuid()) @map("order_id")
   userId      String   @map("user_id")
-  medicineId  String   @map("medicine_id")
+  medicineId  String?  @map("medicine_id")
   quantity    Int
   orderType   String   @map("order_type") @db.VarChar(20)
   useAi       Boolean  @default(false) @map("use_ai")
@@ -66,7 +66,7 @@ model Order {
   updatedAt   DateTime @updatedAt
 
   user        User     @relation(fields: [userId], references: [userId], onDelete: Cascade)
-  medicine    Medicine @relation(fields: [medicineId], references: [medicineId], onDelete: Restrict)
+  medicine    Medicine? @relation(fields: [medicineId], references: [medicineId], onDelete: Restrict)
 
   @@index([userId])
   @@index([medicineId])

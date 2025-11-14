@@ -92,6 +92,15 @@
         </button>
       </div>
 
+      <!-- Waiting for Approval Display -->
+      <div v-if="currentQuestion && currentQuestion.type === 'waiting_approval'" class="waiting-approval">
+        <div class="waiting-icon">
+          <div class="spinner"></div>
+        </div>
+        <div class="waiting-text">{{ currentQuestion.prompt }}</div>
+        <div class="waiting-subtext">This usually takes a few minutes. You'll be notified once the pharmacist reviews your consultation.</div>
+      </div>
+
       <!-- Medication Cart Display -->
       <div v-if="currentQuestion && currentQuestion.type === 'medication_cart'" class="medication-cart">
         <div class="cart-title">💊 Available Medications</div>
@@ -114,9 +123,12 @@
         </div>
         <div class="cart-actions">
           <button class="chip continue-btn" @click="continueFromCart" :disabled="loading">
-            <span>Continue {{ addedToCart.length > 0 ? `(${addedToCart.length} item${addedToCart.length > 1 ? 's' : ''})` : '' }}</span>
+            <span>{{ addedToCart.length > 0 ? 'Finish' : 'Skip' }}</span>
             <span class="arrow">→</span>
           </button>
+          <router-link v-if="addedToCart.length > 0" to="/cart" class="chip view-cart-btn">
+            <span>🛒 View Cart ({{ addedToCart.length }})</span>
+          </router-link>
         </div>
       </div>
 
@@ -129,8 +141,8 @@
       <div v-if="sessionId && !currentQuestion && !loading" class="done">No further questions. Conversation complete.</div>
     </div>
 
-  <!-- Composer - Hide completely when showing recommendation array, medication cart, or completion message -->
-  <div v-if="currentQuestion && !Array.isArray(currentQuestion.prompt) && currentQuestion.type !== 'medication_cart' && currentQuestion.type !== 'completion_message'" class="composer">
+  <!-- Composer - Hide completely when showing recommendation array, medication cart, completion message, or waiting for approval -->
+  <div v-if="currentQuestion && !Array.isArray(currentQuestion.prompt) && currentQuestion.type !== 'medication_cart' && currentQuestion.type !== 'completion_message' && currentQuestion.type !== 'waiting_approval'" class="composer">
       <!-- Show input whenever session exists (bot asks first). Send button remains disabled until canSubmit is true. -->
       <input v-if="sessionId && !loading && currentQuestion && ((currentQuestion.type !== 'multiple_choice' && currentQuestion.type !== 'single_choice') || otherSymptomSelected || yesSelected)" v-model="textAnswer" :type="currentQuestion && currentQuestion.type === 'number_input' ? 'number' : 'text'" placeholder="Type your answer..." @keydown.enter.prevent="sendAnswer" />
 
@@ -144,6 +156,9 @@
 <script setup>
 import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import axios from 'axios'
+import { useCartStore } from '../store/cart'
+
+const cartStore = useCartStore()
 
 const sessionId = ref('')
 const currentQuestion = ref(null)
@@ -154,6 +169,10 @@ const otherSymptomSelected = ref(false)
 const yesSelected = ref(false)
 const addedToCart = ref([]) // Track medications added to cart
 const showPlaceholder = ref(true) // Show placeholder bubble until first reply
+const orderId = ref(null) // Track created order ID
+const orderStatus = ref(null) // Track order status (pending, approved, rejected)
+const approvedMedicines = ref([]) // Store approved medicines from pharmacist
+const chatComplete = ref(false) // Track if chat has been completed
 
 // form state
 const singleChoice = ref('')
@@ -180,6 +199,10 @@ const resetInput = () => {
   otherSymptomSelected.value = false
   yesSelected.value = false
   addedToCart.value = [] // Clear cart on reset
+  orderId.value = null
+  orderStatus.value = null
+  approvedMedicines.value = []
+  chatComplete.value = false
 }
 
 // Identify the standalone heading prompt sent by backend
@@ -230,7 +253,20 @@ async function startSession() {
     loading.value = true
     error.value = ''
     history.value = []
-    const res = await axios.post('/api/chat/start')
+    
+    // Get logged-in user ID from localStorage
+    let userId = null
+    try {
+      const userStr = localStorage.getItem('user')
+      if (userStr) {
+        const user = JSON.parse(userStr)
+        userId = user.userId
+      }
+    } catch (e) {
+      console.warn('Could not retrieve user ID:', e)
+    }
+    
+    const res = await axios.post('/api/chat/start', { userId })
     sessionId.value = res.data.sessionId
     currentQuestion.value = res.data.currentQuestion
 
@@ -407,30 +443,119 @@ function toggleMulti(opt) {
   else multiChoice.value.splice(idx, 1)
 }
 
-function continueFromRecommendation() {
-  // For recommendation_display type, proceed with a dummy answer
+async function continueFromRecommendation() {
+  // For recommendation_display type, create order and wait for pharmacist approval
   if (loading.value) return
-  textAnswer.value = 'Continue'
-  sendAnswer()
+  
+  try {
+    loading.value = true
+    // Create order from chat session
+    const res = await axios.post('/api/chat/complete', {
+      sessionId: sessionId.value
+    })
+    
+    orderId.value = res.data.order.orderId
+    orderStatus.value = 'pending'
+    chatComplete.value = true
+    
+    // Show waiting message
+    currentQuestion.value = {
+      type: 'waiting_approval',
+      prompt: 'Thank you! Your consultation has been submitted to our pharmacist for review. Please wait for approval...'
+    }
+    
+    // Start polling for approval status
+    pollOrderStatus()
+  } catch (e) {
+    error.value = e.response?.data?.error || e.message || 'Failed to submit consultation'
+    loading.value = false
+  }
 }
 
 function addToCart(medication) {
   // Add medication to cart tracking
   if (!addedToCart.value.find(m => m.name === medication.name)) {
     addedToCart.value.push(medication)
+    
+    // Add to actual cart store
+    cartStore.addToCart({
+      id: medication.medicineId,
+      name: medication.name,
+      price: parseFloat(medication.price || 0),
+      imageUrl: medication.imageUrl,
+      type: medication.symptom
+    })
   }
-  // Visual feedback is handled by button state change
-  // TODO: Integrate with actual shopping cart system
+}
+
+async function pollOrderStatus() {
+  if (!orderId.value) return
+  
+  const pollInterval = setInterval(async () => {
+    try {
+      const res = await axios.get(`/ai-sihat/order/${orderId.value}`)
+      const order = res.data
+      
+      if (order.status === 'approved') {
+        clearInterval(pollInterval)
+        orderStatus.value = 'approved'
+        loading.value = false
+        
+        // Fetch medicine details
+        if (order.medicineId) {
+          const medRes = await axios.get(`/ai-sihat/medicine/${order.medicineId}`)
+          approvedMedicines.value = [{
+            ...medRes.data,
+            quantity: order.quantity
+          }]
+        }
+        
+        // Show approved medicines
+        currentQuestion.value = {
+          type: 'medication_cart',
+          prompt: 'Your consultation has been approved! Here are the recommended medications:',
+          medications: approvedMedicines.value.map(med => ({
+            name: med.medicineName,
+            symptom: med.medicineType,
+            medicineId: med.medicineId,
+            price: med.price,
+            imageUrl: med.imageUrl
+          }))
+        }
+      } else if (order.status === 'rejected') {
+        clearInterval(pollInterval)
+        orderStatus.value = 'rejected'
+        loading.value = false
+        
+        currentQuestion.value = {
+          type: 'completion_message',
+          prompt: 'We\'re sorry, but the pharmacist was unable to approve this consultation. Please consult with a healthcare professional for further assistance.'
+        }
+      }
+    } catch (e) {
+      console.error('Error polling order status:', e)
+    }
+  }, 5000) // Poll every 5 seconds
+  
+  // Stop polling after 5 minutes
+  setTimeout(() => {
+    clearInterval(pollInterval)
+    if (orderStatus.value === 'pending') {
+      loading.value = false
+      error.value = 'Approval timeout. Please check your order status later.'
+    }
+  }, 300000)
 }
 
 function continueFromCart() {
-  // User finished reviewing medications, proceed to next question
+  // User finished reviewing approved medications
   if (loading.value) return
-  // Send information about whether items were added
-  textAnswer.value = addedToCart.value.length > 0 
-    ? `Added ${addedToCart.value.length} item(s) to cart` 
-    : 'No items added'
-  sendAnswer()
+  
+  // Show completion message
+  currentQuestion.value = {
+    type: 'completion_message',
+    prompt: `Thank you for using AI-Sihat! ${addedToCart.value.length > 0 ? `You've added ${addedToCart.value.length} item(s) to your cart.` : ''} You can proceed to checkout or continue shopping.`
+  }
 }
 
 function parseRecommendationSections(promptArray, symptomName = null) {
@@ -918,7 +1043,21 @@ function formatAnswer(a) {
 .cart-actions {
   display: flex;
   justify-content: center;
+  gap: 0.8rem;
   margin-top: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.view-cart-btn {
+  background: #3498db !important;
+  color: white !important;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+}
+
+.view-cart-btn:hover {
+  background: #2980b9 !important;
 }
 
 /* Completion Message Styles */
@@ -948,6 +1087,48 @@ function formatAnswer(a) {
   line-height: 1.6;
   font-weight: 500;
   white-space: pre-line;
+}
+
+/* Waiting for Approval Styles */
+.waiting-approval {
+  text-align: center;
+  padding: 2rem;
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  border-radius: 12px;
+  color: white;
+  margin-top: 1rem;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.waiting-icon {
+  margin-bottom: 1rem;
+}
+
+.spinner {
+  width: 50px;
+  height: 50px;
+  border: 4px solid rgba(255,255,255,0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  margin: 0 auto;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.waiting-text {
+  font-size: 1.2rem;
+  line-height: 1.6;
+  font-weight: 600;
+  margin-bottom: 0.8rem;
+}
+
+.waiting-subtext {
+  font-size: 0.95rem;
+  opacity: 0.9;
+  line-height: 1.5;
 }
 
 .error { margin-top:0.6rem; color:#c33; background:#fee; border:1px solid #fbb; padding:0.6rem; border-radius:8px }

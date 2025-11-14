@@ -63,6 +63,24 @@ module.exports = (app) => {
   });
 
   /**
+   * POST /chat/complete
+   * Complete chat and create order for pharmacist approval
+   */
+  app.post("/api/chat/complete", async (req, res) => {
+    console.log('[chat.routes] POST /api/chat/complete', { body: req.body });
+    try {
+      const { sessionId } = req.body;
+      if (!sessionId) return res.status(400).json({ error: "sessionId is required" });
+
+      const result = await chatService.createOrderFromChat(sessionId);
+      res.json(result);
+    } catch (error) {
+      console.error("Complete chat error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  /**
    * POST /chat/approve
    * Simulate pharmacist approval or confirmation
    */
