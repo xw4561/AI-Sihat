@@ -17,27 +17,20 @@ function calculatePoints(quantity, useAI) {
 }
 
 /**
- * Create a new order and update user points
- * @param {object} orderData - { userId, medicineId, quantity, orderType, useAi }
- * @returns {Promise<object>} { order, updatedPoints }
+ * Create a new order with multiple items
+ * @param {object} orderData - { userId, items: [{medicineId, quantity, price, prescriptionItemId?}], customerName, customerPhone, customerAddress?, prescriptionId? }
+ * @returns {Promise<object>} { order, updatedPoints, earnedPoints }
  */
 async function createOrder(orderData) {
-  const { userId, medicineId, quantity, orderType, useAi } = orderData;
+  const { userId, items, customerName, customerPhone, customerAddress, prescriptionId } = orderData;
 
   // Validate required fields
-  if (!userId || !medicineId || !quantity || !orderType) {
-    throw new Error("Missing required fields: userId, medicineId, quantity, orderType");
+  if (!userId || !items || !Array.isArray(items) || items.length === 0) {
+    throw new Error("Missing required fields: userId, items (must be non-empty array)");
   }
 
-  // Validate order type
-  const validOrderTypes = ["pickup", "delivery"];
-  if (!validOrderTypes.includes(orderType)) {
-    throw new Error("Invalid orderType. Must be 'pickup' or 'delivery'");
-  }
-
-  // Validate quantity
-  if (typeof quantity !== "number" || quantity <= 0) {
-    throw new Error("Quantity must be a positive number");
+  if (!customerName || !customerPhone) {
+    throw new Error("Missing required fields: customerName, customerPhone");
   }
 
   // Check if user exists
@@ -48,55 +41,99 @@ async function createOrder(orderData) {
     throw new Error("User not found");
   }
 
-  // Check if medicine exists
-  const medicine = await prisma.medicine.findUnique({
-    where: { medicineId: medicineId }
-  });
-  if (!medicine) {
-    throw new Error("Medicine not found");
+  // Validate all medicines exist and calculate totals
+  let totalPrice = 0;
+  let totalPoints = 0;
+
+  for (const item of items) {
+    if (!item.medicineId || !item.quantity || !item.price) {
+      throw new Error("Each item must have medicineId, quantity, and price");
+    }
+
+    const medicine = await prisma.medicine.findUnique({
+      where: { medicineId: item.medicineId }
+    });
+
+    if (!medicine) {
+      throw new Error(`Medicine not found: ${item.medicineId}`);
+    }
+
+    // Check stock
+    if (medicine.medicineQuantity < item.quantity) {
+      throw new Error(`Insufficient stock for ${medicine.medicineName}. Available: ${medicine.medicineQuantity}`);
+    }
+
+    const itemTotal = parseFloat(item.price) * item.quantity;
+    totalPrice += itemTotal;
+    
+    // Calculate points: 1 point per RM spent
+    totalPoints += Math.floor(itemTotal);
   }
 
-  // Check medicine stock
-  if (medicine.medicineQuantity < quantity) {
-    throw new Error(`Insufficient stock. Available: ${medicine.medicineQuantity}`);
-  }
-
-  // Calculate points
-  const earnedPoints = calculatePoints(quantity, useAi || false);
-
-  // Create order and update user points in a transaction
+  // Create order and order items in a transaction
   const result = await prisma.$transaction(async (tx) => {
+    // Create the order
     const newOrder = await tx.order.create({
       data: {
-        userId: userId,
-        medicineId: medicineId,
-        quantity,
-        orderType: orderType,
-        useAi: useAi || false,
-        totalPoints: earnedPoints,
-        status: "completed",
-      },
-      include: {
-        user: {
-          select: { userId: true, username: true, email: true, points: true }
-        },
-        medicine: true
+        userId,
+        prescriptionId: prescriptionId || null,
+        totalPrice,
+        totalPoints,
+        customerName,
+        customerPhone,
+        customerAddress: customerAddress || null,
+        status: "pending",
       }
     });
 
+    // Create order items
+    for (const item of items) {
+      await tx.orderItem.create({
+        data: {
+          orderId: newOrder.orderId,
+          medicineId: item.medicineId,
+          prescriptionItemId: item.prescriptionItemId || null,
+          quantity: item.quantity,
+          price: parseFloat(item.price)
+        }
+      });
+
+      // Update medicine stock
+      await tx.medicine.update({
+        where: { medicineId: item.medicineId },
+        data: { medicineQuantity: { decrement: item.quantity } }
+      });
+    }
+
     // Update user points
     const updatedUser = await tx.user.update({
-      where: { userId: userId },
-      data: { points: { increment: earnedPoints } }
+      where: { userId },
+      data: { points: { increment: totalPoints } }
     });
 
-    return { newOrder, updatedUser };
+    // Fetch complete order with items
+    const completeOrder = await tx.order.findUnique({
+      where: { orderId: newOrder.orderId },
+      include: {
+        items: {
+          include: {
+            medicine: true,
+            prescriptionItem: true
+          }
+        },
+        user: {
+          select: { userId: true, username: true, email: true, points: true }
+        }
+      }
+    });
+
+    return { completeOrder, updatedUser };
   });
 
   return {
-    order: result.newOrder,
+    order: result.completeOrder,
     updatedPoints: result.updatedUser.points,
-    earnedPoints
+    earnedPoints: totalPoints
   };
 }
 

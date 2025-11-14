@@ -58,7 +58,9 @@
           <input type="text" v-model="purchaseMethod" placeholder="Purchase Method (e.g. Cash/Online)" required />
         </template>
 
-        <button type="submit" class="submit-order">Place Order</button>
+        <button type="submit" class="submit-order" :disabled="isSubmitting">
+          {{ isSubmitting ? 'Processing...' : 'Place Order' }}
+        </button>
       </form>
     </div>
   </div>
@@ -68,6 +70,7 @@
   import { ref } from 'vue'
   import { useCartStore } from '../store/cart'
   import { useRouter } from 'vue-router'
+  import axios from 'axios'
 
   const cart = useCartStore()
   const router = useRouter()
@@ -78,8 +81,9 @@
   const customerAddress = ref('')
   const purchaseMethod = ref('')
   const orderType = ref('') // 'pickup' or 'delivery'
+  const isSubmitting = ref(false)
 
-  function submitOrder() {
+  async function submitOrder() {
     if (!orderType.value) {
       alert('Please select Pickup or Delivery.')
       return
@@ -94,8 +98,47 @@
       return
     }
 
-    cart.clearCart()
-    router.push('/order-confirmed')
+    isSubmitting.value = true
+
+    try {
+      // Get user ID from localStorage
+      const userId = localStorage.getItem('userId')
+      if (!userId) {
+        alert('Please login to place an order')
+        router.push('/login')
+        return
+      }
+
+      // Prepare order data
+      const orderData = {
+        userId: userId,
+        customerName: customerName.value,
+        customerPhone: customerPhone.value,
+        customerAddress: orderType.value === 'delivery' ? customerAddress.value : null,
+        items: cart.items.map(item => ({
+          medicineId: item.medicineId || item.id, // Use medicineId if available, otherwise use id
+          quantity: item.quantity,
+          price: item.price,
+          prescriptionItemId: item.prescriptionItemId || null
+        }))
+      }
+
+      // Create order
+      const response = await axios.post('/ai-sihat/order', orderData)
+
+      console.log('Order created:', response.data)
+
+      // Clear cart after successful order
+      cart.clearCart()
+      
+      // Redirect to confirmation page
+      router.push('/order-confirmed')
+    } catch (error) {
+      console.error('Error creating order:', error)
+      alert(error.response?.data?.error || 'Failed to create order. Please try again.')
+    } finally {
+      isSubmitting.value = false
+    }
   }
 </script>
 

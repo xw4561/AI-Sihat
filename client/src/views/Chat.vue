@@ -107,11 +107,16 @@
         <div class="medications-grid">
           <div v-for="(med, idx) in currentQuestion.medications" :key="idx" class="medication-card">
             <div class="med-image-placeholder">
-              <span class="image-icon">📦</span>
+              <img v-if="med.imageUrl" :src="med.imageUrl" :alt="med.name" class="med-image" />
+              <span v-else class="image-icon">📦</span>
             </div>
             <div class="med-info">
               <div class="med-name">{{ med.name }}</div>
               <div class="med-symptom">For: {{ med.symptom }}</div>
+              <div v-if="med.wasRejected" class="rejection-info">
+                <span class="rejection-badge">⚠️ Alternative</span>
+                <p class="rejection-reason">Original rejected: {{ med.rejectionReason }}</p>
+              </div>
             </div>
             <button 
               class="btn-add-cart" 
@@ -507,7 +512,9 @@ async function pollOrderStatus() {
             ...item.medicine,
             quantity: item.quantity,
             symptom: item.symptom,
-            notes: item.notes
+            notes: item.notes,
+            wasRejected: item.wasRejected,
+            rejectionReason: item.rejectionReason
           }))
         }
         
@@ -520,7 +527,9 @@ async function pollOrderStatus() {
             symptom: med.symptom || med.medicineType,
             medicineId: med.medicineId,
             price: med.price,
-            imageUrl: med.imageUrl
+            imageUrl: med.imageUrl,
+            wasRejected: med.wasRejected,
+            rejectionReason: med.rejectionReason
           }))
         }
       } else if (prescription.status === 'rejected') {
@@ -987,6 +996,13 @@ function formatAnswer(a) {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  overflow: hidden;
+}
+
+.med-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .image-icon {
@@ -1003,8 +1019,29 @@ function formatAnswer(a) {
   font-weight: 600;
   color: #2c3e50;
   margin-bottom: 0.25rem;
-  line-height: 1.3;
-  word-wrap: break-word;
+}
+
+.rejection-info {
+  margin-top: 0.5rem;
+  padding: 0.4rem 0.6rem;
+  background: #fff3cd;
+  border-radius: 6px;
+  border-left: 3px solid #ff9800;
+}
+
+.rejection-badge {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #ff9800;
+  display: block;
+  margin-bottom: 0.2rem;
+}
+
+.rejection-reason {
+  font-size: 0.75rem;
+  color: #666;
+  margin: 0;
+  font-style: italic;
 }
 
 .med-symptom {

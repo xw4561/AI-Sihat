@@ -273,7 +273,7 @@ function getNextQuestion(section, currentId, sessionData) {
 
     const recommendationObj = data[section].find(q => q.id === targetId);
     
-    // Check if we're in multi-symptom flow
+    // Define symptom sections list
     const symptomSections = [
       "Fever", "Flu", "Cough", "Cold", "Diarrhoea", "Constipation",
       "Nausea and Vomiting", "Indigestion/Heartburn", "Bloat", "Menstrual Pain",
@@ -502,7 +502,6 @@ async function startChat(userId = null) {
     const chat = await prisma.chat.create({
       data: {
         userId,
-        sessionData: {},
       },
     });
     
@@ -664,50 +663,6 @@ async function answerQuestion(sessionId, answer) {
   session.currentId = nextQ ? nextQ.id : null;
   sessionService.updateSession(sessionId, session);
 
-  // Get recommendation if any
-  const sectionData = data[session.section];
-  const recommendationObj = sectionData?.find(q => q.type === "recommendation");
-  
-  // Combine all collected recommendations for multi-symptom cases
-  let recommendation = null;
-  if (session.allRecommendations && session.allRecommendations.length > 0) {
-    // Format all recommendations from multiple symptoms
-    const allRecsText = session.allRecommendations.map(rec => {
-      return `\n--- ${rec.symptom} ---\n` + rec.details.join("\n");
-    }).join("\n\n");
-    recommendation = allRecsText;
-  } else if (recommendationObj) {
-    // Single symptom recommendation
-    recommendation = Array.isArray(recommendationObj.prompt) ? recommendationObj.prompt.join("\n") : recommendationObj.prompt;
-  }
-
-  // Upsert or create chat record safely
-  try {
-    if (session.userId) {
-      await prisma.chat.upsert({
-        where: { userId: session.userId },
-        update: { 
-          sessionData: session.answers,
-          recommendation: recommendation,
-        },
-        create: {
-          userId: session.userId,
-          sessionData: session.answers,
-          recommendation: recommendation,
-        },
-      });
-    } else {
-      await prisma.chat.create({
-        data: {
-          sessionData: session.answers,
-          recommendation: recommendation,
-        },
-      });
-    }
-  } catch (err) {
-    console.error('Failed to save chat record:', err);
-  }
-
   // Inject medications into AppFlow medication_cart question
   if (nextQ && session.section === "AppFlow" && nextQ.type === "medication_cart") {
     console.log('General injection - Session medications:', session.medications);
@@ -853,32 +808,22 @@ async function generateSummary(sessionId) {
     age: answers["4"] || "N/A",
     gender: answers["5"] || "N/A",
     pregnant: answers["6"] || "N/A",
+    userDescription: answers["2"]?.userInput || "N/A", // User's own description of symptoms
     symptoms: answers["7"] || [],
     duration: answers["8"] || "N/A",
     temperature: answers["9"] || "N/A",
     allergies: answers["10"] || "N/A",
     medication: answers["11"] || "N/A",
     allAnswers: answers, // Include all answers for complete history
-    recommendation: null,
-    recommendationDetails: null,
     recommendedMedicines: [], // Medicines extracted from AI recommendations
   };
 
-  // Get full recommendation details
+  // Get full recommendation details - remove duplicate
+  // Store recommendations in recommendedMedicines array only
+  
+  // Get recommendation object for single symptom case
   const sectionData = data[session.section];
   const recommendationObj = sectionData?.find(q => q.type === "recommendation");
-  
-  if (recommendationObj) {
-    // Store both the summary and full details
-    report.recommendation = recommendationObj.details || recommendationObj.prompt;
-    report.recommendationDetails = {
-      symptom: recommendationObj.symptomName,
-      fullText: Array.isArray(recommendationObj.prompt) 
-        ? recommendationObj.prompt.join('\n') 
-        : recommendationObj.prompt,
-      details: recommendationObj.details
-    };
-  }
   
   // Include all collected recommendations if multi-symptom
   if (session.allRecommendations && session.allRecommendations.length > 0) {

@@ -41,6 +41,11 @@
           </div>
           
           <div class="summary-section">
+            <h5>Patient's Description</h5>
+            <p class="user-description">{{ selectedOrder.summary.userDescription || 'N/A' }}</p>
+          </div>
+          
+          <div class="summary-section">
             <h5>Symptoms & Condition</h5>
             <p><strong>Symptoms:</strong> {{ Array.isArray(selectedOrder.summary.symptoms) ? selectedOrder.summary.symptoms.join(', ') : selectedOrder.summary.symptoms }}</p>
             <p><strong>Duration:</strong> {{ selectedOrder.summary.duration }}</p>
@@ -51,19 +56,6 @@
             <h5>Medical History</h5>
             <p><strong>Allergies:</strong> {{ selectedOrder.summary.allergies }}</p>
             <p><strong>Current Medication:</strong> {{ selectedOrder.summary.medication }}</p>
-          </div>
-          
-          <div v-if="selectedOrder.summary.recommendationDetails || selectedOrder.summary.recommendation" class="summary-section">
-            <h5>AI Recommendation</h5>
-            <pre class="recommendation-text">{{ selectedOrder.summary.recommendationDetails?.fullText || selectedOrder.summary.recommendation }}</pre>
-          </div>
-          
-          <div v-if="selectedOrder.summary.allRecommendations && selectedOrder.summary.allRecommendations.length > 0" class="summary-section">
-            <h5>Detailed Recommendations</h5>
-            <div v-for="(rec, idx) in selectedOrder.summary.allRecommendations" :key="idx" class="recommendation-item">
-              <strong>{{ rec.symptom }}:</strong>
-              <pre class="recommendation-text">{{ rec.details.join('\n') }}</pre>
-            </div>
           </div>
         </div>
         <div v-else>
@@ -742,6 +734,15 @@ h2 {
     color: #2c3e50;
     font-size: 1.1rem;
     font-weight: 600;
+}
+
+.user-description {
+  font-style: italic;
+  color: #555;
+  background: white;
+  padding: 0.8rem;
+  border-radius: 6px;
+  border-left: 3px solid #42b983;
 }
 
 .summary-report p {

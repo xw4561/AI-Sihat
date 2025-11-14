@@ -11,7 +11,11 @@ export const useCartStore = defineStore('cart', {
       if (existing) {
         existing.quantity += 1
       } else {
-        this.items.push({ ...product, quantity: 1 })
+        this.items.push({ 
+          ...product, 
+          medicineId: product.id, // Preserve medicineId for backend
+          quantity: 1 
+        })
       }
     },
     removeFromCart(id) {

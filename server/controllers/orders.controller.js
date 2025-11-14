@@ -78,9 +78,7 @@ exports.getPendingAiOrders = async (req, res) => {
         },
         chat: {
           select: {
-            summary: true,
-            recommendation: true,
-            sessionData: true
+            summary: true
           }
         }
       },
@@ -141,6 +139,9 @@ exports.approveOrder = async (req, res) => {
         quantity: parseInt(med.quantity),
         symptom: med.symptom || null,
         aiRecommendation: med.aiRecommendation || null,
+        wasRejected: med.action === 'reject',
+        rejectionReason: med.rejectionReason || null,
+        originalAiRecommendation: med.action === 'reject' ? med.aiRecommendation : null,
         notes: med.notes || null
       });
     }

@@ -46,6 +46,7 @@ model Medicine {
 model Order {
   orderId         String      @id @default(cuid()) @map("order_id")
   userId          String      @map("user_id")
+  prescriptionId  String?     @map("prescription_id")
   totalPrice      Decimal     @default(0) @map("total_price") @db.Decimal(10, 2)
   totalPoints     Int         @default(0) @map("total_points")
   status          String      @default("pending") @db.VarChar(20)
@@ -56,8 +57,10 @@ model Order {
   customerPhone   String      @map("customer_phone") @db.VarChar(50)
   items           OrderItem[]
   user            User        @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  prescription    Prescription? @relation(fields: [prescriptionId], references: [prescriptionId])
 
   @@index([userId])
+  @@index([prescriptionId])
   @@index([status])
   @@index([createdAt])
   @@map("orders")
@@ -83,8 +86,6 @@ model OrderItem {
 model Chat {
   id             Int      @id @default(autoincrement())
   userId         String?
-  sessionData    Json
-  recommendation String?
   createdAt      DateTime @default(now())
   summary        Json?
   user           User?    @relation(fields: [userId], references: [userId])
@@ -110,6 +111,7 @@ model Prescription {
   user            User     @relation(fields: [userId], references: [userId], onDelete: Cascade)
   pharmacist      User?    @relation("PharmacistPrescriptions", fields: [pharmacistId], references: [userId])
   items           PrescriptionItem[]
+  orders          Order[]
 
   @@index([userId])
   @@index([pharmacistId])
@@ -126,6 +128,9 @@ model PrescriptionItem {
   notes              String?
   symptom            String?
   aiRecommendation   String?  @map("ai_recommendation")
+  wasRejected        Boolean  @default(false) @map("was_rejected")
+  rejectionReason    String?  @map("rejection_reason")
+  originalAiRecommendation String? @map("original_ai_recommendation")
   createdAt          DateTime @default(now()) @map("created_at")
   prescription       Prescription @relation(fields: [prescriptionId], references: [prescriptionId], onDelete: Cascade)
   medicine           Medicine @relation(fields: [medicineId], references: [medicineId])
