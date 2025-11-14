@@ -94,9 +94,11 @@ onMounted(async () => {
       // If we have a userId, try to refresh from server for latest data
       if (parsed.userId) {
         try {
-          const res = await fetch(`http://localhost:3000/ai-sihat/user/${parsed.userId}`);
+          const res = await fetch(`/ai-sihat/user/${parsed.userId}`);
           if (res.ok) {
             user.value = await res.json();
+          } else {
+            console.warn('Could not refresh user from server', res.status, await res.text());
           }
         } catch (e) {
           // refresh failed, keep local copy
@@ -107,11 +109,15 @@ onMounted(async () => {
       // Fallback: if `userId` was stored separately (older clients)
       const userId = localStorage.getItem('userId');
       if (userId) {
-        const res = await fetch(`http://localhost:3000/ai-sihat/user/${userId}`);
-        if (!res.ok) throw new Error('Failed to fetch user');
-        user.value = await res.json();
-        // Save to localStorage for future use
-        localStorage.setItem('user', JSON.stringify(user.value));
+        try {
+          const res = await fetch(`/ai-sihat/user/${userId}`);
+          if (!res.ok) throw new Error(`Failed to fetch user (${res.status})`);
+          user.value = await res.json();
+          // Save to localStorage for future use
+          localStorage.setItem('user', JSON.stringify(user.value));
+        } catch (e) {
+          console.error('Fallback fetch user failed', e);
+        }
       }
     }
   } catch (err) {
@@ -172,7 +178,7 @@ async function saveProfile() {
       payload.password = editableUser.value.newPassword;
     }
     
-    const res = await fetch(`http://localhost:3000/ai-sihat/user/${user.value.userId}`, {
+    const res = await fetch(`/ai-sihat/user/${user.value.userId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
