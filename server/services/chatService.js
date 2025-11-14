@@ -815,7 +815,7 @@ async function createOrderFromChat(sessionId) {
   const order = await prisma.order.create({
     data: {
       userId: session.userId,
-      medicineId: null, // Will be filled by pharmacist
+      // medicineId is optional and will be filled by pharmacist
       quantity: 0, // Will be filled by pharmacist
       orderType: "AI Consultation",
       useAi: true,
@@ -853,6 +853,7 @@ async function generateSummary(sessionId) {
     allAnswers: answers, // Include all answers for complete history
     recommendation: null,
     recommendationDetails: null,
+    recommendedMedicines: [], // For pharmacist to select/add medicines
   };
 
   // Get full recommendation details
@@ -868,6 +869,17 @@ async function generateSummary(sessionId) {
         : recommendationObj.prompt,
       details: recommendationObj.details
     };
+    
+    // Create medicine slots for each symptom
+    const symptoms = Array.isArray(answers["7"]) ? answers["7"] : [];
+    report.recommendedMedicines = symptoms.map(symptom => ({
+      symptom: symptom,
+      medicineName: null,
+      medicineId: null,
+      quantity: 1,
+      medicineType: 'OTC',
+      status: 'pending'
+    }));
   }
   
   // Include all collected recommendations if multi-symptom

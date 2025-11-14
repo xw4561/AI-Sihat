@@ -92,31 +92,62 @@ exports.getPendingAiOrders = async (req, res) => {
   }
 };
 
-// Approve order (pharmacist)
+// Approve order (pharmacist) - supports multiple medicines and new medicine creation
 exports.approveOrder = async (req, res) => {
   try {
     const { id } = req.params;
-    const { medicineId, quantity } = req.body;
+    const { approvedMedicines } = req.body;
     
-    if (!medicineId || !quantity) {
-      return res.status(400).json({ error: "medicineId and quantity are required" });
+    // approvedMedicines format: [{ medicineId?, medicineName, medicineType, quantity, price?, imageUrl?, isNew? }]
+    if (!approvedMedicines || !Array.isArray(approvedMedicines) || approvedMedicines.length === 0) {
+      return res.status(400).json({ error: "At least one medicine must be approved" });
     }
 
-    const order = await prisma.order.update({
-      where: { orderId: id },
-      data: {
-        status: "approved",
-        medicineId: medicineId,
-        quantity: parseInt(quantity),
-        updatedAt: new Date()
-      },
-      include: {
-        user: true,
-        medicine: true
+    const results = [];
+    
+    for (const med of approvedMedicines) {
+      let medicineId = med.medicineId;
+      
+      // If it's a new medicine, create it first
+      if (med.isNew) {
+        const newMedicine = await prisma.medicine.create({
+          data: {
+            medicineName: med.medicineName,
+            medicineType: med.medicineType || 'OTC',
+            medicineQuantity: 1000, // Default stock
+            price: parseFloat(med.price) || 0,
+            imageUrl: med.imageUrl || 'https://via.placeholder.com/150'
+          }
+        });
+        medicineId = newMedicine.medicineId;
       }
+      
+      // Create an order for each approved medicine
+      const order = await prisma.order.create({
+        data: {
+          userId: (await prisma.order.findUnique({ where: { orderId: id } })).userId,
+          medicineId: medicineId,
+          quantity: parseInt(med.quantity),
+          orderType: "AI Consultation",
+          useAi: true,
+          status: "approved",
+          totalPoints: 0
+        },
+        include: {
+          user: true,
+          medicine: true
+        }
+      });
+      
+      results.push(order);
+    }
+    
+    // Delete the original pending order
+    await prisma.order.delete({
+      where: { orderId: id }
     });
     
-    res.status(200).json({ message: "Order approved successfully", order });
+    res.status(200).json({ message: "Order approved successfully", orders: results });
   } catch (error) {
     console.error("Approve order error:", error);
     res.status(400).json({ error: error.message });

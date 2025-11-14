@@ -73,28 +73,68 @@
       </div>
     </div>
 
-    <!-- Approve Modal -->
+    <!-- Approve Modal with Multiple Medicines -->
     <div v-if="showApproveModal" class="modal-overlay" @click.self="closeApproveModal">
-        <div class="modal-content">
+        <div class="modal-content large">
             <span class="close-btn" @click="closeApproveModal">&times;</span>
             <h4>Approve Order #{{ selectedOrder?.id.substring(0, 8) }}</h4>
-            <p>Select medicine and quantity to approve:</p>
-            <div class="form-group">
-              <label>Medicine:</label>
-              <select v-model="selectedMedicineId" class="form-control">
-                <option value="">Select a medicine</option>
-                <option v-for="med in medicines" :key="med.medicineId" :value="med.medicineId">
-                  {{ med.medicineName }} ({{ med.medicineType }}) - Stock: {{ med.medicineQuantity }}
-                </option>
-              </select>
+            <p>Select or add medicines for each symptom:</p>
+            
+            <div v-for="(medSlot, idx) in medicineSlots" :key="idx" class="medicine-slot">
+              <div class="symptom-label">{{ medSlot.symptom }}</div>
+              
+              <div class="medicine-select-group">
+                <div class="form-group">
+                  <label>Medicine:</label>
+                  <select v-model="medSlot.medicineId" @change="onMedicineSelect(idx)" class="form-control">
+                    <option value="">Select existing medicine</option>
+                    <option v-for="med in medicines" :key="med.medicineId" :value="med.medicineId">
+                      {{ med.medicineName }} ({{ med.medicineType }}) - Stock: {{ med.medicineQuantity }}
+                    </option>
+                    <option value="__new__">+ Add New Medicine</option>
+                  </select>
+                </div>
+                
+                <!-- New Medicine Form -->
+                <div v-if="medSlot.isNew" class="new-medicine-form">
+                  <div class="form-group">
+                    <label>Medicine Name:</label>
+                    <input v-model="medSlot.medicineName" type="text" class="form-control" placeholder="Enter medicine name" />
+                  </div>
+                  <div class="form-group">
+                    <label>Type:</label>
+                    <select v-model="medSlot.medicineType" class="form-control">
+                      <option value="OTC">OTC (Can add to cart)</option>
+                      <option value="NON_OTC">NON-OTC (Prescription only)</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label>Price (RM):</label>
+                    <input v-model.number="medSlot.price" type="number" step="0.01" min="0" class="form-control" />
+                  </div>
+                  <div class="form-group">
+                    <label>Image URL (optional):</label>
+                    <input v-model="medSlot.imageUrl" type="text" class="form-control" placeholder="https://..." />
+                  </div>
+                </div>
+                
+                <div class="form-group">
+                  <label>Quantity:</label>
+                  <input v-model.number="medSlot.quantity" type="number" min="1" class="form-control" />
+                </div>
+                
+                <div class="form-group checkbox-group">
+                  <label>
+                    <input type="checkbox" v-model="medSlot.approved" />
+                    Approve this medicine
+                  </label>
+                </div>
+              </div>
             </div>
-            <div class="form-group">
-              <label>Quantity:</label>
-              <input v-model.number="selectedQuantity" type="number" min="1" class="form-control" />
-            </div>
+            
             <div class="modal-actions">
                 <button class="btn" @click="closeApproveModal">Cancel</button>
-                <button class="btn approve" @click="submitApproval">Approve Order</button>
+                <button class="btn approve" @click="submitApproval">Approve Selected Medicines</button>
             </div>
         </div>
     </div>
@@ -127,9 +167,8 @@ const showRejectModal = ref(false);
 const showApproveModal = ref(false);
 const selectedOrder = ref(null);
 const rejectionReason = ref('');
-const selectedMedicineId = ref('');
-const selectedQuantity = ref(1);
 const medicines = ref([]);
+const medicineSlots = ref([]);
 
 onMounted(async () => {
   await fetchOrders();
@@ -177,14 +216,46 @@ function closeReportModal() {
 
 function openApproveModal(order) {
   selectedOrder.value = order;
+  
+  // Initialize medicine slots from recommended medicines or symptoms
+  const symptoms = order.summary?.symptoms || [];
+  medicineSlots.value = symptoms.map(symptom => ({
+    symptom: symptom,
+    medicineId: '',
+    medicineName: '',
+    medicineType: 'OTC',
+    quantity: 1,
+    price: 0,
+    imageUrl: '',
+    isNew: false,
+    approved: false
+  }));
+  
   showApproveModal.value = true;
 }
 
 function closeApproveModal() {
   showApproveModal.value = false;
   selectedOrder.value = null;
-  selectedMedicineId.value = '';
-  selectedQuantity.value = 1;
+  medicineSlots.value = [];
+}
+
+function onMedicineSelect(idx) {
+  const slot = medicineSlots.value[idx];
+  if (slot.medicineId === '__new__') {
+    slot.isNew = true;
+    slot.medicineId = null;
+  } else {
+    slot.isNew = false;
+    // Find selected medicine and populate info
+    const selected = medicines.value.find(m => m.medicineId === slot.medicineId);
+    if (selected) {
+      slot.medicineName = selected.medicineName;
+      slot.medicineType = selected.medicineType;
+      slot.price = parseFloat(selected.price);
+      slot.imageUrl = selected.imageUrl;
+    }
+  }
 }
 
 function openRejectModal(order) {
@@ -199,15 +270,37 @@ function closeRejectModal() {
 }
 
 async function submitApproval() {
-  if (!selectedMedicineId.value || selectedQuantity.value < 1) {
-    alert('Please select a medicine and valid quantity.');
+  // Get only approved medicines
+  const approvedMeds = medicineSlots.value.filter(slot => slot.approved);
+  
+  if (approvedMeds.length === 0) {
+    alert('Please approve at least one medicine.');
     return;
+  }
+  
+  // Validate new medicines
+  for (const med of approvedMeds) {
+    if (med.isNew && (!med.medicineName || !med.price)) {
+      alert('Please fill in all fields for new medicines (name and price required).');
+      return;
+    }
+    if (!med.isNew && !med.medicineId) {
+      alert('Please select a medicine or add a new one.');
+      return;
+    }
   }
 
   try {
     await axios.put(`/ai-sihat/order/${selectedOrder.value.id}/approve`, {
-      medicineId: selectedMedicineId.value,
-      quantity: selectedQuantity.value
+      approvedMedicines: approvedMeds.map(med => ({
+        medicineId: med.medicineId,
+        medicineName: med.medicineName,
+        medicineType: med.medicineType,
+        quantity: med.quantity,
+        price: med.price,
+        imageUrl: med.imageUrl || 'https://via.placeholder.com/150',
+        isNew: med.isNew
+      }))
     });
     
     alert('Order approved successfully!');
@@ -368,7 +461,13 @@ h2 {
   border-radius: 12px;
   width: 90%;
   max-width: 600px;
+  max-height: 85vh;
+  overflow-y: auto;
   position: relative;
+}
+
+.modal-content.large {
+  max-width: 900px;
 }
 
 .close-btn {
@@ -476,5 +575,45 @@ h2 {
     justify-content: flex-end;
     gap: 1rem;
     margin-top: 1rem;
+}
+
+.medicine-slot {
+  background: #f8f9fa;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  border-left: 4px solid #3498db;
+}
+
+.symptom-label {
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: #2c3e50;
+  margin-bottom: 0.8rem;
+}
+
+.medicine-select-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.new-medicine-form {
+  background: #fff;
+  padding: 1rem;
+  border-radius: 8px;
+  border: 2px dashed #42b983;
+}
+
+.checkbox-group label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+
+.checkbox-group input[type="checkbox"] {
+  width: auto;
+  cursor: pointer;
 }
 </style>
