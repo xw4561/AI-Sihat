@@ -41,6 +41,11 @@ async function handleLogin() {
     
     const user = response.data.user;
     localStorage.setItem('user', JSON.stringify(user));
+    // store useful individual values for backward compatibility
+    if (user.userId) localStorage.setItem('userId', user.userId);
+    if (user.username) localStorage.setItem('userName', user.username);
+    if (user.email) localStorage.setItem('userEmail', user.email);
+    if (user.role) localStorage.setItem('userRole', user.role);
     
     // Redirect based on role
     if (user.role === 'ADMIN') {

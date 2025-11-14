@@ -52,6 +52,25 @@ exports.updatePoints = async (req, res) => {
   }
 };
 
+exports.update = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { username, email, password } = req.body;
+
+    // Validate input
+    if (!username && !email && !password) {
+      return res.status(400).json({ error: "At least one field (username, email, or password) is required" });
+    }
+
+    const user = await userService.updateUser(id, { username, email, password });
+    res.status(200).json(user);
+  } catch (error) {
+    console.error("Update user error:", error);
+    const status = error.message === "User not found" ? 404 : 400;
+    res.status(status).json({ error: error.message });
+  }
+};
+
 exports.delete = async (req, res) => {
   try {
     const { id } = req.body || req.params;
