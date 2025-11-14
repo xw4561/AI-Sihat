@@ -1,6 +1,3 @@
-// This is your Prisma schema file
-// Learn more: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -9,13 +6,6 @@ datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
-}
-
-// Define roles
-enum Role {
-  ADMIN
-  PHARMACIST
-  USER
 }
 
 model User {
@@ -27,25 +17,26 @@ model User {
   points    Int      @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
-  orders Order[]
-  chats  Chat[] 
+  chats     Chat[]
+  orders    Order[]
+  prescriptions Prescription[]
+  approvedPrescriptions Prescription[] @relation("PharmacistPrescriptions")
 
   @@index([email])
   @@map("users")
 }
 
 model Medicine {
-  medicineId       String   @id @default(cuid()) @map("medicine_id")
-  medicineName     String   @map("medicine_name") @db.VarChar(50)
-  medicineType     String   @map("medicine_type") @db.VarChar(50)
-  medicineQuantity Int      @map("medicine_quantity")
-  price            Decimal? @db.Decimal(10, 2)
-  imageUrl         String?  @map("image_url") @db.Text
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-
-  orderItems OrderItem[]
+  medicineId       String      @id @default(cuid()) @map("medicine_id")
+  medicineName     String      @map("medicine_name") @db.VarChar(50)
+  medicineType     MedicineType @map("medicine_type")
+  medicineQuantity Int         @map("medicine_quantity")
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+  imageUrl         String?     @map("image_url")
+  price            Decimal?    @db.Decimal(10, 2)
+  orderItems       OrderItem[]
+  prescriptionItems PrescriptionItem[]
 
   @@index([medicineName])
   @@index([medicineType])
@@ -53,20 +44,18 @@ model Medicine {
 }
 
 model Order {
-  orderId         String   @id @default(cuid()) @map("order_id")
-  userId          String   @map("user_id")
-  customerName    String   @map("customer_name") @db.VarChar(255)
-  customerPhone   String   @map("customer_phone") @db.VarChar(50)
-  customerAddress String?  @map("customer_address") @db.Text // Optional (for pickup)
-  orderType       String   @map("order_type") @db.VarChar(20)
-  useAi           Boolean  @default(false) @map("use_ai")
-  totalPoints     Int      @default(0) @map("total_points")
-  status          String   @default("pending") @db.VarChar(20)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-
-  user  User        @relation(fields: [userId], references: [userId], onDelete: Cascade)
-  items OrderItem[] // This creates the relation to OrderItem
+  orderId         String      @id @default(cuid()) @map("order_id")
+  userId          String      @map("user_id")
+  totalPrice      Decimal     @default(0) @map("total_price") @db.Decimal(10, 2)
+  totalPoints     Int         @default(0) @map("total_points")
+  status          String      @default("pending") @db.VarChar(20)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  customerAddress String?     @map("customer_address")
+  customerName    String      @map("customer_name") @db.VarChar(255)
+  customerPhone   String      @map("customer_phone") @db.VarChar(50)
+  items           OrderItem[]
+  user            User        @relation(fields: [userId], references: [userId], onDelete: Cascade)
 
   @@index([userId])
   @@index([status])
@@ -75,18 +64,19 @@ model Order {
 }
 
 model OrderItem {
-  orderItemId String   @id @default(cuid()) @map("order_item_id")
-  orderId     String   @map("order_id")
-  medicineId  String   @map("medicine_id")
-  quantity    Int
-  price       Decimal  @db.Decimal(10, 2) // Snapshot the price at time of purchase
-
-  // Relationships
-  order    Order    @relation(fields: [orderId], references: [orderId], onDelete: Cascade)
-  medicine Medicine @relation(fields: [medicineId], references: [medicineId], onDelete: Restrict)
+  orderItemId        String   @id @default(cuid()) @map("order_item_id")
+  orderId            String   @map("order_id")
+  medicineId         String   @map("medicine_id")
+  prescriptionItemId String?  @map("prescription_item_id")
+  quantity           Int
+  price              Decimal  @db.Decimal(10, 2)
+  medicine           Medicine @relation(fields: [medicineId], references: [medicineId])
+  order              Order    @relation(fields: [orderId], references: [orderId], onDelete: Cascade)
+  prescriptionItem   PrescriptionItem? @relation(fields: [prescriptionItemId], references: [prescriptionItemId])
 
   @@index([orderId])
   @@index([medicineId])
+  @@index([prescriptionItemId])
   @@map("order_items")
 }
 
@@ -95,10 +85,64 @@ model Chat {
   userId         String?
   sessionData    Json
   recommendation String?
-  summary        Json? // Your new summary field
   createdAt      DateTime @default(now())
-
-  user User? @relation(fields: [userId], references: [userId], onDelete: SetNull)
+  summary        Json?
+  user           User?    @relation(fields: [userId], references: [userId])
+  prescriptions  Prescription[]
 
   @@map("chats")
+}
+
+model Prescription {
+  prescriptionId  String   @id @default(cuid()) @map("prescription_id")
+  chatId          Int      @map("chat_id")
+  userId          String   @map("user_id")
+  pharmacistId    String?  @map("pharmacist_id")
+  status          String   @default("pending") @db.VarChar(20)
+  customerName    String   @map("customer_name") @db.VarChar(255)
+  customerPhone   String   @map("customer_phone") @db.VarChar(50)
+  customerAddress String?  @map("customer_address")
+  createdAt       DateTime @default(now())
+  approvedAt      DateTime? @map("approved_at")
+  rejectedAt      DateTime? @map("rejected_at")
+  rejectionReason String?  @map("rejection_reason")
+  chat            Chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  user            User     @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  pharmacist      User?    @relation("PharmacistPrescriptions", fields: [pharmacistId], references: [userId])
+  items           PrescriptionItem[]
+
+  @@index([userId])
+  @@index([pharmacistId])
+  @@index([status])
+  @@index([chatId])
+  @@map("prescriptions")
+}
+
+model PrescriptionItem {
+  prescriptionItemId String   @id @default(cuid()) @map("prescription_item_id")
+  prescriptionId     String   @map("prescription_id")
+  medicineId         String   @map("medicine_id")
+  quantity           Int
+  notes              String?
+  symptom            String?
+  aiRecommendation   String?  @map("ai_recommendation")
+  createdAt          DateTime @default(now())
+  prescription       Prescription @relation(fields: [prescriptionId], references: [prescriptionId], onDelete: Cascade)
+  medicine           Medicine @relation(fields: [medicineId], references: [medicineId])
+  orderItems         OrderItem[]
+
+  @@index([prescriptionId])
+  @@index([medicineId])
+  @@map("prescription_items")
+}
+
+enum Role {
+  ADMIN
+  PHARMACIST
+  USER
+}
+
+enum MedicineType {
+  OTC
+  NON_OTC
 }
