@@ -155,7 +155,47 @@ async function deleteUser(userId) {
 }
 
 /**
- * Authenticate user (for future login functionality)
+ * Update user (username, email, password)
+ * @param {string} userId - User ID
+ * @param {object} updateData - { username?, email?, password? }
+ * @returns {Promise<object>} Updated user (without password)
+ */
+async function updateUser(userId, updateData) {
+  const { username, email, password } = updateData;
+
+  // Build update payload
+  const data = {};
+  if (username !== undefined) data.username = username;
+  if (email !== undefined) data.email = email;
+  
+  // Hash password if provided
+  if (password !== undefined) {
+    if (password.length < 6) {
+      throw new Error("Password must be at least 6 characters");
+    }
+    data.password = await bcrypt.hash(password, 10);
+  }
+
+  // Update user
+  const user = await prisma.user.update({
+    where: { userId },
+    data,
+    select: {
+      userId: true,
+      username: true,
+      email: true,
+      role: true,
+      points: true,
+      createdAt: true,
+      updatedAt: true,
+    },
+  });
+
+  return user;
+}
+
+/**
+ * Authenticate user (for login functionality)
  * @param {string} email - User email
  * @param {string} password - Plain text password
  * @returns {Promise<object>} User object (without password)
@@ -179,6 +219,7 @@ module.exports = {
   createUser,
   getAllUsers,
   getUserById,
+  updateUser,
   updateUserPoints,
   addUserPoints,
   deleteUser,
