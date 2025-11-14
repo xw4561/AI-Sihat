@@ -2,7 +2,7 @@
   <div class="profile-page">
     <div class="card">
       <div class="page-header">
-        <button class="btn-back" @click="$router.push('/customer')" title="Go back">
+        <button class="btn-back" @click="goBack" title="Go back">
           <span class="back-arrow">←</span>
         </button>
         <h2>My Profile</h2>
@@ -141,6 +141,16 @@ function formatDate(val) {
   }
 }
 
+function goBack() {
+  const role = user.value?.role;
+  if (role === 'ADMIN') {
+    router.push('/admin');
+  } else if (role === 'PHARMACIST') {
+    router.push('/pharmacist');
+  } else {
+    router.push('/customer');
+  }
+}
 
 function editProfile() {
   // Create a deep copy for editing to avoid mutating the original object
