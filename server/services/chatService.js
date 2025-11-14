@@ -499,12 +499,15 @@ async function startChat(userId = null) {
 
   // Save session in database (single record)
   try {
-    await prisma.chat.create({
+    const chat = await prisma.chat.create({
       data: {
         userId,
         sessionData: {},
       },
     });
+    
+    // Store chatId in session for later use
+    sessionService.updateSession(sessionId, { chatId: chat.id });
   } catch (err) {
     console.error('Failed to create chat record:', err);
   }
@@ -811,20 +814,25 @@ async function createOrderFromChat(sessionId) {
   // Generate summary first
   const summary = await generateSummary(sessionId);
   
-  // Create a pending order with chat data (no medicine selected yet)
-  const order = await prisma.order.create({
+  // Save summary to chat record
+  await prisma.chat.update({
+    where: { id: session.chatId },
+    data: { summary },
+  });
+
+  // Create a pending prescription (pharmacist will review and approve)
+  const prescription = await prisma.prescription.create({
     data: {
+      chatId: session.chatId,
       userId: session.userId,
-      // medicineId is optional and will be filled by pharmacist
-      quantity: 0, // Will be filled by pharmacist
-      orderType: "AI Consultation",
-      useAi: true,
+      customerName: summary.name || "Unknown",
+      customerPhone: summary.phoneNumber || "N/A",
+      customerAddress: null,
       status: "pending",
-      totalPoints: 0,
     },
   });
 
-  return { order, summary };
+  return { prescription, summary };
 }
 
 /**
@@ -853,12 +861,13 @@ async function generateSummary(sessionId) {
     allAnswers: answers, // Include all answers for complete history
     recommendation: null,
     recommendationDetails: null,
-    recommendedMedicines: [], // For pharmacist to select/add medicines
+    recommendedMedicines: [], // Medicines extracted from AI recommendations
   };
 
   // Get full recommendation details
   const sectionData = data[session.section];
   const recommendationObj = sectionData?.find(q => q.type === "recommendation");
+  
   if (recommendationObj) {
     // Store both the summary and full details
     report.recommendation = recommendationObj.details || recommendationObj.prompt;
@@ -869,22 +878,70 @@ async function generateSummary(sessionId) {
         : recommendationObj.prompt,
       details: recommendationObj.details
     };
-    
-    // Create medicine slots for each symptom
-    const symptoms = Array.isArray(answers["7"]) ? answers["7"] : [];
-    report.recommendedMedicines = symptoms.map(symptom => ({
-      symptom: symptom,
-      medicineName: null,
-      medicineId: null,
-      quantity: 1,
-      medicineType: 'OTC',
-      status: 'pending'
-    }));
   }
   
   // Include all collected recommendations if multi-symptom
   if (session.allRecommendations && session.allRecommendations.length > 0) {
     report.allRecommendations = session.allRecommendations;
+    
+    // Extract medicine names from recommendations and match with database
+    const symptoms = Array.isArray(answers["7"]) ? answers["7"] : [];
+    const medicines = await prisma.medicine.findMany();
+    
+    for (const symptom of symptoms) {
+      const recForSymptom = session.allRecommendations.find(r => r.symptom === symptom);
+      if (recForSymptom) {
+        const recText = recForSymptom.details.join(' ');
+        
+        // Try to match medicine name from recommendation text
+        let matchedMedicine = null;
+        for (const med of medicines) {
+          if (recText.toLowerCase().includes(med.medicineName.toLowerCase())) {
+            matchedMedicine = med;
+            break;
+          }
+        }
+        
+        report.recommendedMedicines.push({
+          symptom: symptom,
+          recommendationText: recText,
+          medicineName: matchedMedicine ? matchedMedicine.medicineName : null,
+          medicineId: matchedMedicine ? matchedMedicine.medicineId : null,
+          medicineType: matchedMedicine ? matchedMedicine.medicineType : 'OTC',
+          price: matchedMedicine ? parseFloat(matchedMedicine.price) : 0,
+          imageUrl: matchedMedicine ? matchedMedicine.imageUrl : null,
+          quantity: 1,
+          status: 'pending'
+        });
+      }
+    }
+  } else if (recommendationObj) {
+    // Single symptom - try to extract medicine
+    const symptoms = Array.isArray(answers["7"]) ? answers["7"] : [];
+    const recText = Array.isArray(recommendationObj.prompt) ? recommendationObj.prompt.join(' ') : recommendationObj.prompt;
+    const medicines = await prisma.medicine.findMany();
+    
+    for (const symptom of symptoms) {
+      let matchedMedicine = null;
+      for (const med of medicines) {
+        if (recText.toLowerCase().includes(med.medicineName.toLowerCase())) {
+          matchedMedicine = med;
+          break;
+        }
+      }
+      
+      report.recommendedMedicines.push({
+        symptom: symptom,
+        recommendationText: recText,
+        medicineName: matchedMedicine ? matchedMedicine.medicineName : null,
+        medicineId: matchedMedicine ? matchedMedicine.medicineId : null,
+        medicineType: matchedMedicine ? matchedMedicine.medicineType : 'OTC',
+        price: matchedMedicine ? parseFloat(matchedMedicine.price) : 0,
+        imageUrl: matchedMedicine ? matchedMedicine.imageUrl : null,
+        quantity: 1,
+        status: 'pending'
+      });
+    }
   }
 
   // Save summary to database - update the most recent chat for this user

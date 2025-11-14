@@ -169,7 +169,7 @@ const otherSymptomSelected = ref(false)
 const yesSelected = ref(false)
 const addedToCart = ref([]) // Track medications added to cart
 const showPlaceholder = ref(true) // Show placeholder bubble until first reply
-const orderId = ref(null) // Track created order ID
+const prescriptionId = ref(null) // Track created prescription ID
 const orderStatus = ref(null) // Track order status (pending, approved, rejected)
 const approvedMedicines = ref([]) // Store approved medicines from pharmacist
 const chatComplete = ref(false) // Track if chat has been completed
@@ -199,7 +199,7 @@ const resetInput = () => {
   otherSymptomSelected.value = false
   yesSelected.value = false
   addedToCart.value = [] // Clear cart on reset
-  orderId.value = null
+  prescriptionId.value = null
   orderStatus.value = null
   approvedMedicines.value = []
   chatComplete.value = false
@@ -449,12 +449,12 @@ async function continueFromRecommendation() {
   
   try {
     loading.value = true
-    // Create order from chat session
+    // Create prescription from chat session
     const res = await axios.post('/api/chat/complete', {
       sessionId: sessionId.value
     })
     
-    orderId.value = res.data.order.orderId
+    prescriptionId.value = res.data.prescription.prescriptionId
     orderStatus.value = 'pending'
     chatComplete.value = true
     
@@ -489,25 +489,26 @@ function addToCart(medication) {
 }
 
 async function pollOrderStatus() {
-  if (!orderId.value) return
+  if (!prescriptionId.value) return
   
   const pollInterval = setInterval(async () => {
     try {
-      const res = await axios.get(`/ai-sihat/order/${orderId.value}`)
-      const order = res.data
+      const res = await axios.get(`/ai-sihat/prescriptions/${prescriptionId.value}`)
+      const prescription = res.data
       
-      if (order.status === 'approved') {
+      if (prescription.status === 'approved') {
         clearInterval(pollInterval)
         orderStatus.value = 'approved'
         loading.value = false
         
-        // Fetch medicine details
-        if (order.medicineId) {
-          const medRes = await axios.get(`/ai-sihat/medicine/${order.medicineId}`)
-          approvedMedicines.value = [{
-            ...medRes.data,
-            quantity: order.quantity
-          }]
+        // Get approved medicines from prescription items
+        if (prescription.items && prescription.items.length > 0) {
+          approvedMedicines.value = prescription.items.map(item => ({
+            ...item.medicine,
+            quantity: item.quantity,
+            symptom: item.symptom,
+            notes: item.notes
+          }))
         }
         
         // Show approved medicines
@@ -516,24 +517,24 @@ async function pollOrderStatus() {
           prompt: 'Your consultation has been approved! Here are the recommended medications:',
           medications: approvedMedicines.value.map(med => ({
             name: med.medicineName,
-            symptom: med.medicineType,
+            symptom: med.symptom || med.medicineType,
             medicineId: med.medicineId,
             price: med.price,
             imageUrl: med.imageUrl
           }))
         }
-      } else if (order.status === 'rejected') {
+      } else if (prescription.status === 'rejected') {
         clearInterval(pollInterval)
         orderStatus.value = 'rejected'
         loading.value = false
         
         currentQuestion.value = {
           type: 'completion_message',
-          prompt: 'We\'re sorry, but the pharmacist was unable to approve this consultation. Please consult with a healthcare professional for further assistance.'
+          prompt: `We're sorry, but the pharmacist was unable to approve this consultation. ${prescription.rejectionReason || 'Please consult with a healthcare professional for further assistance.'}`
         }
       }
     } catch (e) {
-      console.error('Error polling order status:', e)
+      console.error('Error polling prescription status:', e)
     }
   }, 5000) // Poll every 5 seconds
   
@@ -542,7 +543,7 @@ async function pollOrderStatus() {
     clearInterval(pollInterval)
     if (orderStatus.value === 'pending') {
       loading.value = false
-      error.value = 'Approval timeout. Please check your order status later.'
+      error.value = 'Approval timeout. Please check your prescription status later.'
     }
   }, 300000)
 }

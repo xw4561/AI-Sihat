@@ -21,8 +21,7 @@
         <p><strong>Date:</strong> {{ new Date(order.createdAt).toLocaleString() }}</p>
         <div class="actions">
           <button class="btn view-report" @click="viewReport(order)">View Report</button>
-          <button class="btn approve" @click="openApproveModal(order)" :disabled="order.status !== 'Pending'">Approve</button>
-          <button class="btn reject" @click="openRejectModal(order)" :disabled="order.status !== 'Pending'">Reject</button>
+          <button class="btn approve" @click="openApproveModal(order)" :disabled="order.status !== 'Pending'">Review & Approve</button>
         </div>
       </div>
     </div>
@@ -77,19 +76,68 @@
     <div v-if="showApproveModal" class="modal-overlay" @click.self="closeApproveModal">
         <div class="modal-content large">
             <span class="close-btn" @click="closeApproveModal">&times;</span>
-            <h4>Approve Order #{{ selectedOrder?.id.substring(0, 8) }}</h4>
-            <p>Select or add medicines for each symptom:</p>
+            <h4>Review Order #{{ selectedOrder?.id.substring(0, 8) }}</h4>
             
+            <!-- Patient Symptoms Description -->
+            <div v-if="selectedOrder?.summary" class="patient-info">
+              <h5>Patient Reported Symptoms:</h5>
+              <div class="symptom-description">
+                <p><strong>Symptoms:</strong> {{ Array.isArray(selectedOrder.summary.symptoms) ? selectedOrder.summary.symptoms.join(', ') : selectedOrder.summary.symptoms }}</p>
+                <p><strong>Duration:</strong> {{ selectedOrder.summary.duration }}</p>
+                <p><strong>Temperature:</strong> {{ selectedOrder.summary.temperature }}°C</p>
+                <p v-if="selectedOrder.summary.allergies !== 'None'"><strong>Allergies:</strong> {{ selectedOrder.summary.allergies }}</p>
+              </div>
+            </div>
+            
+            <p class="instruction">Review each symptom and approve/reject medicine:</p>
+            
+            <!-- Symptom Medicine Slots -->
             <div v-for="(medSlot, idx) in medicineSlots" :key="idx" class="medicine-slot">
-              <div class="symptom-label">{{ medSlot.symptom }}</div>
+              <div class="slot-header">
+                <div class="symptom-label">{{ medSlot.symptom }}</div>
+                <div class="action-buttons">
+                  <button 
+                    @click="medSlot.action = 'approve'" 
+                    :class="['action-btn', 'approve-btn', { active: medSlot.action === 'approve' }]">
+                    ✓ Approve
+                  </button>
+                  <button 
+                    @click="medSlot.action = 'reject'" 
+                    :class="['action-btn', 'reject-btn', { active: medSlot.action === 'reject' }]">
+                    ✗ Reject
+                  </button>
+                </div>
+              </div>
               
-              <div class="medicine-select-group">
+              <!-- AI Recommendation Display -->
+              <div class="ai-recommendation">
+                <h6>AI Recommendation:</h6>
+                <p class="recommendation-text">{{ medSlot.recommendationText }}</p>
+                <div v-if="medSlot.medicineId" class="recommended-medicine">
+                  <strong>Recommended Medicine:</strong> {{ medSlot.medicineName }}
+                  <br><strong>Type:</strong> {{ medSlot.medicineType }}
+                  <br><strong>Price:</strong> RM{{ medSlot.price.toFixed(2) }}
+                  <br><strong>Quantity:</strong> {{ medSlot.quantity }}
+                </div>
+                <div v-else class="no-match-warning">
+                  ⚠️ No matching medicine found in database. Please select alternative below.
+                </div>
+              </div>
+              
+              <!-- Show alternative selection only if rejected OR no medicine matched -->
+              <div v-if="(medSlot.action === 'reject') || (!medSlot.medicineId && medSlot.action === 'approve')" class="medicine-select-group">
+                <div v-if="medSlot.action === 'reject'" class="rejection-note">
+                  <label>Reason for rejection:</label>
+                  <textarea v-model="medSlot.rejectionReason" placeholder="Explain why this is rejected..."></textarea>
+                  <p class="help-text">Please provide an alternative medicine below:</p>
+                </div>
+                
                 <div class="form-group">
-                  <label>Medicine:</label>
-                  <select v-model="medSlot.medicineId" @change="onMedicineSelect(idx)" class="form-control">
-                    <option value="">Select existing medicine</option>
+                  <label>{{ medSlot.action === 'reject' ? 'Alternative Medicine:' : 'Select Medicine:' }}</label>
+                  <select v-model="medSlot.alternativeMedicineId" @change="onAlternativeSelect(idx)" class="form-control">
+                    <option value="">Select medicine from database</option>
                     <option v-for="med in medicines" :key="med.medicineId" :value="med.medicineId">
-                      {{ med.medicineName }} ({{ med.medicineType }}) - Stock: {{ med.medicineQuantity }}
+                      {{ med.medicineName }} ({{ med.medicineType }}) - RM{{ med.price }} - Stock: {{ med.medicineQuantity }}
                     </option>
                     <option value="__new__">+ Add New Medicine</option>
                   </select>
@@ -99,56 +147,94 @@
                 <div v-if="medSlot.isNew" class="new-medicine-form">
                   <div class="form-group">
                     <label>Medicine Name:</label>
-                    <input v-model="medSlot.medicineName" type="text" class="form-control" placeholder="Enter medicine name" />
+                    <input v-model="medSlot.newMedicineName" type="text" class="form-control" placeholder="Enter medicine name" />
                   </div>
                   <div class="form-group">
                     <label>Type:</label>
-                    <select v-model="medSlot.medicineType" class="form-control">
+                    <select v-model="medSlot.newMedicineType" class="form-control">
                       <option value="OTC">OTC (Can add to cart)</option>
                       <option value="NON_OTC">NON-OTC (Prescription only)</option>
                     </select>
                   </div>
                   <div class="form-group">
                     <label>Price (RM):</label>
-                    <input v-model.number="medSlot.price" type="number" step="0.01" min="0" class="form-control" />
+                    <input v-model.number="medSlot.newPrice" type="number" step="0.01" min="0" class="form-control" />
                   </div>
                   <div class="form-group">
                     <label>Image URL (optional):</label>
-                    <input v-model="medSlot.imageUrl" type="text" class="form-control" placeholder="https://..." />
+                    <input v-model="medSlot.newImageUrl" type="text" class="form-control" placeholder="https://..." />
                   </div>
                 </div>
                 
-                <div class="form-group">
+                <div v-if="medSlot.action === 'reject' || !medSlot.medicineId" class="form-group">
                   <label>Quantity:</label>
-                  <input v-model.number="medSlot.quantity" type="number" min="1" class="form-control" />
+                  <input v-model.number="medSlot.alternativeQuantity" type="number" min="1" class="form-control" />
+                </div>
+              </div>
+            </div>
+            
+            <!-- Extra Medicines Section -->
+            <div class="extra-medicines-section">
+              <h5>Additional Medicines (Optional)</h5>
+              <button @click="addExtraMedicine" class="btn add-extra">+ Add Extra Medicine</button>
+              
+              <div v-for="(extra, idx) in extraMedicines" :key="'extra-' + idx" class="medicine-slot extra">
+                <div class="slot-header">
+                  <div class="symptom-label">Extra Medicine {{ idx + 1 }}</div>
+                  <button @click="removeExtraMedicine(idx)" class="remove-btn">✗ Remove</button>
                 </div>
                 
-                <div class="form-group checkbox-group">
-                  <label>
-                    <input type="checkbox" v-model="medSlot.approved" />
-                    Approve this medicine
-                  </label>
+                <div class="medicine-select-group">
+                  <div class="form-group">
+                    <label>Medicine:</label>
+                    <select v-model="extra.medicineId" @change="onExtraMedicineSelect(idx)" class="form-control">
+                      <option value="">Select existing medicine</option>
+                      <option v-for="med in medicines" :key="med.medicineId" :value="med.medicineId">
+                        {{ med.medicineName }} ({{ med.medicineType }}) - RM{{ med.price }} - Stock: {{ med.medicineQuantity }}
+                      </option>
+                      <option value="__new__">+ Add New Medicine</option>
+                    </select>
+                  </div>
+                  
+                  <!-- New Medicine Form for Extra -->
+                  <div v-if="extra.isNew" class="new-medicine-form">
+                    <div class="form-group">
+                      <label>Medicine Name:</label>
+                      <input v-model="extra.medicineName" type="text" class="form-control" placeholder="Enter medicine name" />
+                    </div>
+                    <div class="form-group">
+                      <label>Type:</label>
+                      <select v-model="extra.medicineType" class="form-control">
+                        <option value="OTC">OTC (Can add to cart)</option>
+                        <option value="NON_OTC">NON-OTC (Prescription only)</option>
+                      </select>
+                    </div>
+                    <div class="form-group">
+                      <label>Price (RM):</label>
+                      <input v-model.number="extra.price" type="number" step="0.01" min="0" class="form-control" />
+                    </div>
+                    <div class="form-group">
+                      <label>Image URL (optional):</label>
+                      <input v-model="extra.imageUrl" type="text" class="form-control" placeholder="https://..." />
+                    </div>
+                  </div>
+                  
+                  <div class="form-group">
+                    <label>Quantity:</label>
+                    <input v-model.number="extra.quantity" type="number" min="1" class="form-control" />
+                  </div>
+                  
+                  <div class="form-group">
+                    <label>Reason for adding:</label>
+                    <input v-model="extra.reason" type="text" class="form-control" placeholder="e.g., To complement treatment..." />
+                  </div>
                 </div>
               </div>
             </div>
             
             <div class="modal-actions">
                 <button class="btn" @click="closeApproveModal">Cancel</button>
-                <button class="btn approve" @click="submitApproval">Approve Selected Medicines</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Reject Modal -->
-    <div v-if="showRejectModal" class="modal-overlay" @click.self="closeRejectModal">
-        <div class="modal-content">
-            <span class="close-btn" @click="closeRejectModal">&times;</span>
-            <h4>Reject Order #{{ selectedOrder.id }}</h4>
-            <p>Please provide a reason for rejection and suggest an alternative if applicable.</p>
-            <textarea v-model="rejectionReason" placeholder="e.g., 'This medicine is out of stock. I recommend...'"></textarea>
-            <div class="modal-actions">
-                <button class="btn" @click="closeRejectModal">Cancel</button>
-                <button class="btn reject" @click="submitRejection">Submit Rejection</button>
+                <button class="btn approve" @click="submitReview">Submit Review</button>
             </div>
         </div>
     </div>
@@ -163,12 +249,11 @@ import axios from 'axios';
 const orders = ref([]);
 const isLoading = ref(true);
 const showReportModal = ref(false);
-const showRejectModal = ref(false);
 const showApproveModal = ref(false);
 const selectedOrder = ref(null);
-const rejectionReason = ref('');
 const medicines = ref([]);
 const medicineSlots = ref([]);
+const extraMedicines = ref([]);
 
 onMounted(async () => {
   await fetchOrders();
@@ -179,17 +264,18 @@ async function fetchOrders() {
   try {
     isLoading.value = true;
     const response = await axios.get('/ai-sihat/order/pending-ai');
-    orders.value = response.data.map(order => ({
-      id: order.orderId,
-      customerName: order.user?.username || 'Unknown',
-      status: order.status.charAt(0).toUpperCase() + order.status.slice(1),
-      chatHistory: order.user?.chats?.[0] || null,
-      summary: order.user?.chats?.[0]?.summary || null,
-      userId: order.userId,
-      createdAt: order.createdAt
+    orders.value = response.data.map(prescription => ({
+      id: prescription.prescriptionId,
+      customerName: prescription.customerName || prescription.user?.username || 'Unknown',
+      status: prescription.status.charAt(0).toUpperCase() + prescription.status.slice(1),
+      chatHistory: prescription.chat || null,
+      summary: prescription.chat?.summary || null,
+      userId: prescription.userId,
+      createdAt: prescription.createdAt,
+      prescriptionId: prescription.prescriptionId
     }));
   } catch (error) {
-    console.error('Error fetching orders:', error);
+    console.error('Error fetching prescriptions:', error);
   } finally {
     isLoading.value = false;
   }
@@ -217,20 +303,57 @@ function closeReportModal() {
 function openApproveModal(order) {
   selectedOrder.value = order;
   
-  // Initialize medicine slots from recommended medicines or symptoms
-  const symptoms = order.summary?.symptoms || [];
-  medicineSlots.value = symptoms.map(symptom => ({
-    symptom: symptom,
-    medicineId: '',
-    medicineName: '',
-    medicineType: 'OTC',
-    quantity: 1,
-    price: 0,
-    imageUrl: '',
-    isNew: false,
-    approved: false
-  }));
+  // Initialize medicine slots from AI recommendations
+  const recommendedMeds = order.summary?.recommendedMedicines || [];
   
+  if (recommendedMeds.length > 0) {
+    // Use AI recommendations directly
+    medicineSlots.value = recommendedMeds.map(rec => ({
+      symptom: rec.symptom,
+      recommendationText: rec.recommendationText || 'N/A',
+      action: null, // 'approve' or 'reject'
+      // Original AI recommendation
+      medicineId: rec.medicineId,
+      medicineName: rec.medicineName,
+      medicineType: rec.medicineType,
+      price: rec.price || 0,
+      imageUrl: rec.imageUrl,
+      quantity: rec.quantity || 1,
+      // Alternative selection (if rejected or no match)
+      alternativeMedicineId: '',
+      alternativeQuantity: 1,
+      isNew: false,
+      newMedicineName: '',
+      newMedicineType: 'OTC',
+      newPrice: 0,
+      newImageUrl: '',
+      rejectionReason: ''
+    }));
+  } else {
+    // Fallback if no recommendations (shouldn't happen)
+    const symptoms = order.summary?.symptoms || [];
+    medicineSlots.value = symptoms.map(symptom => ({
+      symptom: symptom,
+      recommendationText: 'No AI recommendation available',
+      action: null,
+      medicineId: null,
+      medicineName: null,
+      medicineType: 'OTC',
+      price: 0,
+      imageUrl: null,
+      quantity: 1,
+      alternativeMedicineId: '',
+      alternativeQuantity: 1,
+      isNew: false,
+      newMedicineName: '',
+      newMedicineType: 'OTC',
+      newPrice: 0,
+      newImageUrl: '',
+      rejectionReason: ''
+    }));
+  }
+  
+  extraMedicines.value = [];
   showApproveModal.value = true;
 }
 
@@ -238,97 +361,171 @@ function closeApproveModal() {
   showApproveModal.value = false;
   selectedOrder.value = null;
   medicineSlots.value = [];
+  extraMedicines.value = [];
 }
 
-function onMedicineSelect(idx) {
+function addExtraMedicine() {
+  extraMedicines.value.push({
+    medicineId: '',
+    medicineName: '',
+    medicineType: 'OTC',
+    quantity: 1,
+    price: 0,
+    imageUrl: '',
+    isNew: false,
+    reason: ''
+  });
+}
+
+function removeExtraMedicine(idx) {
+  extraMedicines.value.splice(idx, 1);
+}
+
+function onAlternativeSelect(idx) {
   const slot = medicineSlots.value[idx];
-  if (slot.medicineId === '__new__') {
+  if (slot.alternativeMedicineId === '__new__') {
     slot.isNew = true;
-    slot.medicineId = null;
+    slot.alternativeMedicineId = null;
   } else {
     slot.isNew = false;
-    // Find selected medicine and populate info
-    const selected = medicines.value.find(m => m.medicineId === slot.medicineId);
+    const selected = medicines.value.find(m => m.medicineId === slot.alternativeMedicineId);
     if (selected) {
-      slot.medicineName = selected.medicineName;
-      slot.medicineType = selected.medicineType;
-      slot.price = parseFloat(selected.price);
-      slot.imageUrl = selected.imageUrl;
+      slot.newMedicineName = selected.medicineName;
+      slot.newMedicineType = selected.medicineType;
+      slot.newPrice = parseFloat(selected.price);
+      slot.newImageUrl = selected.imageUrl;
     }
   }
 }
 
-function openRejectModal(order) {
-  selectedOrder.value = order;
-  showRejectModal.value = true;
+function onExtraMedicineSelect(idx) {
+  const extra = extraMedicines.value[idx];
+  if (extra.medicineId === '__new__') {
+    extra.isNew = true;
+    extra.medicineId = null;
+  } else {
+    extra.isNew = false;
+    const selected = medicines.value.find(m => m.medicineId === extra.medicineId);
+    if (selected) {
+      extra.medicineName = selected.medicineName;
+      extra.medicineType = selected.medicineType;
+      extra.price = parseFloat(selected.price);
+      extra.imageUrl = selected.imageUrl;
+    }
+  }
 }
 
-function closeRejectModal() {
-  showRejectModal.value = false;
-  selectedOrder.value = null;
-  rejectionReason.value = '';
-}
-
-async function submitApproval() {
-  // Get only approved medicines
-  const approvedMeds = medicineSlots.value.filter(slot => slot.approved);
+async function submitReview() {
+  // Collect all approved medicines (from symptoms and extras)
+  const approvedMeds = [];
+  
+  // Process symptom medicines
+  for (const medSlot of medicineSlots.value) {
+    if (!medSlot.action) {
+      alert(`Please approve or reject the medicine for: ${medSlot.symptom}`);
+      return;
+    }
+    
+    if (medSlot.action === 'reject' && !medSlot.rejectionReason.trim()) {
+      alert(`Please provide a rejection reason for: ${medSlot.symptom}`);
+      return;
+    }
+    
+    // Determine which medicine to use
+    let finalMedicineId, finalMedicineName, finalMedicineType, finalPrice, finalImageUrl, finalQuantity, isNew;
+    
+    if (medSlot.action === 'approve' && medSlot.medicineId) {
+      // Approve AI recommendation directly
+      finalMedicineId = medSlot.medicineId;
+      finalMedicineName = medSlot.medicineName;
+      finalMedicineType = medSlot.medicineType;
+      finalPrice = medSlot.price;
+      finalImageUrl = medSlot.imageUrl;
+      finalQuantity = medSlot.quantity;
+      isNew = false;
+    } else {
+      // Use alternative (rejected OR no AI match)
+      if (!medSlot.alternativeMedicineId && !medSlot.isNew) {
+        alert(`Please select an alternative medicine for: ${medSlot.symptom}`);
+        return;
+      }
+      
+      if (medSlot.isNew) {
+        if (!medSlot.newMedicineName || !medSlot.newPrice) {
+          alert(`Please fill in all required fields for new medicine (${medSlot.symptom})`);
+          return;
+        }
+        finalMedicineId = null;
+        finalMedicineName = medSlot.newMedicineName;
+        finalMedicineType = medSlot.newMedicineType;
+        finalPrice = medSlot.newPrice;
+        finalImageUrl = medSlot.newImageUrl || 'https://via.placeholder.com/150';
+        isNew = true;
+      } else {
+        finalMedicineId = medSlot.alternativeMedicineId;
+        const altMed = medicines.value.find(m => m.medicineId === medSlot.alternativeMedicineId);
+        finalMedicineName = altMed.medicineName;
+        finalMedicineType = altMed.medicineType;
+        finalPrice = parseFloat(altMed.price);
+        finalImageUrl = altMed.imageUrl;
+        isNew = false;
+      }
+      finalQuantity = medSlot.alternativeQuantity;
+    }
+    
+    approvedMeds.push({
+      symptom: medSlot.symptom,
+      action: medSlot.action,
+      rejectionReason: medSlot.rejectionReason || null,
+      medicineId: finalMedicineId,
+      medicineName: finalMedicineName,
+      medicineType: finalMedicineType,
+      quantity: finalQuantity,
+      price: finalPrice,
+      imageUrl: finalImageUrl,
+      isNew: isNew
+    });
+  }
+  
+  // Process extra medicines
+  for (const extra of extraMedicines.value) {
+    if (!extra.medicineId && !extra.isNew) continue;
+    
+    if (extra.isNew && (!extra.medicineName || !extra.price)) {
+      alert('Please fill in all required fields for extra medicines');
+      return;
+    }
+    
+    approvedMeds.push({
+      symptom: 'Extra',
+      action: 'extra',
+      reason: extra.reason,
+      medicineId: extra.medicineId,
+      medicineName: extra.medicineName,
+      medicineType: extra.medicineType,
+      quantity: extra.quantity,
+      price: extra.price,
+      imageUrl: extra.imageUrl || 'https://via.placeholder.com/150',
+      isNew: extra.isNew
+    });
+  }
   
   if (approvedMeds.length === 0) {
-    alert('Please approve at least one medicine.');
+    alert('Please approve at least one medicine or add alternatives.');
     return;
-  }
-  
-  // Validate new medicines
-  for (const med of approvedMeds) {
-    if (med.isNew && (!med.medicineName || !med.price)) {
-      alert('Please fill in all fields for new medicines (name and price required).');
-      return;
-    }
-    if (!med.isNew && !med.medicineId) {
-      alert('Please select a medicine or add a new one.');
-      return;
-    }
   }
 
   try {
     await axios.put(`/ai-sihat/order/${selectedOrder.value.id}/approve`, {
-      approvedMedicines: approvedMeds.map(med => ({
-        medicineId: med.medicineId,
-        medicineName: med.medicineName,
-        medicineType: med.medicineType,
-        quantity: med.quantity,
-        price: med.price,
-        imageUrl: med.imageUrl || 'https://via.placeholder.com/150',
-        isNew: med.isNew
-      }))
+      approvedMedicines: approvedMeds
     });
     
-    alert('Order approved successfully!');
+    alert('Order reviewed successfully!');
     closeApproveModal();
     await fetchOrders();
   } catch (error) {
-    console.error('Error approving order:', error);
-    alert('Failed to approve order: ' + (error.response?.data?.error || error.message));
-  }
-}
-
-async function submitRejection() {
-  if (!rejectionReason.value.trim()) {
-    alert('Please provide a reason for rejection.');
-    return;
-  }
-
-  try {
-    await axios.put(`/ai-sihat/order/${selectedOrder.value.id}/reject`, {
-      reason: rejectionReason.value
-    });
-    
-    alert('Order rejected successfully.');
-    closeRejectModal();
-    await fetchOrders();
-  } catch (error) {
-    console.error('Error rejecting order:', error);
-    alert('Failed to reject order: ' + (error.response?.data?.error || error.message));
+    console.error('Error reviewing order:', error);
+    alert('Failed to review order: ' + (error.response?.data?.error || error.message));
   }
 }
 </script>
@@ -615,5 +812,161 @@ h2 {
 .checkbox-group input[type="checkbox"] {
   width: auto;
   cursor: pointer;
+}
+
+.patient-info {
+  background: #e8f5e9;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+}
+
+.patient-info h5 {
+  margin-top: 0;
+  color: #2c3e50;
+}
+
+.symptom-description {
+  line-height: 1.8;
+}
+
+.instruction {
+  font-weight: 600;
+  color: #2c3e50;
+  margin: 1.5rem 0 1rem;
+}
+
+.slot-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.action-btn {
+  padding: 0.5rem 1rem;
+  border: 2px solid #ddd;
+  background: white;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.action-btn.approve-btn {
+  color: #27ae60;
+  border-color: #27ae60;
+}
+
+.action-btn.approve-btn.active {
+  background: #27ae60;
+  color: white;
+}
+
+.action-btn.reject-btn {
+  color: #c0392b;
+  border-color: #c0392b;
+}
+
+.action-btn.reject-btn.active {
+  background: #c0392b;
+  color: white;
+}
+
+.rejection-note {
+  background: #ffe6e6;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+.rejection-note textarea {
+  width: 100%;
+  min-height: 60px;
+  padding: 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  margin-top: 0.5rem;
+}
+
+.help-text {
+  color: #666;
+  font-size: 0.9rem;
+  margin-top: 0.5rem;
+}
+
+.extra-medicines-section {
+  margin-top: 2rem;
+  padding-top: 2rem;
+  border-top: 2px solid #e0e0e0;
+}
+
+.extra-medicines-section h5 {
+  color: #2c3e50;
+  margin-bottom: 1rem;
+}
+
+.btn.add-extra {
+  background: #3498db;
+  color: white;
+  margin-bottom: 1rem;
+}
+
+.medicine-slot.extra {
+  border-left-color: #9b59b6;
+}
+
+.remove-btn {
+  background: #e74c3c;
+  color: white;
+  border: none;
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.ai-recommendation {
+  background: #f0f8ff;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  border-left: 4px solid #3498db;
+}
+
+.ai-recommendation h6 {
+  margin: 0 0 0.5rem 0;
+  color: #2c3e50;
+  font-size: 0.95rem;
+}
+
+.ai-recommendation .recommendation-text {
+  color: #555;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  margin-bottom: 0.8rem;
+}
+
+.recommended-medicine {
+  background: white;
+  padding: 0.8rem;
+  border-radius: 6px;
+  border: 1px solid #3498db;
+  font-size: 0.9rem;
+  line-height: 1.8;
+}
+
+.no-match-warning {
+  background: #fff3cd;
+  color: #856404;
+  padding: 0.8rem;
+  border-radius: 6px;
+  border: 1px solid #ffc107;
+  font-weight: 600;
 }
 </style>

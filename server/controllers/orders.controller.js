@@ -62,49 +62,62 @@ exports.delete = async (req, res) => {
   }
 };
 
-// Get pending AI-assisted orders with chat data for pharmacist review
+// Get pending prescriptions with chat data for pharmacist review
 exports.getPendingAiOrders = async (req, res) => {
   try {
-    const orders = await prisma.order.findMany({
+    const prescriptions = await prisma.prescription.findMany({
       where: {
-        useAi: true,
         status: "pending"
       },
       include: {
         user: {
           select: {
             username: true,
-            email: true,
-            chats: {
-              orderBy: { createdAt: 'desc' },
-              take: 1
-            }
+            email: true
+          }
+        },
+        chat: {
+          select: {
+            summary: true,
+            recommendation: true,
+            sessionData: true
           }
         }
       },
       orderBy: { createdAt: 'desc' }
     });
     
-    res.status(200).json(orders);
+    res.status(200).json(prescriptions);
   } catch (error) {
-    console.error("Get pending AI orders error:", error);
+    console.error("Get pending prescriptions error:", error);
     res.status(400).json({ error: error.message });
   }
 };
 
-// Approve order (pharmacist) - supports multiple medicines and new medicine creation
+// Approve prescription (pharmacist) - supports multiple medicines and new medicine creation
 exports.approveOrder = async (req, res) => {
   try {
     const { id } = req.params;
-    const { approvedMedicines } = req.body;
+    const { approvedMedicines, pharmacistId } = req.body;
     
-    // approvedMedicines format: [{ medicineId?, medicineName, medicineType, quantity, price?, imageUrl?, isNew? }]
+    // approvedMedicines format: [{ medicineId?, medicineName, medicineType, quantity, symptom?, aiRecommendation?, notes?, isNew? }]
     if (!approvedMedicines || !Array.isArray(approvedMedicines) || approvedMedicines.length === 0) {
       return res.status(400).json({ error: "At least one medicine must be approved" });
     }
 
-    const results = [];
+    // Get the pending prescription
+    const prescription = await prisma.prescription.findUnique({ 
+      where: { prescriptionId: id },
+      include: { user: true, chat: true }
+    });
     
+    if (!prescription) {
+      return res.status(404).json({ error: "Prescription not found" });
+    }
+
+    const prescriptionItems = [];
+    
+    // Process each approved medicine
     for (const med of approvedMedicines) {
       let medicineId = med.medicineId;
       
@@ -122,59 +135,117 @@ exports.approveOrder = async (req, res) => {
         medicineId = newMedicine.medicineId;
       }
       
-      // Create an order for each approved medicine
-      const order = await prisma.order.create({
-        data: {
-          userId: (await prisma.order.findUnique({ where: { orderId: id } })).userId,
-          medicineId: medicineId,
-          quantity: parseInt(med.quantity),
-          orderType: "AI Consultation",
-          useAi: true,
-          status: "approved",
-          totalPoints: 0
-        },
-        include: {
-          user: true,
-          medicine: true
-        }
+      // Prepare prescription item data
+      prescriptionItems.push({
+        medicineId: medicineId,
+        quantity: parseInt(med.quantity),
+        symptom: med.symptom || null,
+        aiRecommendation: med.aiRecommendation || null,
+        notes: med.notes || null
       });
-      
-      results.push(order);
     }
     
-    // Delete the original pending order
-    await prisma.order.delete({
-      where: { orderId: id }
+    // Update prescription to approved and create prescription items
+    const approvedPrescription = await prisma.prescription.update({
+      where: { prescriptionId: id },
+      data: {
+        status: "approved",
+        pharmacistId: pharmacistId || null,
+        approvedAt: new Date(),
+        items: {
+          create: prescriptionItems
+        }
+      },
+      include: {
+        user: true,
+        pharmacist: {
+          select: {
+            username: true,
+            email: true
+          }
+        },
+        items: {
+          include: {
+            medicine: true
+          }
+        }
+      }
     });
     
-    res.status(200).json({ message: "Order approved successfully", orders: results });
+    res.status(200).json({ message: "Prescription approved successfully", prescription: approvedPrescription });
   } catch (error) {
-    console.error("Approve order error:", error);
+    console.error("Approve prescription error:", error);
     res.status(400).json({ error: error.message });
   }
 };
 
-// Reject order (pharmacist)
+// Reject prescription (pharmacist)
 exports.rejectOrder = async (req, res) => {
   try {
     const { id } = req.params;
-    const { reason } = req.body;
+    const { reason, pharmacistId } = req.body;
     
-    const order = await prisma.order.update({
-      where: { orderId: id },
+    const prescription = await prisma.prescription.update({
+      where: { prescriptionId: id },
       data: {
         status: "rejected",
-        updatedAt: new Date()
-        // Note: You may want to add a 'rejectionReason' field to the schema
+        pharmacistId: pharmacistId || null,
+        rejectedAt: new Date(),
+        rejectionReason: reason || "No reason provided"
       },
       include: {
-        user: true
+        user: true,
+        pharmacist: {
+          select: {
+            username: true,
+            email: true
+          }
+        }
       }
     });
     
-    res.status(200).json({ message: "Order rejected successfully", order, reason });
+    res.status(200).json({ message: "Prescription rejected successfully", prescription });
   } catch (error) {
-    console.error("Reject order error:", error);
+    console.error("Reject prescription error:", error);
+    res.status(400).json({ error: error.message });
+  }
+};
+
+// Get prescription by ID (for polling status)
+exports.getPrescription = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const prescription = await prisma.prescription.findUnique({
+      where: { prescriptionId: id },
+      include: {
+        user: {
+          select: {
+            username: true,
+            email: true
+          }
+        },
+        pharmacist: {
+          select: {
+            username: true,
+            email: true
+          }
+        },
+        items: {
+          include: {
+            medicine: true
+          }
+        }
+      }
+    });
+    
+    if (!prescription) {
+      return res.status(404).json({ error: "Prescription not found" });
+    }
+    
+    res.status(200).json(prescription);
+  } catch (error) {
+    console.error("Get prescription error:", error);
     res.status(400).json({ error: error.message });
   }
 };

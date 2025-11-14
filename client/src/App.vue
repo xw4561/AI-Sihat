@@ -9,14 +9,6 @@
 
     <!-- Bottom navigation (app-style) - visible on all screen sizes -->
     <footer v-if="showNavbar" class="bottom-nav" aria-hidden="false">
-      <router-link to="/customer" class="nav-item">Customer</router-link>
-      <router-link to="/pharmacist" class="nav-item">Pharmacist</router-link>
-      <router-link to="/admin" class="nav-item">Admin</router-link>
-
-      <router-link to="/cart" class="nav-item cart-link">
-        🛒 Cart <span v-if="cart.totalItems > 0" class="badge">{{ cart.totalItems }}</span>
-      </router-link>
-
       <button class="nav-item" @click="logout">Logout</button>
     </footer>
   </div>

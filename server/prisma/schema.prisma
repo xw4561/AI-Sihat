@@ -102,7 +102,7 @@ model Prescription {
   customerName    String   @map("customer_name") @db.VarChar(255)
   customerPhone   String   @map("customer_phone") @db.VarChar(50)
   customerAddress String?  @map("customer_address")
-  createdAt       DateTime @default(now())
+  createdAt       DateTime @default(now()) @map("created_at")
   approvedAt      DateTime? @map("approved_at")
   rejectedAt      DateTime? @map("rejected_at")
   rejectionReason String?  @map("rejection_reason")
@@ -126,7 +126,7 @@ model PrescriptionItem {
   notes              String?
   symptom            String?
   aiRecommendation   String?  @map("ai_recommendation")
-  createdAt          DateTime @default(now())
+  createdAt          DateTime @default(now()) @map("created_at")
   prescription       Prescription @relation(fields: [prescriptionId], references: [prescriptionId], onDelete: Cascade)
   medicine           Medicine @relation(fields: [medicineId], references: [medicineId])
   orderItems         OrderItem[]
