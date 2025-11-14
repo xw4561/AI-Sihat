@@ -13,6 +13,7 @@ import Shop from '../views/Shop.vue'
 import Checkout from '../views/Checkout.vue'
 import OrderConfirmed from '../views/OrderConfirmed.vue'
 import Cart from '../views/Cart.vue'
+import OrderHistory from '../views/OrderHistory.vue'
 
 const routes = [
   {
@@ -99,6 +100,12 @@ const routes = [
     path: '/cart',
     name: 'Cart',
     component: Cart,
+    meta: { requiresAuth: true, role: 'customer' }
+  },
+  {
+    path: '/orders',
+    name: 'OrderHistory',
+    component: OrderHistory,
     meta: { requiresAuth: true, role: 'customer' }
   }
 ]

@@ -36,6 +36,51 @@ exports.findAll = async (req, res) => {
   }
 };
 
+exports.findByUser = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const orders = await prisma.order.findMany({
+      where: { userId: userId },
+      include: {
+        items: {
+          include: {
+            medicine: true
+          }
+        },
+        prescription: {
+          include: {
+            items: {
+              include: {
+                medicine: true
+              }
+            }
+          }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+    
+    // Transform orders to match expected format
+    const transformedOrders = orders.map(order => ({
+      orderId: order.orderId,
+      orderDate: order.createdAt,
+      orderStatus: order.status.charAt(0).toUpperCase() + order.status.slice(1),
+      totalAmount: order.totalPrice,
+      paymentMethod: 'Online Payment', // Add this field if it exists in your schema
+      prescriptions: order.prescription?.items?.map(item => ({
+        prescriptionId: item.prescriptionItemId,
+        quantity: item.quantity,
+        medicine: item.medicine
+      })) || []
+    }));
+    
+    res.status(200).json(transformedOrders);
+  } catch (error) {
+    console.error("Get user orders error:", error);
+    res.status(400).json({ error: error.message });
+  }
+};
+
 exports.findOne = async (req, res) => {
   try {
     const { id } = req.params;

@@ -1,7 +1,12 @@
 <template>
   <div class="chat card">
     <div class="chat-header">
-      <div class="title">AI_SIHAT CHAT</div>
+      <div class="header-left">
+        <button class="btn-back" @click="goBack" title="Go back">
+          <span class="back-arrow">←</span>
+        </button>
+        <div class="title">AI_SIHAT CHAT</div>
+      </div>
       <div class="controls">
         <button class="btn" @click="refreshChat" :disabled="loading">Start New Chat</button>
       </div>
@@ -160,9 +165,11 @@
 
 <script setup>
 import { ref, computed, onMounted, watch, nextTick } from 'vue'
+import { useRouter } from 'vue-router'
 import axios from 'axios'
 import { useCartStore } from '../store/cart'
 
+const router = useRouter()
 const cartStore = useCartStore()
 
 const sessionId = ref('')
@@ -178,6 +185,53 @@ const prescriptionId = ref(null) // Track created prescription ID
 const orderStatus = ref(null) // Track order status (pending, approved, rejected)
 const approvedMedicines = ref([]) // Store approved medicines from pharmacist
 const chatComplete = ref(false) // Track if chat has been completed
+
+function goBack() {
+  router.back()
+}
+
+// Save chat state to localStorage
+function saveChatState() {
+  const chatState = {
+    sessionId: sessionId.value,
+    currentQuestion: currentQuestion.value,
+    history: history.value,
+    prescriptionId: prescriptionId.value,
+    orderStatus: orderStatus.value,
+    approvedMedicines: approvedMedicines.value,
+    chatComplete: chatComplete.value,
+    addedToCart: addedToCart.value,
+    timestamp: Date.now()
+  }
+  localStorage.setItem('chatState', JSON.stringify(chatState))
+}
+
+// Restore chat state from localStorage
+function restoreChatState() {
+  try {
+    const savedState = localStorage.getItem('chatState')
+    if (savedState) {
+      const chatState = JSON.parse(savedState)
+      sessionId.value = chatState.sessionId || ''
+      currentQuestion.value = chatState.currentQuestion || null
+      history.value = chatState.history || []
+      prescriptionId.value = chatState.prescriptionId || null
+      orderStatus.value = chatState.orderStatus || null
+      approvedMedicines.value = chatState.approvedMedicines || []
+      chatComplete.value = chatState.chatComplete || false
+      addedToCart.value = chatState.addedToCart || []
+      return true
+    }
+  } catch (e) {
+    console.error('Error restoring chat state:', e)
+  }
+  return false
+}
+
+// Clear chat state from localStorage
+function clearChatState() {
+  localStorage.removeItem('chatState')
+}
 
 // form state
 const singleChoice = ref('')
@@ -208,6 +262,11 @@ const resetInput = () => {
   orderStatus.value = null
   approvedMedicines.value = []
   chatComplete.value = false
+}
+
+const fullReset = () => {
+  resetInput()
+  clearChatState() // Clear localStorage
 }
 
 // Identify the standalone heading prompt sent by backend
@@ -279,6 +338,7 @@ async function startSession() {
     // This provides consistent UX
 
     resetInput()
+    saveChatState() // Save after starting new session
   } catch (e) {
     error.value = e.response?.data?.error || e.message || 'Failed to start session'
   } finally {
@@ -289,6 +349,7 @@ async function startSession() {
 function refreshChat() {
   // clear history and restart
   showPlaceholder.value = true // Reset placeholder for new chat
+  fullReset() // Clear localStorage when starting new chat
   startSession()
 }
 
@@ -367,7 +428,12 @@ async function sendAnswer() {
       })
       // Clear current question so it doesn't show the special completion UI
       currentQuestion.value = null
+      chatComplete.value = true
+      clearChatState() // Clear localStorage when chat is completed
     }
+    
+    // Save state after each answer
+    saveChatState()
     
     // Debug: Log medication cart data
     if (currentQuestion.value && currentQuestion.value.type === 'medication_cart') {
@@ -402,7 +468,13 @@ onMounted(() => scrollToBottom())
 
 // auto-start chat when view mounts
 onMounted(() => {
-  startSession()
+  // Try to restore chat state first
+  const restored = restoreChatState()
+  
+  // Only start new session if no saved state or chat was completed
+  if (!restored || !sessionId.value) {
+    startSession()
+  }
 })
 
 // Auto-advance past heading-only prompt so user only sees the combined recommendation bubble
@@ -682,15 +754,62 @@ function formatAnswer(a) {
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 200px);
-  min-height: 400px;
+  position: fixed;
+  top: 48px;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  overflow: hidden;
 }
 
 .chat-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 0.5rem;
+  margin: 0;
+  flex-shrink: 0;
+  padding: 1rem;
+  background: white;
+  z-index: 10;
+  border-bottom: 1px solid #e6e6e6;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.btn-back {
+  background: none;
+  border: 2px solid transparent;
+  cursor: pointer;
+  padding: 0.3rem 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  margin-bottom: 2px;
+}
+
+.btn-back:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+  border-color: rgba(0, 0, 0, 0.1);
+  transform: translateX(-2px);
+}
+
+.btn-back:active {
+  transform: translateX(-4px);
+}
+
+.back-arrow {
+  font-size: 1.2rem;
+  color: #333;
+  line-height: 1;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
 }
 
 .title { font-weight: 700 }
@@ -703,8 +822,9 @@ function formatAnswer(a) {
   background: #f7f7f7;
   flex: 1 1 auto;
   padding: 1rem;
+  margin: 0;
   overflow-y: auto;
-  border-radius: 10px;
+  border-radius: 0;
   width: 100%;
   min-width: 0;
   display: flex;
@@ -937,8 +1057,22 @@ function formatAnswer(a) {
   transform: translateX(3px);
 }
 
-.composer { display:flex; gap:0.5rem; margin-top:0.6rem; align-items:center }
-.composer input { flex:1; padding:0.6rem; border-radius:10px; border:1px solid #e6e6e6 }
+.composer { 
+  display: flex; 
+  gap: 0.5rem; 
+  margin-top: 0.6rem; 
+  align-items: center;
+  flex-shrink: 0;
+  padding: 0.5rem 0;
+  background: white;
+  z-index: 10;
+}
+.composer input { 
+  flex: 1; 
+  padding: 0.6rem; 
+  border-radius: 10px; 
+  border: 1px solid #e6e6e6;
+}
 .composer-actions { display:flex }
 .composer-hint { font-size:0.9rem; color:#666; margin-top:0.4rem }
 
