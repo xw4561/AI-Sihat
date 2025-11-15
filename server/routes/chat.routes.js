@@ -77,7 +77,10 @@ module.exports = (app) => {
       const { sessionId } = req.body;
       if (!sessionId) return res.status(400).json({ error: "sessionId is required" });
 
-      const result = await chatService.createOrderFromChat(sessionId);
+      const { branchId } = req.body;
+      if (!branchId) return res.status(400).json({ error: "branchId is required" });
+
+      const result = await chatService.createOrderFromChat(sessionId, branchId);
       res.json(result);
     } catch (error) {
       console.error("Complete chat error:", error);

@@ -807,7 +807,8 @@ async function continueFromRecommendation() {
     loading.value = true
     // Create prescription from chat session
     const res = await axios.post('/api/chat/complete', {
-      sessionId: sessionId.value
+      sessionId: sessionId.value,
+      branchId: selectedBranch.value.branchId
     })
 
     prescriptionId.value = res.data.prescription.prescriptionId
