@@ -1,6 +1,13 @@
 <template>
   <div class="home">
-    <h2>API & Database Test</h2>
+    <div class="header-container">
+      <button @click="$router.push('/admin')" class="back-arrow">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M19 12H5M12 19l-7-7 7-7"/>
+        </svg>
+      </button>
+      <h2>API & Database Test</h2>
+    </div>
     
     <!-- API Test Section -->
     <div class="test-section">
@@ -119,9 +126,35 @@ const testAll = async () => {
   margin: 0 auto;
 }
 
+.header-container {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  justify-content: center;
+}
+
+.back-arrow {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #2c3e50;
+  transition: all 0.2s ease;
+  border-radius: 8px;
+}
+
+.back-arrow:hover {
+  background-color: #f3f4f6;
+  color: #10b981;
+}
+
 h2 {
   color: #2c3e50;
-  margin-bottom: 2rem;
+  margin: 0;
 }
 
 h3 {

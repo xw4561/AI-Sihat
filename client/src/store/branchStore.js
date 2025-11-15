@@ -16,7 +16,7 @@ export const useBranchStore = defineStore('branch', () => {
     isLoading.value = true;
     error.value = null;
     try {
-      const response = await axios.get('http://localhost:3000/ai-sihat/pharmacy');
+      const response = await axios.get('http://localhost:8080/ai-sihat/pharmacy');
       branches.value = response.data;
     } catch (e) {
       console.error("Failed to fetch branches:", e);
@@ -39,7 +39,7 @@ export const useBranchStore = defineStore('branch', () => {
     try {
       // Update the user's profile on the backend
       await axios.put(
-        `http://localhost:3000/ai-sihat/user/${userStore.user.userId}/select-branch`,
+        `http://localhost:8080/ai-sihat/user/${userStore.user.userId}/select-branch`,
         { branchId: branch.branchId },
         { headers: { Authorization: `Bearer ${userStore.token}` } } // Assuming you use Bearer token auth
       );
@@ -62,7 +62,7 @@ export const useBranchStore = defineStore('branch', () => {
       isLoading.value = true;
       try {
         // Fetch the specific branch details
-        const response = await axios.get(`http://localhost:3000/ai-sihat/pharmacy/${userStore.user.lastSelectedBranchId}`);
+        const response = await axios.get(`http://localhost:8080/ai-sihat/pharmacy/${userStore.user.lastSelectedBranchId}`);
         selectedBranch.value = response.data;
       } catch (e) {
         console.error("Failed to load user's selected branch:", e);

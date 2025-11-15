@@ -1,6 +1,8 @@
 const { validationResult } = require("express-validator");
 const orderService = require("../services/orderService");
 const prisma = require("../prisma/client");
+// --- ADD THIS LINE ---
+const { translateText } = require("../services/geminiService"); // Adjust path if needed
 const { Role } = require("../prisma/client");
 
 const getPharmacistBranch = async (userId) => {
@@ -48,6 +50,51 @@ exports.findAll = async (req, res) => {
     res.status(200).json(orders);
   } catch (error) {
     console.error("Get all orders error:", error);
+    res.status(400).json({ error: error.message });
+  }
+};
+
+exports.findByUser = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const orders = await prisma.order.findMany({
+      where: { userId: userId },
+      include: {
+        items: {
+          include: {
+            medicine: true
+          }
+        },
+        prescription: {
+          include: {
+            items: {
+              include: {
+                medicine: true
+              }
+            }
+          }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+    
+    // Transform orders to match expected format
+    const transformedOrders = orders.map(order => ({
+      orderId: order.orderId,
+      orderDate: order.createdAt,
+      orderStatus: order.status.charAt(0).toUpperCase() + order.status.slice(1),
+      totalAmount: order.totalPrice,
+      paymentMethod: 'Online Payment', // Add this field if it exists in your schema
+      prescriptions: order.prescription?.items?.map(item => ({
+        prescriptionId: item.prescriptionItemId,
+        quantity: item.quantity,
+        medicine: item.medicine
+      })) || []
+    }));
+    
+    res.status(200).json(transformedOrders);
+  } catch (error) {
+    console.error("Get user orders error:", error);
     res.status(400).json({ error: error.message });
   }
 };
@@ -165,10 +212,12 @@ exports.approveOrder = async (req, res) => {
         medicineId: medicineId,
         quantity: parseInt(med.quantity),
         symptom: med.symptom || null,
-        aiRecommendation: med.aiRecommendation || null,
+        // --- FIX: Store original AI recommendation text
+        aiRecommendation: med.recommendationText || null,
         wasRejected: med.action === 'reject',
         rejectionReason: med.rejectionReason || null,
-        originalAiRecommendation: med.action === 'reject' ? med.aiRecommendation : null,
+        // --- FIX: Store original AI rec text if rejected
+        originalAiRecommendation: med.action === 'reject' ? (med.recommendationText || null) : null,
         notes: med.notes || null
       });
     }
@@ -240,6 +289,7 @@ exports.rejectOrder = async (req, res) => {
 };
 
 // Get prescription by ID (for polling status)
+// --- THIS IS THE MODIFIED FUNCTION ---
 exports.getPrescription = async (req, res) => {
   try {
     const { id } = req.params;
@@ -263,13 +313,39 @@ exports.getPrescription = async (req, res) => {
           include: {
             medicine: true
           }
+        },
+        // --- ADD THIS ---
+        chat: {
+          select: {
+            summary: true
+          }
         }
+        // --- END ADD ---
       }
     });
     
     if (!prescription) {
       return res.status(404).json({ error: "Prescription not found" });
     }
+
+    // --- START: TRANSLATION LOGIC ---
+    // Get the user's language from the saved summary
+    const userLang = prescription.chat?.summary?.lang || 'en';
+
+    // If language is NOT English, translate rejection reasons
+    if (userLang !== 'en' && prescription.items) {
+      // We use Promise.all to translate all items in parallel
+      await Promise.all(
+        prescription.items.map(async (item) => {
+          if (item.rejectionReason) {
+            // Translate the reason and replace it on the item object
+            item.rejectionReason = await translateText(item.rejectionReason, userLang);
+          }
+          return item;
+        })
+      );
+    }
+    // --- END: TRANSLATION LOGIC ---
     
     res.status(200).json(prescription);
   } catch (error) {
@@ -278,3 +354,32 @@ exports.getPrescription = async (req, res) => {
   }
 };
 
+// Get all prescriptions (with items) - useful for admin DB manager
+exports.findAllPrescriptions = async (req, res) => {
+  try {
+    const prescriptions = await prisma.prescription.findMany({
+      include: {
+        user: {
+          select: { username: true, email: true }
+        },
+        pharmacist: {
+          select: { username: true, email: true }
+        },
+        chat: {
+          select: { summary: true }
+        },
+        items: {
+          include: {
+            medicine: true
+          }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    res.status(200).json(prescriptions);
+  } catch (error) {
+    console.error("Get all prescriptions error:", error);
+    res.status(400).json({ error: error.message });
+  }
+};
