@@ -1,6 +1,7 @@
 <template>
   <div class="branch-selector-overlay">
     <div class="branch-selector-modal">
+      <button v-if="allowCancel" class="btn-close" @click="onCancel" title="Cancel">×</button>
       <h2>Please Select Your Pharmacy Branch</h2>
       <p>Your selection will apply to both shopping and AI chat.</p>
       
@@ -26,10 +27,21 @@
 import { ref, onMounted } from 'vue';
 import axios from 'axios';
 
-const emit = defineEmits(['branch-selected']);
+defineProps({
+  allowCancel: {
+    type: Boolean,
+    default: false
+  }
+});
+
+const emit = defineEmits(['branch-selected', 'close']);
 const branches = ref([]);
 const isLoading = ref(false);
 const error = ref(null);
+
+function onCancel() {
+  emit('close');
+}
 
 onMounted(async () => {
   isLoading.value = true;
@@ -106,6 +118,7 @@ async function onSelectBranch(branch) {
 }
 
 .branch-selector-modal {
+  position: relative;
   background: white;
   padding: 2rem;
   border-radius: 8px;
@@ -114,6 +127,31 @@ async function onSelectBranch(branch) {
   max-height: 80vh;
   overflow-y: auto;
   box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+}
+
+.btn-close {
+  position: absolute;
+  top: 10px; /* Adjust as needed */
+  left: 7px; /* Adjust as needed */
+  background: none; /* No background by default */
+  border: none;
+  font-size: 2.2rem; /* Made it bigger */
+  line-height: 1; /* Ensures proper vertical alignment */
+  color: #888; /* Softer default color */
+  cursor: pointer;
+  padding: 0 0.5rem; /* Only horizontal padding for better click area */
+  transition: all 0.2s ease-in-out; /* Smooth transitions for visual feedback */
+  border-radius: 50%; /* Make it round */
+  width: 40px; /* Give it a fixed size */
+  height: 40px; /* Give it a fixed size */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-close:hover {
+  color: #333; /* Darker on hover */
+  background-color: #f0f0f0; /* Light background on hover */
 }
 
 h2 {

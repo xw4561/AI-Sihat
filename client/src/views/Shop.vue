@@ -3,6 +3,8 @@
   <BranchSelector 
     v-if="showSelector" 
     @branch-selected="handleBranchSelected" 
+    @close="showSelector = false" 
+    :allow-cancel="!!selectedBranch"
   />
 
   <!-- Show Shop Content only if a branch is selected -->

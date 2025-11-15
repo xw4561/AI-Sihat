@@ -1,6 +1,11 @@
 <template>
   <!-- Show Branch Selector if showSelector is true -->
-  <BranchSelector v-if="showSelector" @branch-selected="handleBranchSelected" />
+  <BranchSelector 
+    v-if="showSelector" 
+    @branch-selected="handleBranchSelected" 
+    @close="showSelector = false" 
+    :allow-cancel="!!selectedBranch"
+  />
 
   <!-- Show Chat Content only if a branch is selected -->
   <div v-else-if="selectedBranch" class="chat card">
