@@ -47,6 +47,9 @@ exports.findAll = async (req, res) => {
     const orders = await prisma.order.findMany({
       orderBy: { createdAt: 'desc' }
     });
+
+    // console.log("Retrieved orders:", orders);
+
     res.status(200).json(orders);
   } catch (error) {
     console.error("Get all orders error:", error);
@@ -59,22 +62,7 @@ exports.findByUser = async (req, res) => {
     const { userId } = req.params;
     const orders = await prisma.order.findMany({
       where: { userId: userId },
-      include: {
-        items: {
-          include: {
-            medicine: true
-          }
-        },
-        prescription: {
-          include: {
-            items: {
-              include: {
-                medicine: true
-              }
-            }
-          }
-        }
-      },
+      select: { orderId: true, createdAt: true, status: true, totalPrice: true, prescription: { include: { items: { include: { medicine: true } } } } },
       orderBy: { createdAt: 'desc' }
     });
     
@@ -127,18 +115,29 @@ exports.delete = async (req, res) => {
 
 // Get pending prescriptions with chat data for pharmacist review
 exports.getPendingAiOrders = async (req, res) => {
+  console.log('[Pending AI Route] POST /ai-sihat/pending-ai', { body: req.body });
   try {
-    const { userId, role } = req.user;
-    let whereClause = { status: "pending" };
+    const userId = req.body?.userId; 
+    // const role = req.body?.role;
+    const branchId = await getPharmacistBranch(userId);
 
-    if (role === Role.PHARMACIST) {
-      const branchId = await getPharmacistBranch(userId);
-      whereClause.chat = {
-        branchId: branchId,
-      };
-    } else if (role !== Role.ADMIN) {
-      return res.status(403).json({ error: "Access denied." });
+    if (!userId) {
+      return res.status(400).json({ error: "Missing userId or role" });
     }
+    
+    let whereClause = { 
+      status: "pending",
+      branchId: branchId
+    };
+
+    // if (role === Role.PHARMACIST) {
+    //   const branchId = await getPharmacistBranch(userId);
+    //   whereClause.chat = {
+    //     branchId: branchId,
+    //   };
+    // } else if (role !== Role.ADMIN) {
+    //   return res.status(403).json({ error: "Access denied." });
+    // }
 
      const prescriptions = await prisma.prescription.findMany({
       where: whereClause,
@@ -158,7 +157,9 @@ exports.getPendingAiOrders = async (req, res) => {
       orderBy: { createdAt: 'desc' }
     });
     
+    console.log("Retrieved pending prescriptions:", prescriptions);
     res.status(200).json(prescriptions);
+
   } catch (error) {
     console.error("Get pending prescriptions error:", error);
     const status = error.message.includes("denied") ? 403 : 400;
