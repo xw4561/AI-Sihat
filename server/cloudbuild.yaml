@@ -1,6 +1,22 @@
 # This Cloud Build configuration uses Google Cloud Buildpacks, tags the image with the SHORT_SHA, and deploys to Cloud Run.
 
 steps:
+  # 0. Run Prisma Client Generation
+  # This step uses a Node.js image to install dependencies and execute 'prisma generate'.
+  # We use 'sh' entrypoint to run multiple commands sequentially.
+  - name: 'node' # Use the standard Node.js image (often maps to node:latest)
+    id: 'Prisma_Generate'
+    entrypoint: 'sh'
+    args:
+      - '-c'
+      - |
+          echo "Installing dependencies and running Prisma generate..."
+          # Install all dependencies (dev dependencies are needed for Prisma CLI)
+          npm install
+          # Generate the Prisma Client
+          npx prisma generate
+    timeout: '300s' # Give it enough time to install dependencies
+
   # 1. Build the container image using the dedicated Buildpacks builder.
   - name: 'gcr.io/cloud-builders/buildpacks'
     id: 'Build_with_Buildpacks'
@@ -33,3 +49,6 @@ substitutions:
 # Define the image that was built to be available as an output of the build and pushed to the registry.
 images:
   - 'us-central1-docker.pkg.dev/$PROJECT_ID/${_IMAGE_NAME}:$SHORT_SHA'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
