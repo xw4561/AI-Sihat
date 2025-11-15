@@ -35,7 +35,7 @@ onMounted(async () => {
   isLoading.value = true;
   error.value = null;
   try {
-    const response = await axios.get('http://localhost:8080/ai-sihat/pharmacy');
+    const response = await axios.get('/ai-sihat/pharmacy');
     branches.value = response.data;
   } catch (e) {
     console.error("Failed to fetch branches:", e);
@@ -68,7 +68,7 @@ async function onSelectBranch(branch) {
   try {
     // 2. Save selection to backend. Token is sent automatically by interceptor
     await axios.put(
-      `http://localhost:8080/ai-sihat/user/${user.userId}/select-branch`,
+      `/ai-sihat/user/${user.userId}/select-branch`,
       { branchId: branch.branchId }
     );
     
