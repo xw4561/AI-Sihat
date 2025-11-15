@@ -76,7 +76,6 @@
   const router = useRouter()
 
   const customerName = ref('')
-  const customerEmail = ref('')
   const customerPhone = ref('')
   const customerAddress = ref('')
   const purchaseMethod = ref('')

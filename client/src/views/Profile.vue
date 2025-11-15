@@ -223,10 +223,18 @@ async function saveProfile() {
 
 
 function logout() {
+  localStorage.removeItem('user');
   localStorage.removeItem('token');
+  localStorage.removeItem('userId');
   localStorage.removeItem('userName');
   localStorage.removeItem('userEmail');
   localStorage.removeItem('userRole');
+
+   // Clear other app-specific state
+  localStorage.removeItem('selectedBranch');
+  localStorage.removeItem('chatState'); 
+
+  // Redirect to the login page
   router.push('/login');
 }
 </script>
