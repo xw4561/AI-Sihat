@@ -343,7 +343,17 @@ function handleClickOutside(event) {
 async function fetchOrders() {
   try {
     isLoading.value = true;
-    const response = await axios.get('/ai-sihat/order/pending-ai');
+
+    const user = localStorage.getItem('user');
+
+    const parsedUser = JSON.parse(user);
+
+    const response = await axios.post('/ai-sihat/order/pending-ai', {
+      userId: parsedUser.userId
+    });
+
+    // console.log('Fetched prescriptions:', response.data.length);
+
     orders.value = response.data.map(prescription => ({
       id: prescription.prescriptionId,
       customerName: prescription.customerName || prescription.user?.username || 'Unknown',
