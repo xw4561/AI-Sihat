@@ -141,6 +141,11 @@
         }))
       }
 
+      // Normalize and attach payment method expected by backend
+      // UI options: 'Cash', 'TNG', 'Online Banking' -> backend expects values like 'cash', 'tng', 'onlinebanking'
+      const normalize = (s) => (s || '').toString().toLowerCase().replace(/\s+/g, '');
+      orderData.paymentMethod = normalize(purchaseMethod.value);
+
       // Create order
       const response = await axios.post('/ai-sihat/order', orderData)
 

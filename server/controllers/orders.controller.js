@@ -72,7 +72,7 @@ exports.findByUser = async (req, res) => {
       orderDate: order.createdAt,
       orderStatus: order.status.charAt(0).toUpperCase() + order.status.slice(1),
       totalAmount: order.totalPrice,
-      paymentMethod: 'Online Payment', // Add this field if it exists in your schema
+      paymentMethod: order.paymentMethod ? (order.paymentMethod === 'CASH' ? 'Cash' : 'Online Banking') : null,
       prescriptions: order.prescription?.items?.map(item => ({
         prescriptionId: item.prescriptionItemId,
         quantity: item.quantity,
