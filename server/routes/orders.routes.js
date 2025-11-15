@@ -15,6 +15,8 @@ module.exports = (app) => {
   
   // Prescription routes
   var prescriptionRouter = require("express").Router();
+  // List all prescriptions (for admin DB manager)
+  prescriptionRouter.get("/", controller.findAllPrescriptions);
   prescriptionRouter.get("/:id", controller.getPrescription);  // Get prescription by id
   app.use("/ai-sihat/prescriptions", prescriptionRouter);
 };

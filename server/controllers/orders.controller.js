@@ -296,3 +296,33 @@ exports.getPrescription = async (req, res) => {
   }
 };
 
+// Get all prescriptions (with items) - useful for admin DB manager
+exports.findAllPrescriptions = async (req, res) => {
+  try {
+    const prescriptions = await prisma.prescription.findMany({
+      include: {
+        user: {
+          select: { username: true, email: true }
+        },
+        pharmacist: {
+          select: { username: true, email: true }
+        },
+        chat: {
+          select: { summary: true }
+        },
+        items: {
+          include: {
+            medicine: true
+          }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    res.status(200).json(prescriptions);
+  } catch (error) {
+    console.error("Get all prescriptions error:", error);
+    res.status(400).json({ error: error.message });
+  }
+};
+
