@@ -22,7 +22,7 @@ function calculatePoints(quantity, useAI) {
  * @returns {Promise<object>} { order, updatedPoints, earnedPoints }
  */
 async function createOrder(orderData) {
-  const { userId, items, customerName, customerPhone, customerAddress, prescriptionId } = orderData;
+  const { userId, items, customerName, customerPhone, customerAddress, prescriptionId, paymentMethod } = orderData;
 
   // Validate required fields
   if (!userId || !items || !Array.isArray(items) || items.length === 0) {
@@ -75,6 +75,15 @@ async function createOrder(orderData) {
 
   // Create order and order items in a transaction
   const result = await prisma.$transaction(async (tx) => {
+    // Map incoming payment method (from UI) to Prisma enum values
+    let mappedPaymentMethod = null;
+    if (paymentMethod) {
+      const pm = String(paymentMethod).toLowerCase();
+      if (pm === 'cash') mappedPaymentMethod = 'CASH';
+      else if (pm === 'tng' || pm === 'tngwallet' || pm === 'ewallet' || pm === 'e-wallet' || pm === 'onlinebanking' || pm === 'online' || pm === 'online_payment') mappedPaymentMethod = 'ONLINE_BANKING';
+      else mappedPaymentMethod = pm.toUpperCase();
+    }
+
     // Create the order
     const newOrder = await tx.order.create({
       data: {
@@ -87,20 +96,53 @@ async function createOrder(orderData) {
         customerPhone,
         customerAddress: customerAddress || null,
         status: "pending",
+        paymentMethod: mappedPaymentMethod || null
       }
     });
 
     // Create order items
     for (const item of items) {
-      await tx.orderItem.create({ /* ... */ });
-      await tx.medicine.update({ /* ... */ });
+      // create order item record
+      await tx.orderItem.create({
+        data: {
+          orderId: newOrder.orderId,
+          medicineId: item.medicineId,
+          quantity: item.quantity,
+          price: item.price,
+          prescriptionItemId: item.prescriptionItemId || null
+        }
+      });
+
+      // decrement medicine stock
+      await tx.medicine.update({
+        where: { medicineId: item.medicineId },
+        data: {
+          medicineQuantity: { decrement: item.quantity }
+        }
+      });
     }
 
-    // Update user points...
-    const updatedUser = await tx.user.update({ /* ... */ });
+    // Update user points (increment by totalPoints)
+    const updatedUser = await tx.user.update({
+      where: { userId },
+      data: { points: { increment: totalPoints } }
+    });
 
-    // Fetch complete order...
-    const completeOrder = await tx.order.findUnique({ /* ... */ });
+    // Fetch complete order with items and related medicine info
+    const completeOrder = await tx.order.findUnique({
+      where: { orderId: newOrder.orderId },
+      include: {
+        items: {
+          include: {
+            medicine: true
+          }
+        },
+        user: {
+          select: { userId: true, username: true, email: true }
+        },
+        branch: true
+      }
+    });
 
     return { completeOrder, updatedUser };
   });
