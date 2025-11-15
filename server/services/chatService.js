@@ -1171,7 +1171,6 @@ async function createOrderFromChat(sessionId, branchId) {
       branchId: branchId,
       customerName: summary.name || "Unknown",
       customerPhone: summary.phoneNumber || "N/A",
-      customerAddress: null,
       status: "pending",
     },
   });
