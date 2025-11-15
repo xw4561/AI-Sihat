@@ -5,8 +5,7 @@
 
 const chatService = require("../services/chatService");
 const sessionService = require("../services/sessionService");
-const { PrismaClient } = require("@prisma/client");
-const prisma = new PrismaClient();
+const prisma = require("../prisma/client");
 
 module.exports = (app) => {
   /**
@@ -16,12 +15,18 @@ module.exports = (app) => {
   app.post("/api/chat/start", async (req, res) => {
     console.log('[chat.routes] POST /api/chat/start', { body: req.body });
     try {
-      const body = req.body || {};
-      const { userId } = body; // optional, pass userId if available
+      const { userId } = req.body;
+      
+      if (!userId) {
+        return res.status(400).json({ error: "User ID is required." });
+      }
       const result = await chatService.startChat(userId);
       res.json(result);
     } catch (error) {
       console.error("Start chat error:", error);
+      if (error.message.includes("No branch selected")) {
+        return res.status(400).json({ error: error.message });
+      }
       res.status(500).json({ error: error.message });
     }
   });

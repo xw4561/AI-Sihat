@@ -1,16 +1,12 @@
 <template>
   <div id="app">
-    <header v-if="showNavbar">
+     <header v-if="showNavbar">
       <h1>🏥 AI-Sihat</h1>
     </header>
+
     <main>
       <router-view />
     </main>
-
-    <!-- Bottom navigation (app-style) - visible on all screen sizes -->
-    <footer v-if="showNavbar" class="bottom-nav" aria-hidden="false">
-      <button class="nav-item" @click="logout">Logout</button>
-    </footer>
   </div>
 </template>
 
@@ -28,7 +24,14 @@ const showNavbar = computed(() => {
 });
 
 function logout() {
+  localStorage.removeItem('user');
   localStorage.removeItem('token');
+  localStorage.removeItem('userId');
+  localStorage.removeItem('userName');
+  localStorage.removeItem('userEmail');
+  localStorage.removeItem('userRole');
+  localStorage.removeItem('selectedBranch');
+
   router.push('/login');
 }
 </script>
@@ -36,19 +39,21 @@ function logout() {
 <style scoped>
 header {
   /* minimal white header with a thin branded accent */
-  background: #fff;
-  padding: 0.6rem 1rem;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  padding: 0.75rem 1rem;
   text-align: center;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
   position: sticky;
   top: 0;
   z-index: 40;
 }
 
 h1 {
-  color: #2c3e50;
+  color: white;
   margin: 0;
-  font-size: 1.15rem;
+  font-size: 1.2rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
 }
 
 /* hide any unused top nav markup */
@@ -67,8 +72,7 @@ main {
   /* mobile-first container sizing */
   max-width: 460px;
   margin: 0 auto;
-  padding: 1rem;
-  padding-top: 1.2rem; /* leave room below sticky header */
+  padding: 0;
   padding-bottom: 4rem; /* ensure content not hidden by bottom nav */
 }
 
@@ -97,13 +101,10 @@ main {
   border: none;
 }
 
-/* thin green accent at the top for branding */
-header::before { content: ''; display: block; height: 4px; background: linear-gradient(90deg,#42b983 0%, #48bb78 100%); position: absolute; left: 0; right: 0; top: 0 }
-
 /* desktop tweaks */
 @media (min-width: 900px) {
   header { padding: 1rem 2rem }
-  h1 { font-size: 1.4rem }
+  h1 { font-size: 1.5rem }
   main { max-width: 820px; padding: 2rem; padding-bottom: 2rem }
 }
 

@@ -1,12 +1,36 @@
-const { PrismaClient } = require("@prisma/client");
-const prisma = new PrismaClient();
+const prisma = require("../prisma/client");
+const { Role } = require("@prisma/client");
+
+const getPharmacistBranch = async (userId) => {
+  if (!userId) {
+    throw new Error("User authentication is required.");
+  }
+  const pharmacyBranch = await prisma.pharmacyBranch.findUnique({
+    where: { userId: userId },
+    select: { branchId: true },
+  });
+  if (!pharmacyBranch) {
+    throw new Error("Access denied. Not associated with a pharmacy branch.");
+  }
+  return pharmacyBranch.branchId;
+};
 
 /**
  * Get all chat sessions
  */
 exports.findAll = async (req, res) => {
   try {
+    const { userId, role } = req.user;
+    let whereClause = {};
+    if (role === Role.PHARMACIST) {
+      const branchId = await getPharmacistBranch(userId);
+      whereClause.branchId = branchId;
+    } else if (role !== Role.ADMIN) {
+      return res.status(403).json({ error: "Access denied." });
+    }
+
     const chats = await prisma.chat.findMany({
+    where: whereClause,
       orderBy: { createdAt: "desc" },
     });
     res.status(200).json(chats);
@@ -22,6 +46,17 @@ exports.findAll = async (req, res) => {
 exports.findOne = async (req, res) => {
   try {
     const { id } = req.params;
+
+    const { userId, role } = req.user;
+    let whereClause = { id: parseInt(id) };
+
+    if (role === Role.PHARMACIST) {
+      const branchId = await getPharmacistBranch(userId);
+      whereClause.branchId = branchId;
+    } else if (role !== Role.ADMIN) {
+      return res.status(403).json({ error: "Access denied." });
+    }
+
     const chat = await prisma.chat.findUnique({
       where: { id: parseInt(id) },
     });
@@ -43,6 +78,12 @@ exports.findOne = async (req, res) => {
 exports.delete = async (req, res) => {
   try {
     const { id } = req.params;
+
+    const { userId, role } = req.user;
+    if (role !== Role.ADMIN) {
+      return res.status(403).json({ error: "Access denied. Only Admins can delete chats." });
+    }
+
     await prisma.chat.delete({
       where: { id: parseInt(id) },
     });

@@ -40,6 +40,9 @@ async function createOrder(orderData) {
   if (!user) {
     throw new Error("User not found");
   }
+  if (!user.lastSelectedBranchId) {
+    throw new Error("No branch selected. Please select a pharmacy branch to place an order.");
+  }
 
   // Validate all medicines exist and calculate totals
   let totalPrice = 0;
@@ -76,6 +79,7 @@ async function createOrder(orderData) {
     const newOrder = await tx.order.create({
       data: {
         userId,
+        branchId: user.lastSelectedBranchId,
         prescriptionId: prescriptionId || null,
         totalPrice,
         totalPoints,
@@ -88,44 +92,15 @@ async function createOrder(orderData) {
 
     // Create order items
     for (const item of items) {
-      await tx.orderItem.create({
-        data: {
-          orderId: newOrder.orderId,
-          medicineId: item.medicineId,
-          prescriptionItemId: item.prescriptionItemId || null,
-          quantity: item.quantity,
-          price: parseFloat(item.price)
-        }
-      });
-
-      // Update medicine stock
-      await tx.medicine.update({
-        where: { medicineId: item.medicineId },
-        data: { medicineQuantity: { decrement: item.quantity } }
-      });
+      await tx.orderItem.create({ /* ... */ });
+      await tx.medicine.update({ /* ... */ });
     }
 
-    // Update user points
-    const updatedUser = await tx.user.update({
-      where: { userId },
-      data: { points: { increment: totalPoints } }
-    });
+    // Update user points...
+    const updatedUser = await tx.user.update({ /* ... */ });
 
-    // Fetch complete order with items
-    const completeOrder = await tx.order.findUnique({
-      where: { orderId: newOrder.orderId },
-      include: {
-        items: {
-          include: {
-            medicine: true,
-            prescriptionItem: true
-          }
-        },
-        user: {
-          select: { userId: true, username: true, email: true, points: true }
-        }
-      }
-    });
+    // Fetch complete order...
+    const completeOrder = await tx.order.findUnique({ /* ... */ });
 
     return { completeOrder, updatedUser };
   });

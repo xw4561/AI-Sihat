@@ -82,3 +82,22 @@ exports.delete = async (req, res) => {
     res.status(status).json({ error: error.message });
   }
 };
+
+exports.selectBranch = async (req, res) => {
+  try {
+    const { id } = req.params; // The userId
+    const { branchId } = req.body; // The branchId to select
+
+    if (!branchId) {
+      return res.status(400).json({ error: "branchId is required in the body" });
+    }
+
+    const user = await userService.selectBranch(id, branchId);
+    res.status(200).json({ message: "Branch selected successfully", user });
+  } catch (error) {
+    console.error("Select branch error:", error);
+    // Set 404 if user or branch not found, 400 otherwise
+    const status = (error.message === "User not found" || error.message === "Pharmacy branch not found") ? 404 : 400;
+    res.status(status).json({ error: error.message });
+  }
+};

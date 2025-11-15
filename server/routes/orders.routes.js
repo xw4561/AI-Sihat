@@ -3,8 +3,9 @@ module.exports = (app) => {
   var router = require("express").Router();
 
   router.post("/", controller.create);           // Create order
-  router.get("/", controller.findAll);           // Get all orders
+  router.get("/user/:userId", controller.findByUser);  // Get orders by user (must be before /:id)
   router.get("/pending-ai", controller.getPendingAiOrders);  // Get pending prescriptions for pharmacist
+  router.get("/", controller.findAll);           // Get all orders
   router.get("/:id", controller.findOne);        // Get order by id
   router.put("/:id/approve", controller.approveOrder);  // Approve prescription (pharmacist)
   router.put("/:id/reject", controller.rejectOrder);    // Reject prescription (pharmacist)
@@ -14,6 +15,8 @@ module.exports = (app) => {
   
   // Prescription routes
   var prescriptionRouter = require("express").Router();
+  // List all prescriptions (for admin DB manager)
+  prescriptionRouter.get("/", controller.findAllPrescriptions);
   prescriptionRouter.get("/:id", controller.getPrescription);  // Get prescription by id
   app.use("/ai-sihat/prescriptions", prescriptionRouter);
 };

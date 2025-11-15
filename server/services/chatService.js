@@ -6,7 +6,7 @@
 const fs = require("fs");
 const path = require('path');
 const sessionService = require("./sessionService");
-const { runGemini } = require("./geminiService");
+const { runGemini, translateToEnglish } = require("./geminiService");
 
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
@@ -17,29 +17,98 @@ let symptomsData = null;
 /**
  * Get the prompt in the correct language from a question object.
  * @param {object} question - The question object.
- * @param {string} lang - The selected language ('English', 'Malay').
+ * @param {string} lang - The selected language ('en', 'my', 'zh').
  * @returns {string} The translated prompt.
  */
 function getPrompt(question, lang) {
-  if (lang === 'Malay' && question.prompt_my) {
+  if (!question) return '';
+  
+  // Default to English if no language specified
+  if (!lang || lang === 'en') {
+    return question.prompt || '';
+  }
+  
+  // Return Malay translation if available
+  if (lang === 'my' && question.prompt_my) {
     return question.prompt_my;
   }
-  return question.prompt;
+  
+  // Return Chinese translation if available
+  if ((lang === 'zh' || lang === '中文') && question.prompt_zh) {
+    return question.prompt_zh;
+  }
+  
+  // Fallback to English prompt if translation not available
+  return question.prompt || '';
 }
 
 /**
- * Create a question object with the correct language prompt.
+ * Return the recommendation prompt content as an array of lines in the requested language.
+ * If the question has an array prompt in the chosen language, return that array.
+ * If only a string prompt exists, return a single-element array with the localized string.
+ */
+function getPromptArray(question, lang) {
+  if (!question) return [];
+
+  // If language-specific array exists, prefer it
+  if (lang === 'my' && Array.isArray(question.prompt_my)) return question.prompt_my;
+  if ((lang === 'zh' || lang === '中文') && Array.isArray(question.prompt_zh)) return question.prompt_zh;
+
+  // If default prompt is an array, return it (for English or fallback)
+  if (Array.isArray(question.prompt)) return question.prompt;
+
+  // Fallback: use localized single-string prompt and return as array
+  const p = getPrompt(question, lang);
+  return p ? [p] : [];
+}
+
+/**
+ * Create a question object with the correct language prompt and options.
  * @param {object} question - The original question object.
- * @param {string} lang - The selected language.
- * @returns {object} A new question object with the correct prompt.
+ * @param {string} lang - The selected language ('en', 'my', 'zh').
+ * @returns {object} A new question object with the correct prompt and options.
  */
 function localizeQuestion(question, lang) {
   if (!question) return null;
-  return {
+  
+  const localized = {
     ...question,
     prompt: getPrompt(question, lang),
   };
+
+  // Store the original (English/backend) options
+  const originalOptions = localized.options;
+  
+  // Check if options exist and are an array
+  if (originalOptions && Array.isArray(originalOptions) && lang) {
+    
+    // Store original options for mapping
+    localized.originalOptions = originalOptions;
+
+    // Select the correct translated options array
+    if (lang === 'my' && localized.options_my && Array.isArray(localized.options_my)) {
+      localized.options = localized.options_my;
+    } else if ((lang === 'zh' || lang === '中文') && localized.options_zh && Array.isArray(localized.options_zh)) {
+      localized.options = localized.options_zh;
+    }
+    // If English or no translation, localized.options just stays as the original 'options' array.
+
+    // Create a mapping from the *displayed* option back to the *original* value
+    localized.optionMapping = {};
+    if (localized.options && localized.originalOptions) {
+      localized.options.forEach((displayed, index) => {
+        // Ensure we don't go out of bounds
+        if (index < localized.originalOptions.length) {
+          const originalValue = localized.originalOptions[index];
+          localized.optionMapping[displayed] = originalValue;
+        }
+      });
+    }
+  }
+  
+  return localized;
 }
+
 
 /* -------------------- Data Loading -------------------- */
 function loadSymptomsData() {
@@ -74,28 +143,43 @@ function validateAnswer(question, input) {
       // For questions where a text input is expected for a "yes" answer,
       // the input will be the free text itself. We should not validate
       // it against the options list.
-      const hasOpenTextOption = question.options.some(o => 
+
+      // --- START FIX ---
+      // 始终根据 *原始* (英文) 选项进行检查，以确定这是否是一个开放式文本问题。
+      // 这样可以确保即便是 "Yes (List details)" 或 "Other (Specify)" 被翻译后也能被正确识别。
+      const referenceOptions = question.originalOptions || question.options;
+      const hasOpenTextOption = referenceOptions.some(o => 
         o.toLowerCase().includes('yes') || o.toLowerCase().includes('other')
       );
+      // --- END FIX ---
 
       if (hasOpenTextOption) {
-        // If the user selected "No", it's a valid option.
-        if (typeof input === "string" && question.options?.includes(input)) {
+        // 检查是否存在映射 (已翻译的选项)
+        // 这将验证用户是否选择了一个简单的选项，如 "No" (或 "否")
+        if (question.optionMapping && typeof input === "string" && question.optionMapping[input]) {
+          return true; // 已翻译的选项 (如 "No") 是有效的
+        }
+        // 这将验证用户是否选择了 *原始* 的英文 "No"
+        if (typeof input === "string" && (question.originalOptions || []).includes(input)) {
           return true;
         }
-        // If the user selected "Yes" and typed something, it's also valid.
-        // The input will be the typed string.
+        // 如果用户选择了 "Yes" 并输入了内容，那也是有效的。
+        // 此时 'input' 将是输入的字符串。
         if (typeof input === "string" && input.trim() !== "") {
           return true;
         }
         return false;
       }
 
-      // For standard single-choice questions, perform the original validation.
-      if (typeof input === "string" && question.options?.includes(input)) return true;
+      // 对于标准的单项选择题 (例如 Male/Female)，执行原始验证。
+      const validateOptions = question.originalOptions || question.options;
+      if (question.optionMapping && typeof input === "string" && question.optionMapping[input]) {
+        return true; // 已翻译的选项是有效的
+      }
+      if (typeof input === "string" && validateOptions?.includes(input)) return true;
       if (!isNaN(input)) {
         const idx = parseInt(input, 10) - 1;
-        return question.options && question.options[idx] !== undefined;
+        return validateOptions && validateOptions[idx] !== undefined;
       }
       return false;
 
@@ -120,24 +204,66 @@ async function processAnswer(question, userInput) {
 
   switch (question.type) {
     case "single_choice":
-      if (typeof userInput === "string" && question.options?.includes(userInput)) return userInput;
+      // Check if we have a mapping (translated options)
+      if (question.optionMapping && typeof userInput === "string" && question.optionMapping[userInput]) {
+        return question.optionMapping[userInput]; // Return original value
+      }
+      // Check original options if available
+      const optionsToCheck = question.originalOptions || question.options;
+      if (typeof userInput === "string" && optionsToCheck?.includes(userInput)) return userInput;
       if (!isNaN(userInput)) {
         const idx = parseInt(userInput, 10) - 1;
-        return question.options ? question.options[idx] : null;
+        return optionsToCheck ? optionsToCheck[idx] : null;
       }
       return userInput;
 
     case "multiple_choice":
+      const multiOptionsToCheck = question.originalOptions || question.options;
       if (Array.isArray(userInput)) {
         return userInput
-          .map(a => (question.options?.includes(a) ? a : null))
+          .map(a => {
+            // Map translated option back to original if mapping exists
+            if (question.optionMapping && question.optionMapping[a]) {
+              return question.optionMapping[a];
+            }
+            // If it's already an original option, keep it
+            if (multiOptionsToCheck?.includes(a)) {
+              return a;
+            }
+            // --- START FIX ---
+            // If it's not a translated option (key) and not an original option (value),
+            // it must be the "Other" free text. Keep it.
+            if (!question.optionMapping || !question.optionMapping[a]) {
+              return a;
+            }
+            // --- END FIX ---
+            return null;
+          })
           .filter(Boolean);
       }
       if (typeof userInput === "string") {
         return userInput
           .split(",")
-          .map(s => s.trim())
-          .filter(s => question.options?.includes(s));
+          .map(s => {
+            const trimmed = s.trim();
+            // Map translated option back to original if mapping exists
+            if (question.optionMapping && question.optionMapping[trimmed]) {
+              return question.optionMapping[trimmed];
+            }
+            // --- START FIX ---
+            // If it's already an original option, keep it
+            if (multiOptionsToCheck?.includes(trimmed)) {
+              return trimmed;
+            }
+            // If it's not a translated option (key) and not an original option (value),
+            // it must be the "Other" free text. Keep it.
+            if (!question.optionMapping || !question.optionMapping[trimmed]) {
+              return trimmed;
+            }
+            // --- END FIX ---
+            return null;
+          })
+          .filter(Boolean);
       }
       return [];
 
@@ -292,10 +418,15 @@ function getNextQuestion(section, currentId, sessionData) {
         );
         
         if (!alreadyCollected) {
+          // --- START FIX ---
+          // Save the recommendation ID to find the English text later
+          // Save the TRANSLATED text for the user to see
           sessionData.allRecommendations.push({
             symptom: section,
-            details: recommendationObj.prompt
+            recommendationId: recommendationObj.id, // Save ID
+            details: getPromptArray(recommendationObj, sessionData.lang || 'en') // Save translated text
           });
+          // --- END FIX ---
         }
       }
       
@@ -359,7 +490,7 @@ function getNextQuestion(section, currentId, sessionData) {
         return {
           id: "COMBINED_REC",
           type: "recommendation",
-          prompt: combinedPrompt,
+          prompt: combinedPrompt, // This prompt is now correctly translated for the user
           next_logic: "AppFlow"
         };
       }
@@ -404,10 +535,15 @@ function getNextQuestion(section, currentId, sessionData) {
         );
         
         if (!alreadyCollected) {
+          // --- START FIX ---
+          // Save the recommendation ID to find the English text later
+          // Save the TRANSLATED text for the user to see
           sessionData.allRecommendations.push({
             symptom: section,
-            details: recommendationObj.prompt
+            recommendationId: recommendationObj.id, // Save ID
+            details: getPromptArray(recommendationObj, sessionData.lang || 'en') // Save translated text
           });
+          // --- END FIX ---
         }
       }
       
@@ -454,7 +590,7 @@ function getNextQuestion(section, currentId, sessionData) {
         return {
           id: "COMBINED_REC",
           type: "recommendation",
-          prompt: combinedPrompt,
+          prompt: combinedPrompt, // This prompt is now correctly translated for the user
           next_logic: "AppFlow"
         };
       }
@@ -481,10 +617,43 @@ function getNextQuestion(section, currentId, sessionData) {
  * @returns {Promise<object>} { sessionId, currentQuestion }
  */
 async function startChat(userId = null) {
+  // VALIDATE: A user must be logged in to start a chat
+  if (!userId) {
+    throw new Error("User ID is required to start a chat.");
+  }
+
+  // Find the user to get their selected branch
+  const user = await prisma.user.findUnique({
+    where: { userId: userId },
+    select: { lastSelectedBranchId: true },
+  });
+
+  // VALIDATE: Did the user select a branch?
+  if (!user || !user.lastSelectedBranchId) {
+    throw new Error(
+      "No branch selected. Please select a pharmacy branch to start a chat."
+    );
+  }
+
   const { v4: uuidv4 } = await import('uuid');
   const section = "CommonIntake";
   const firstQ = getFirstQuestion(section);
   const sessionId = uuidv4();
+
+  let newChat;
+  // Save session in database (with branchId)
+  try {
+    newChat = await prisma.chat.create({
+      data: {
+        userId: userId,
+        branchId: user.lastSelectedBranchId, // <-- THE FIX
+        summary: {},
+      },
+    });
+  } catch (err) {
+    console.error('Failed to create chat record:', err);
+    throw new Error("Could not start chat session in database.");
+  }
 
   // Save session in memory
   sessionService.createSession(sessionId, {
@@ -492,6 +661,7 @@ async function startChat(userId = null) {
     answers: {},
     currentId: firstQ?.id,
     userId,
+    lang: 'en', // Default language, will be updated when user selects language
     symptomQueue: [], // Queue to track multiple symptoms
     currentSymptomIndex: 0, // Track which symptom we're currently on
     allRecommendations: [] // Collect all recommendations
@@ -511,9 +681,48 @@ async function startChat(userId = null) {
     console.error('Failed to create chat record:', err);
   }
 
+  // Special handling for language selection question - show all three translations
+  let languageQuestion = localizeQuestion(firstQ, 'en');
+  if (firstQ && firstQ.id === "1") {
+    
+    // --- FIX: Dynamically build translations from JSON data ---
+    const translatedOptions = firstQ.options.map((opt, index) => {
+      // Get translated option from options_my, default to original 'opt' if not found
+      const my_opt = (firstQ.options_my && firstQ.options_my[index]) 
+        ? firstQ.options_my[index] 
+        : opt;
+      
+      // Get translated option from options_zh, default to original 'opt' if not found
+      const zh_opt = (firstQ.options_zh && firstQ.options_zh[index]) 
+        ? firstQ.options_zh[index] 
+        : opt;
+      
+      return {
+        value: opt, // The original value (e.g., "English", "Malay", "Chinese")
+        display: {
+          en: opt,     // e.g., "English"
+          my: my_opt,  // e.g., "Inggeris"
+          zh: zh_opt   // e.g., "华语"
+        }
+      };
+    });
+    
+    languageQuestion = {
+      ...firstQ,
+      prompt: `${firstQ.prompt}\n${firstQ.prompt_my || ''}\n${firstQ.prompt_zh || ''}`,
+      showAllTranslations: true,
+      translations: {
+        en: firstQ.prompt,
+        my: firstQ.prompt_my || firstQ.prompt,
+        zh: firstQ.prompt_zh || firstQ.prompt
+      },
+      optionsWithTranslations: translatedOptions
+    };
+  }
+
   return {
     sessionId,
-    currentQuestion: localizeQuestion(firstQ, 'English'),
+    currentQuestion: languageQuestion,
   };
 }
 
@@ -521,64 +730,231 @@ async function answerQuestion(sessionId, answer) {
   const session = sessionService.getSession(sessionId);
   if (!session) throw new Error("Invalid session");
 
+  const lang = session.lang || 'en';
+  
+  // --- START FIX: Get currentQ logic moved up ---
   const data = loadSymptomsData();
   const { section, currentId } = session;
   
-  // Special handling for COMBINED_REC (dynamically created recommendation)
+  let currentQ;
   if (currentId === "COMBINED_REC") {
-    // Transition to AppFlow
-    session.section = "AppFlow";
-    const nextQ = data["AppFlow"][0];
-    session.currentId = nextQ?.id;
-    session.answers[currentId] = answer;
-    sessionService.updateSession(sessionId, session);
-    
-    // Inject medications into cart question
-    if (nextQ && nextQ.type === "medication_cart") {
-      console.log('Session medications:', session.medications);
-      if (session.medications && session.medications.length > 0) {
-        const medicationCartQ = {
-          ...nextQ,
-          medications: session.medications
-        };
-        
-        console.log('Returning medication cart with medications:', medicationCartQ.medications);
-        
-        return {
-          sessionId,
-          answered: { id: currentId, prompt: "Based on your symptoms, here are our recommendations", answer },
-          nextQuestion: medicationCartQ
-        };
-      }
-      console.log('No medications found in session!');
-    }
-    
-    return {
-      sessionId,
-      answered: { id: currentId, prompt: "Based on your symptoms, here are our recommendations", answer },
-      nextQuestion: nextQ
+    // This is a synthetic question. The "type" is what matters.
+    // We also need its "prompt" for the `answered` block.
+    currentQ = { 
+      id: "COMBINED_REC", 
+      type: "recommendation",
+      prompt: "Based on your symptoms, here are our recommendations",
+      prompt_my: "Berdasarkan simptom anda, berikut adalah cadangan kami:",
+      prompt_zh: "根据您的症状，以下是我们的建议：" 
     };
+  } else {
+    const questions = data[section];
+    currentQ = questions?.find(q => q.id === currentId);
   }
   
-  const questions = data[section];
-  const currentQ = questions.find(q => q.id === currentId);
-  if (!currentQ) throw new Error("Question not found");
+  if (!currentQ) throw new Error(`Question not found for section "${section}" and id "${currentId}"`);
+  // --- END FIX ---
 
-  if (!validateAnswer(currentQ, answer)) {
-    throw new Error("Invalid input for this question");
+
+  // --- START FIX: Modified special handling ---
+  // Now checks for type, catching "COMBINED_REC" AND single recs (e.g., "F_R1")
+  if (currentQ.type === "recommendation") {
+    // The frontend flow (continueFromCart) sends an answer here
+    // AFTER pharmacist approval (e.g., "Added 1 item(s)").
+    // We must NOT show the AppFlow cart (A1).
+    // We skip directly to the completion message (A2).
+    
+    session.answers[currentId] = answer;
+    
+    // Find the completion question (A2) from AppFlow
+    const completionQ = data["AppFlow"]?.find(q => q.type === "completion_message");
+    
+    if (completionQ) {
+      session.section = "AppFlow"; // Set section for localization
+      session.currentId = completionQ.id;
+      sessionService.updateSession(sessionId, session);
+      
+      let localizedCompletionQ = localizeQuestion(completionQ, lang);
+      
+      // --- START: Customization logic ---
+      const cartAnswer = answer; // The answer is "Added..." or "No items added"
+      const itemsAdded = cartAnswer && typeof cartAnswer === 'string' && cartAnswer.includes('Added') && !cartAnswer.includes('No items added');
+      
+      const successMsg = {
+        en: "Thank you for using AI-Sihat! Your medications have been successfully added to cart. You can proceed to checkout from the cart page. Wish you a speedy recovery!",
+        my: "Terima kasih kerana menggunakan AI-Sihat! Ubat-ubatan anda telah berjaya ditambah ke troli. Anda boleh meneruskan ke 'checkout' dari halaman troli. Semoga anda cepat sembuh!",
+        zh: "感谢您使用 AI-Sihat！您的药物已成功添加到购物车。您可以从购物车页面继续结帐。祝您早日康复！"
+      };
+      
+      const noItemsMsg = {
+        en: "Thank you for using AI-Sihat! We hope our recommendations were helpful. Feel free to visit our pharmacy if you need assistance. Wish you a speedy recovery!",
+        my: "Terima kasih kerana menggunakan AI-Sihat! Kami harap cadangan kami membantu. Sila kunjungi farmasi kami jika anda memerlukan bantuan. Semoga anda cepat sembuh!",
+        zh: "感谢您使用 AI-Sihat！我们希望我们的建议对您有所帮助。如果您需要帮助，欢迎光临我们的药房。祝您早日康复！"
+      };
+      
+      // --- START BUG FIX ---
+      // Was: const langKey = (lang === '中文') ? 'zh' : (lang === 'Malay' ? 'my' : 'en');
+      const langKey = (lang === 'zh') ? 'zh' : (lang === 'my' ? 'my' : 'en');
+      // --- END BUG FIX ---
+      
+      if (itemsAdded) {
+        localizedCompletionQ.prompt = successMsg[langKey];
+      } else {
+        localizedCompletionQ.prompt = noItemsMsg[langKey];
+      }
+      // --- END: Customization logic ---
+      
+      return {
+        sessionId,
+        // Get the prompt for the "answered" object.
+        // We must use the *original* question data for getPrompt.
+        // If it's COMBINED_REC, we use the hardcoded prompt from above.
+        // If it's F_R1, we must find it in the data again to get translations.
+        answered: { id: currentId, prompt: getPrompt(currentQ, session.lang), answer },
+        nextQuestion: localizedCompletionQ
+      };
+    }
+    
+    // Fallback: just end the chat
+    session.currentId = null;
+    sessionService.updateSession(sessionId, session);
+    return {
+        sessionId,
+        answered: { id: currentId, prompt: getPrompt(currentQ, session.lang), answer },
+        nextQuestion: null
+    };
+  }
+  // --- END FIX ---
+
+  
+  // --- NORMAL LOGIC ---
+  
+  // Localize the *real* question for validation
+  const localizedQ = localizeQuestion(currentQ, lang);
+
+  if (!validateAnswer(localizedQ, answer)) {
+    // --- SPECIAL CHECK for Q1 ---
+    if (currentId === "1") {
+      let validQ1Ans = false;
+      if (currentQ.options_my && currentQ.options_my.includes(answer)) {
+        validQ1Ans = true;
+      } else if (currentQ.options_zh && currentQ.options_zh.includes(answer)) {
+        validQ1Ans = true;
+      }
+      
+      if (!validQ1Ans) {
+        throw new Error("Invalid input for this question");
+      }
+    } else {
+      throw new Error("Invalid input for this question");
+    }
   }
 
-  const processed = await processAnswer(currentQ, answer);
+  const processed = await processAnswer(localizedQ, answer);
   session.answers[currentId] = processed;
+
+  // --- START: NEW TRANSLATION LOGIC ---
+  let finalAnswer = processed; // Default to the processed value
+  const sessionLang = session.lang || 'en';
+  
+  // Define the list of question IDs that contain free-text input to be translated
+  // We exclude "3" (Name) as that should not be translated.
+  const idsToTranslate = [
+    "2",   // "Can you describe your symptoms...?"
+    "7",   // "What are your symptoms?" (for "Other (Specify)")
+    "10",  // "Do you have allergies...?" (for "Yes (List down details)")
+    "11",  // "Did you take any medication...?" (for "Yes (List down details)")
+    "DI1", // "Do you experience diarrhoea before?" (for "Yes , When___?")
+    "DI5", // "Do you start any new medication?" (for "Yes , What__?")
+    "CN1", // "Do you experience constipation before?" (for "Yes , When___?")
+    "CN5", // "Do you start any new medication?" (for "Yes , What__?")
+    "JP1", // "Which joint you feel pain?"
+    "MU1", // "Where is the location of muscle you feel pain?"
+    "MU4", // "Did you do any vigorous activity...?" (for "Yes , What__?")
+    "IS1"  // "What is the body part you feel itchy?"
+  ];
+
+  // Only run translation if the user is NOT chatting in English
+  if (sessionLang !== 'en' && idsToTranslate.includes(currentId)) {
+    
+    if (currentId === "2") {
+      // Special case for Q2 (useGemini: true)
+      // 'processed' is an object: { userInput, aiResponse }
+      if (processed && processed.userInput) {
+        const translatedInput = await translateToEnglish(processed.userInput);
+        finalAnswer = {
+          ...processed,
+          userInput: translatedInput, // Store translated version
+          originalInput: processed.userInput // Optional: keep original for reference
+        };
+      }
+    } else if (currentId === "7") {
+      // Special case for Q7 (multiple_choice)
+      // 'processed' is an array, e.g., ["Fever", "Cough", "sakit kepala"]
+      const originalOptions = localizedQ.originalOptions || localizedQ.options || [];
+      
+      if (Array.isArray(processed)) {
+        finalAnswer = await Promise.all(processed.map(async (ans) => {
+          // If 'ans' is NOT in the original options list, it's free text ("Other")
+          if (typeof ans === 'string' && !originalOptions.includes(ans)) {
+            return await translateToEnglish(ans); // Translate it
+          }
+          return ans; // It's a standard option, keep as is
+        }));
+      }
+    } else if (typeof processed === 'string' && processed.trim() !== "") {
+      // Standard free-text answer (from text_input or single_choice 'Yes')
+      const options = localizedQ.originalOptions || localizedQ.options || [];
+      // Check if the answer is just a standard option (e.g., "No")
+      const isAnOption = options.some(opt => opt.toLowerCase() === processed.toLowerCase());
+
+      // Only translate if it's NOT a standard option (e.g., it's "Panadol", not "No")
+      if (!isAnOption) { 
+        finalAnswer = await translateToEnglish(processed);
+      }
+    }
+  }
+  // --- END: NEW TRANSLATION LOGIC ---
+  
+  session.answers[currentId] = finalAnswer;
 
   // Handle language selection
   if (currentId === "1") {
-    session.lang = processed;
+    let selected = processed;
+    
+    const langMapping = {
+      'english': 'en',
+      'malay': 'my',
+      'chinese': 'zh'
+    };
+
+    if (typeof selected === 'string' && !langMapping[selected.toLowerCase()]) {
+        const reverseMap = {
+          'english': 'en',
+          'inggeris': 'en',
+          '英语': 'en',
+          'malay': 'my',
+          'melayu': 'my',
+          '马来语': 'my',
+          'chinese': 'zh',
+          'cina': 'zh',
+          '华语': 'zh'
+        };
+        session.lang = reverseMap[selected.toLowerCase()] || 'en';
+    } else {
+      const candidate = (typeof selected === 'string') ? selected.trim() : String(selected);
+      const lower = candidate.toLowerCase();
+      session.lang = langMapping[lower] || selected || 'en';
+    }
+    
+    sessionService.updateSession(sessionId, session);
   }
 
   let nextQ = null;
 
   // CASE 1: next_logic pointing to another section
+  // This block will now be correctly SKIPPED for recommendations
+  // because the check above will catch them first.
   if (currentQ.next_logic && data[currentQ.next_logic]) {
     session.section = currentQ.next_logic;
     nextQ = getFirstQuestion(session.section);
@@ -618,38 +994,21 @@ async function answerQuestion(sessionId, answer) {
 
     return {
       sessionId,
-      answered: { id: currentId, prompt: getPrompt(currentQ, session.lang), answer: processed },
+      answered: { id: currentId, prompt: getPrompt(localizedQ, session.lang), answer: processed },
       nextQuestion: localizeQuestion(nextQ, session.lang),
     };
-  }
-
-  // Handle recommendation display type - inject actual recommendations into the question
-  if (nextQ && nextQ.type === "recommendation_display") {
-    // Combine all collected recommendations
-    if (session.allRecommendations && session.allRecommendations.length > 0) {
-      const recsText = session.allRecommendations.map(rec => {
-        return `\n--- ${rec.symptom} ---\n` + rec.details.join("\n");
-      }).join("\n\n");
-      nextQ = {
-        ...nextQ,
-        prompt: nextQ.prompt + "\n\n" + recsText
-      };
-    }
   }
 
   // CASE 2: CommonIntake flow (gender-based / symptom routing)
   if (section === "CommonIntake") {
     if (currentId === "5" && processed === "Male") {
-      // Skip pregnancy question for males, go directly to symptoms
-      nextQ = questions.find(q => q.id === "7");
+      nextQ = data[section].find(q => q.id === "7");
     }
     else if (currentId === "5" && processed === "Female") {
-      // Ask pregnancy question for females
-      nextQ = questions.find(q => q.id === "6");
+      nextQ = data[section].find(q => q.id === "6");
     }
     else if (currentId === "6") {
-      // After pregnancy question, go to symptoms
-      nextQ = questions.find(q => q.id === "7");
+      nextQ = data[section].find(q => q.id === "7");
     }
     else {
       nextQ = getNextQuestion(section, currentId, session);
@@ -663,6 +1022,25 @@ async function answerQuestion(sessionId, answer) {
   session.currentId = nextQ ? nextQ.id : null;
   sessionService.updateSession(sessionId, session);
 
+  // Localize the question first (before any modifications)
+  if (nextQ) {
+    const langForNext = session.lang || 'en';
+    nextQ = localizeQuestion(nextQ, langForNext);
+  }
+
+  // Handle recommendation display type
+  if (nextQ && nextQ.type === "recommendation_display") {
+    if (session.allRecommendations && session.allRecommendations.length > 0) {
+      const recsText = session.allRecommendations.map(rec => {
+        return `\n--- ${rec.symptom} ---\n` + rec.details.join("\n");
+      }).join("\n\n");
+      nextQ = {
+        ...nextQ,
+        prompt: nextQ.prompt + "\n\n" + recsText
+      };
+    }
+  }
+
   // Inject medications into AppFlow medication_cart question
   if (nextQ && session.section === "AppFlow" && nextQ.type === "medication_cart") {
     console.log('General injection - Session medications:', session.medications);
@@ -672,41 +1050,50 @@ async function answerQuestion(sessionId, answer) {
         medications: session.medications
       };
       console.log('General injection - Injected medications into cart question:', nextQ.medications);
-    } else {
-      console.log('General injection - No medications in session!');
     }
   }
 
   // Customize completion message based on cart activity
   if (nextQ && nextQ.type === "completion_message") {
-    // Check if user added items to cart (from A1 answer)
-    const cartAnswer = session.answers["A1"];
+    const cartAnswer = session.answers["A1"]; // This logic is now for the *original* flow
     const itemsAdded = cartAnswer && typeof cartAnswer === 'string' && cartAnswer.includes('Added') && !cartAnswer.includes('No items added');
     
+    const lang = session.lang || 'en'; // <-- Use 'en' as default
+    let basePrompt = getPrompt(nextQ, lang);
+
+    const successMsg = {
+      en: "Thank you for using AI-Sihat! Your medications have been successfully added to cart. You can proceed to checkout from the cart page. Wish you a speedy recovery!",
+      my: "Terima kasih kerana menggunakan AI-Sihat! Ubat-ubatan anda telah berjaya ditambah ke troli. Anda boleh meneruskan ke 'checkout' dari halaman troli. Semoga anda cepat sembuh!",
+      zh: "感谢您使用 AI-Sihat！您的药物已成功添加到购物车。您可以从购物车页面继续结帐。祝您早日康复！"
+    };
+    
+    const noItemsMsg = {
+      en: "Thank you for using AI-Sihat! We hope our recommendations were helpful. Feel free to visit our pharmacy if you need assistance. Wish you a speedy recovery!",
+      my: "Terima kasih kerana menggunakan AI-Sihat! Kami harap cadangan kami membantu. Sila kunjungi farmasi kami jika anda memerlukan bantuan. Semoga anda cepat sembuh!",
+      zh: "感谢您使用 AI-Sihat！我们希望我们的建议对您有所帮助。如果您需要帮助，欢迎光临我们的药房。祝您早日康复！"
+    };
+    
+    // --- START BUG FIX ---
+    // Was: const langKey = (lang === '中文') ? 'zh' : (lang === 'Malay' ? 'my' : 'en');
+    const langKey = (lang === 'zh') ? 'zh' : (lang === 'my' ? 'my' : 'en');
+    // --- END BUG FIX ---
+    
     if (itemsAdded) {
-      // User added items - show success message
-      nextQ = {
-        ...nextQ,
-        prompt: "Thank you for using AI-Sihat! Your medications have been successfully added to cart. You can proceed to checkout from the cart page. Wish you a speedy recovery!"
-      };
+      nextQ.prompt = successMsg[langKey];
     } else {
-      // User didn't add items - show basic thank you
-      nextQ = {
-        ...nextQ,
-        prompt: "Thank you for using AI-Sihat! We hope our recommendations were helpful. Feel free to visit our pharmacy if you need assistance. Wish you a speedy recovery!"
-      };
+      nextQ.prompt = noItemsMsg[langKey];
     }
   }
 
   // --- Generate summary when chat ends ---
-let summary = null;
-if (!nextQ) {  // chat finished
-  summary = await generateSummary(sessionId);  // this will also save to DB
-}
+  let summary = null;
+  if (!nextQ) {  // chat finished
+    summary = await generateSummary(sessionId);  // this will also save to DB
+  }
 
   return {
     sessionId,
-    answered: { id: currentId, prompt: currentQ.prompt, answer: processed },
+    answered: { id: currentId, prompt: getPrompt(localizedQ, lang), answer: processed },
     nextQuestion: nextQ || null,
     summary,
   };
@@ -801,9 +1188,12 @@ async function generateSummary(sessionId) {
 
   const answers = session.answers || {};
   const data = loadSymptomsData();
+  // --- FIX: Report is always in English for pharmacist ---
+  // const lang = session.lang || 'English'; // <-- REMOVED
 
   // Build detailed report with all answers
   const report = {
+    lang: session.lang || 'en',
     name: answers["3"] || "N/A",
     age: answers["4"] || "N/A",
     gender: answers["5"] || "N/A",
@@ -814,7 +1204,7 @@ async function generateSummary(sessionId) {
     temperature: answers["9"] || "N/A",
     allergies: answers["10"] || "N/A",
     medication: answers["11"] || "N/A",
-    allAnswers: answers, // Include all answers for complete history
+    allAnswers: answers, // Include all allAnswers for complete history
     recommendedMedicines: [], // Medicines extracted from AI recommendations
   };
 
@@ -836,7 +1226,21 @@ async function generateSummary(sessionId) {
     for (const symptom of symptoms) {
       const recForSymptom = session.allRecommendations.find(r => r.symptom === symptom);
       if (recForSymptom) {
-        const recText = recForSymptom.details.join(' ');
+        
+        // --- START FIX: Get ENGLISH text for pharmacist ---
+        const symptomSectionData = data[symptom]; // e.g., data['Fever']
+        let originalRecObj = null;
+        if (symptomSectionData && recForSymptom.recommendationId) {
+             originalRecObj = symptomSectionData.find(q => q.id === recForSymptom.recommendationId);
+        }
+
+        // Get the ENGLISH prompt array
+        const englishPromptArray = originalRecObj 
+            ? getPromptArray(originalRecObj, 'en') 
+            : recForSymptom.details; // Fallback to whatever we have (which might be translated)
+
+        const recText = englishPromptArray.join(' '); // This is now the ENGLISH text!
+        // --- END FIX ---
         
         // Try to match medicine name from recommendation text
         let matchedMedicine = null;
@@ -849,7 +1253,7 @@ async function generateSummary(sessionId) {
         
         report.recommendedMedicines.push({
           symptom: symptom,
-          recommendationText: recText,
+          recommendationText: recText, // This is now ENGLISH
           medicineName: matchedMedicine ? matchedMedicine.medicineName : null,
           medicineId: matchedMedicine ? matchedMedicine.medicineId : null,
           medicineType: matchedMedicine ? matchedMedicine.medicineType : 'OTC',
@@ -863,7 +1267,9 @@ async function generateSummary(sessionId) {
   } else if (recommendationObj) {
     // Single symptom - try to extract medicine
     const symptoms = Array.isArray(answers["7"]) ? answers["7"] : [];
-    const recText = Array.isArray(recommendationObj.prompt) ? recommendationObj.prompt.join(' ') : recommendationObj.prompt;
+    // --- START FIX: Get ENGLISH text for pharmacist ---
+    const recText = getPromptArray(recommendationObj, 'en').join(' '); // Use 'en'
+    // --- END FIX ---
     const medicines = await prisma.medicine.findMany();
     
     for (const symptom of symptoms) {
@@ -877,7 +1283,7 @@ async function generateSummary(sessionId) {
       
       report.recommendedMedicines.push({
         symptom: symptom,
-        recommendationText: recText,
+        recommendationText: recText, // This is now ENGLISH
         medicineName: matchedMedicine ? matchedMedicine.medicineName : null,
         medicineId: matchedMedicine ? matchedMedicine.medicineId : null,
         medicineType: matchedMedicine ? matchedMedicine.medicineType : 'OTC',
@@ -906,6 +1312,514 @@ async function generateSummary(sessionId) {
 
   return report;
 }
+
+// --- START: Duplicated functions from messy file. Applying fixes here too. ---
+
+async function answerQuestion(sessionId, answer) {
+  const session = sessionService.getSession(sessionId);
+  if (!session) throw new Error("Invalid session");
+
+  const lang = session.lang || 'en';
+  
+  // --- START FIX: Get currentQ logic moved up ---
+  const data = loadSymptomsData();
+  const { section, currentId } = session;
+  
+  let currentQ;
+  if (currentId === "COMBINED_REC") {
+    // This is a synthetic question. The "type" is what matters.
+    // We also need its "prompt" for the `answered` block.
+    currentQ = { 
+      id: "COMBINED_REC", 
+      type: "recommendation",
+      prompt: "Based on your symptoms, here are our recommendations",
+      prompt_my: "Berdasarkan simptom anda, berikut adalah cadangan kami:",
+      prompt_zh: "根据您的症状，以下是我们的建议：" 
+    };
+  } else {
+    const questions = data[section];
+    currentQ = questions?.find(q => q.id === currentId);
+  }
+  
+  if (!currentQ) throw new Error(`Question not found for section "${section}" and id "${currentId}"`);
+  // --- END FIX ---
+
+
+  // --- START FIX: Modified special handling ---
+  // Now checks for type, catching "COMBINED_REC" AND single recs (e.g., "F_R1")
+  if (currentQ.type === "recommendation") {
+    // The frontend flow (continueFromCart) sends an answer here
+    // AFTER pharmacist approval (e.g., "Added 1 item(s)").
+    // We must NOT show the AppFlow cart (A1).
+    // We skip directly to the completion message (A2).
+    
+    session.answers[currentId] = answer;
+    
+    // Find the completion question (A2) from AppFlow
+    const completionQ = data["AppFlow"]?.find(q => q.type === "completion_message");
+    
+    if (completionQ) {
+      session.section = "AppFlow"; // Set section for localization
+      session.currentId = completionQ.id;
+      sessionService.updateSession(sessionId, session);
+      
+      let localizedCompletionQ = localizeQuestion(completionQ, lang);
+      
+      // --- START: Customization logic ---
+      const cartAnswer = answer; // The answer is "Added..." or "No items added"
+      const itemsAdded = cartAnswer && typeof cartAnswer === 'string' && cartAnswer.includes('Added') && !cartAnswer.includes('No items added');
+      
+      const successMsg = {
+        en: "Thank you for using AI-Sihat! Your medications have been successfully added to cart. You can proceed to checkout from the cart page. Wish you a speedy recovery!",
+        my: "Terima kasih kerana menggunakan AI-Sihat! Ubat-ubatan anda telah berjaya ditambah ke troli. Anda boleh meneruskan ke 'checkout' dari halaman troli. Semoga anda cepat sembuh!",
+        zh: "感谢您使用 AI-Sihat！您的药物已成功添加到购物车。您可以从购物车页面继续结帐。祝您早日康复！"
+      };
+      
+      const noItemsMsg = {
+        en: "Thank you for using AI-Sihat! We hope our recommendations were helpful. Feel free to visit our pharmacy if you need assistance. Wish you a speedy recovery!",
+        my: "Terima kasih kerana menggunakan AI-Sihat! Kami harap cadangan kami membantu. Sila kunjungi farmasi kami jika anda memerlukan bantuan. Semoga anda cepat sembuh!",
+        zh: "感谢您使用 AI-Sihat！我们希望我们的建议对您有所帮助。如果您需要帮助，欢迎光临我们的药房。祝您早日康复！"
+      };
+      
+      // --- START BUG FIX ---
+      // Was: const langKey = (lang === '中文') ? 'zh' : (lang === 'Malay' ? 'my' : 'en');
+      const langKey = (lang === 'zh') ? 'zh' : (lang === 'my' ? 'my' : 'en');
+      // --- END BUG FIX ---
+      
+      if (itemsAdded) {
+        localizedCompletionQ.prompt = successMsg[langKey];
+      } else {
+        localizedCompletionQ.prompt = noItemsMsg[langKey];
+      }
+      // --- END: Customization logic ---
+      
+      return {
+        sessionId,
+        // Get the prompt for the "answered" object.
+        // We must use the *original* question data for getPrompt.
+        // If it's COMBINED_REC, we use the hardcoded prompt from above.
+        // If it's F_R1, we must find it in the data again to get translations.
+        answered: { id: currentId, prompt: getPrompt(currentQ, session.lang), answer },
+        nextQuestion: localizedCompletionQ
+      };
+    }
+    
+    // Fallback: just end the chat
+    session.currentId = null;
+    sessionService.updateSession(sessionId, session);
+    return {
+        sessionId,
+        answered: { id: currentId, prompt: getPrompt(currentQ, session.lang), answer },
+        nextQuestion: null
+    };
+  }
+  // --- END FIX ---
+
+  
+  // --- NORMAL LOGIC ---
+  
+  // Localize the *real* question for validation
+  const localizedQ = localizeQuestion(currentQ, lang);
+
+  if (!validateAnswer(localizedQ, answer)) {
+    // --- SPECIAL CHECK for Q1 ---
+    if (currentId === "1") {
+      let validQ1Ans = false;
+      if (currentQ.options_my && currentQ.options_my.includes(answer)) {
+        validQ1Ans = true;
+      } else if (currentQ.options_zh && currentQ.options_zh.includes(answer)) {
+        validQ1Ans = true;
+      }
+      
+      if (!validQ1Ans) {
+        throw new Error("Invalid input for this question");
+      }
+    } else {
+      throw new Error("Invalid input for this question");
+    }
+  }
+
+  const processed = await processAnswer(localizedQ, answer);
+  session.answers[currentId] = processed;
+
+  // --- START: NEW TRANSLATION LOGIC ---
+  let finalAnswer = processed; // Default to the processed value
+  const sessionLang = session.lang || 'en';
+  
+  // Define the list of question IDs that contain free-text input to be translated
+  // We exclude "3" (Name) as that should not be translated.
+  const idsToTranslate = [
+    "2",   // "Can you describe your symptoms...?"
+    "7",   // "What are your symptoms?" (for "Other (Specify)")
+    "10",  // "Do you have allergies...?" (for "Yes (List down details)")
+    "11",  // "Did you take any medication...?" (for "Yes (List down details)")
+    "DI1", // "Do you experience diarrhoea before?" (for "Yes , When___?")
+    "DI5", // "Do you start any new medication?" (for "Yes , What__?")
+    "CN1", // "Do you experience constipation before?" (for "Yes , When___?")
+    "CN5", // "Do you start any new medication?" (for "Yes , What__?")
+    "JP1", // "Which joint you feel pain?"
+    "MU1", // "Where is the location of muscle you feel pain?"
+    "MU4", // "Did you do any vigorous activity...?" (for "Yes , What__?")
+    "IS1"  // "What is the body part you feel itchy?"
+  ];
+
+  // Only run translation if the user is NOT chatting in English
+  if (sessionLang !== 'en' && idsToTranslate.includes(currentId)) {
+    
+    if (currentId === "2") {
+      // Special case for Q2 (useGemini: true)
+      // 'processed' is an object: { userInput, aiResponse }
+      if (processed && processed.userInput) {
+        const translatedInput = await translateToEnglish(processed.userInput);
+        finalAnswer = {
+          ...processed,
+          userInput: translatedInput, // Store translated version
+          originalInput: processed.userInput // Optional: keep original for reference
+        };
+      }
+    } else if (currentId === "7") {
+      // Special case for Q7 (multiple_choice)
+      // 'processed' is an array, e.g., ["Fever", "Cough", "sakit kepala"]
+      const originalOptions = localizedQ.originalOptions || localizedQ.options || [];
+      
+      if (Array.isArray(processed)) {
+        finalAnswer = await Promise.all(processed.map(async (ans) => {
+          // If 'ans' is NOT in the original options list, it's free text ("Other")
+          if (typeof ans === 'string' && !originalOptions.includes(ans)) {
+            return await translateToEnglish(ans); // Translate it
+          }
+          return ans; // It's a standard option, keep as is
+        }));
+      }
+    } else if (typeof processed === 'string' && processed.trim() !== "") {
+      // Standard free-text answer (from text_input or single_choice 'Yes')
+      const options = localizedQ.originalOptions || localizedQ.options || [];
+      // Check if the answer is just a standard option (e.g., "No")
+      const isAnOption = options.some(opt => opt.toLowerCase() === processed.toLowerCase());
+
+      // Only translate if it's NOT a standard option (e.g., it's "Panadol", not "No")
+      if (!isAnOption) { 
+        finalAnswer = await translateToEnglish(processed);
+      }
+    }
+  }
+  // --- END: NEW TRANSLATION LOGIC ---
+  
+  session.answers[currentId] = finalAnswer;
+
+  // Handle language selection
+  if (currentId === "1") {
+    let selected = processed;
+    
+    const langMapping = {
+      'english': 'en',
+      'malay': 'my',
+      'chinese': 'zh'
+    };
+
+    if (typeof selected === 'string' && !langMapping[selected.toLowerCase()]) {
+        const reverseMap = {
+          'english': 'en',
+          'inggeris': 'en',
+          '英语': 'en',
+          'malay': 'my',
+          'melayu': 'my',
+          '马来语': 'my',
+          'chinese': 'zh',
+          'cina': 'zh',
+          '华语': 'zh'
+        };
+        session.lang = reverseMap[selected.toLowerCase()] || 'en';
+    } else {
+      const candidate = (typeof selected === 'string') ? selected.trim() : String(selected);
+      const lower = candidate.toLowerCase();
+      session.lang = langMapping[lower] || selected || 'en';
+    }
+    
+    sessionService.updateSession(sessionId, session);
+  }
+
+  let nextQ = null;
+
+  // CASE 1: next_logic pointing to another section
+  // This block will now be correctly SKIPPED for recommendations
+  // because the check above will catch them first.
+  if (currentQ.next_logic && data[currentQ.next_logic]) {
+    session.section = currentQ.next_logic;
+    nextQ = getFirstQuestion(session.section);
+    session.currentId = nextQ?.id;
+    sessionService.updateSession(sessionId, session);
+
+    // Save chat record safely
+    const sectionData = data[session.section];
+    const recommendationObj = sectionData?.find(q => q.type === "recommendation");
+    const recommendation = recommendationObj ? (Array.isArray(recommendationObj.prompt) ? recommendationObj.prompt.join("\n") : recommendationObj.prompt) : null;
+
+    try {
+      if (session.userId) {
+        await prisma.chat.upsert({
+          where: { userId: session.userId },
+          update: {
+            sessionData: session.answers,
+            recommendation: recommendation,
+          },
+          create: {
+            userId: session.userId,
+            sessionData: session.answers,
+            recommendation: recommendation,
+          },
+        });
+      } else {
+        await prisma.chat.create({
+          data: {
+            sessionData: session.answers,
+            recommendation: recommendation,
+          },
+        });
+      }
+    } catch (err) {
+      console.error('Failed to save chat record:', err);
+    }
+
+    return {
+      sessionId,
+      answered: { id: currentId, prompt: getPrompt(localizedQ, session.lang), answer: processed },
+      nextQuestion: localizeQuestion(nextQ, session.lang),
+    };
+  }
+
+  // CASE 2: CommonIntake flow (gender-based / symptom routing)
+  if (section === "CommonIntake") {
+    if (currentId === "5" && processed === "Male") {
+      nextQ = data[section].find(q => q.id === "7");
+    }
+    else if (currentId === "5" && processed === "Female") {
+      nextQ = data[section].find(q => q.id === "6");
+    }
+    else if (currentId === "6") {
+      nextQ = data[section].find(q => q.id === "7");
+    }
+    else {
+      nextQ = getNextQuestion(section, currentId, session);
+    }
+  }
+
+  // CASE 3: Other sections
+  if (!nextQ && data[section]) nextQ = getNextQuestion(section, currentId, session);
+
+  // Update session
+  session.currentId = nextQ ? nextQ.id : null;
+  sessionService.updateSession(sessionId, session);
+
+  // Localize the question first (before any modifications)
+  if (nextQ) {
+    const langForNext = session.lang || 'en';
+    nextQ = localizeQuestion(nextQ, langForNext);
+  }
+
+  // Handle recommendation display type
+  if (nextQ && nextQ.type === "recommendation_display") {
+    if (session.allRecommendations && session.allRecommendations.length > 0) {
+      const recsText = session.allRecommendations.map(rec => {
+        return `\n--- ${rec.symptom} ---\n` + rec.details.join("\n");
+      }).join("\n\n");
+      nextQ = {
+        ...nextQ,
+        prompt: nextQ.prompt + "\n\n" + recsText
+      };
+    }
+  }
+
+  // Inject medications into AppFlow medication_cart question
+  if (nextQ && session.section === "AppFlow" && nextQ.type === "medication_cart") {
+    console.log('General injection - Session medications:', session.medications);
+    if (session.medications && session.medications.length > 0) {
+      nextQ = {
+        ...nextQ,
+        medications: session.medications
+      };
+      console.log('General injection - Injected medications into cart question:', nextQ.medications);
+    }
+  }
+
+  // Customize completion message based on cart activity
+  if (nextQ && nextQ.type === "completion_message") {
+    const cartAnswer = session.answers["A1"]; // This logic is now for the *original* flow
+    const itemsAdded = cartAnswer && typeof cartAnswer === 'string' && cartAnswer.includes('Added') && !cartAnswer.includes('No items added');
+    
+    const lang = session.lang || 'en'; // <-- Use 'en' as default
+    let basePrompt = getPrompt(nextQ, lang);
+
+    const successMsg = {
+      en: "Thank you for using AI-Sihat! Your medications have been successfully added to cart. You can proceed to checkout from the cart page. Wish you a speedy recovery!",
+      my: "Terima kasih kerana menggunakan AI-Sihat! Ubat-ubatan anda telah berjaya ditambah ke troli. Anda boleh meneruskan ke 'checkout' dari halaman troli. Semoga anda cepat sembuh!",
+      zh: "感谢您使用 AI-Sihat！您的药物已成功添加到购物车。您可以从购物车页面继续结帐。祝您早日康复！"
+    };
+    
+    const noItemsMsg = {
+      en: "Thank you for using AI-Sihat! We hope our recommendations were helpful. Feel free to visit our pharmacy if you need assistance. Wish you a speedy recovery!",
+      my: "Terima kasih kerana menggunakan AI-Sihat! Kami harap cadangan kami membantu. Sila kunjungi farmasi kami jika anda memerlukan bantuan. Semoga anda cepat sembuh!",
+      zh: "感谢您使用 AI-Sihat！我们希望我们的建议对您有所帮助。如果您需要帮助，欢迎光临我们的药房。祝您早日康复！"
+    };
+    
+    // --- START BUG FIX ---
+    // Was: const langKey = (lang === '中文') ? 'zh' : (lang === 'Malay' ? 'my' : 'en');
+    const langKey = (lang === 'zh') ? 'zh' : (lang === 'my' ? 'my' : 'en');
+    // --- END BUG FIX ---
+    
+    if (itemsAdded) {
+      nextQ.prompt = successMsg[langKey];
+    } else {
+      nextQ.prompt = noItemsMsg[langKey];
+    }
+  }
+
+  // --- Generate summary when chat ends ---
+  let summary = null;
+  if (!nextQ) {  // chat finished
+    summary = await generateSummary(sessionId);  // this will also save to DB
+  }
+
+  return {
+    sessionId,
+    answered: { id: currentId, prompt: getPrompt(localizedQ, lang), answer: processed },
+    nextQuestion: nextQ || null,
+    summary,
+  };
+}
+
+async function generateSummary(sessionId) {
+  const session = sessionService.getSession(sessionId);
+  if (!session) throw new Error("Session not found");
+
+  const answers = session.answers || {};
+  const data = loadSymptomsData();
+  // --- FIX: Report is always in English for pharmacist ---
+  // const lang = session.lang || 'English'; // <-- REMOVED
+
+  // Build detailed report with all answers
+  const report = {
+    lang: session.lang || 'en',
+    name: answers["3"] || "N/A",
+    age: answers["4"] || "N/A",
+    gender: answers["5"] || "N/A",
+    pregnant: answers["6"] || "N/A",
+    userDescription: answers["2"]?.userInput || "N/A", // User's own description of symptoms
+    symptoms: answers["7"] || [],
+    duration: answers["8"] || "N/A",
+    temperature: answers["9"] || "N/A",
+    allergies: answers["10"] || "N/A",
+    medication: answers["11"] || "N/A",
+    allAnswers: answers, // Include all allAnswers for complete history
+    recommendedMedicines: [], // Medicines extracted from AI recommendations
+  };
+
+  // Get full recommendation details - remove duplicate
+  // Store recommendations in recommendedMedicines array only
+  
+  // Get recommendation object for single symptom case
+  const sectionData = data[session.section];
+  const recommendationObj = sectionData?.find(q => q.type === "recommendation");
+  
+  // Include all collected recommendations if multi-symptom
+  if (session.allRecommendations && session.allRecommendations.length > 0) {
+    report.allRecommendations = session.allRecommendations;
+    
+    // Extract medicine names from recommendations and match with database
+    const symptoms = Array.isArray(answers["7"]) ? answers["7"] : [];
+    const medicines = await prisma.medicine.findMany();
+    
+    for (const symptom of symptoms) {
+      const recForSymptom = session.allRecommendations.find(r => r.symptom === symptom);
+      if (recForSymptom) {
+        
+        // --- START FIX: Get ENGLISH text for pharmacist ---
+        const symptomSectionData = data[symptom]; // e.g., data['Fever']
+        let originalRecObj = null;
+        if (symptomSectionData && recForSymptom.recommendationId) {
+             originalRecObj = symptomSectionData.find(q => q.id === recForSymptom.recommendationId);
+        }
+
+        // Get the ENGLISH prompt array
+        const englishPromptArray = originalRecObj 
+            ? getPromptArray(originalRecObj, 'en') 
+            : recForSymptom.details; // Fallback to whatever we have (which might be translated)
+
+        const recText = englishPromptArray.join(' '); // This is now the ENGLISH text!
+        // --- END FIX ---
+        
+        // Try to match medicine name from recommendation text
+        let matchedMedicine = null;
+        for (const med of medicines) {
+          if (recText.toLowerCase().includes(med.medicineName.toLowerCase())) {
+            matchedMedicine = med;
+            break;
+          }
+        }
+        
+        report.recommendedMedicines.push({
+          symptom: symptom,
+          recommendationText: recText, // This is now ENGLISH
+          medicineName: matchedMedicine ? matchedMedicine.medicineName : null,
+          medicineId: matchedMedicine ? matchedMedicine.medicineId : null,
+          medicineType: matchedMedicine ? matchedMedicine.medicineType : 'OTC',
+          price: matchedMedicine ? parseFloat(matchedMedicine.price) : 0,
+          imageUrl: matchedMedicine ? matchedMedicine.imageUrl : null,
+          quantity: 1,
+          status: 'pending'
+        });
+      }
+    }
+  } else if (recommendationObj) {
+    // Single symptom - try to extract medicine
+    const symptoms = Array.isArray(answers["7"]) ? answers["7"] : [];
+    // --- START FIX: Get ENGLISH text for pharmacist ---
+    const recText = getPromptArray(recommendationObj, 'en').join(' '); // Use 'en'
+    // --- END FIX ---
+    const medicines = await prisma.medicine.findMany();
+    
+    for (const symptom of symptoms) {
+      let matchedMedicine = null;
+      for (const med of medicines) {
+        if (recText.toLowerCase().includes(med.medicineName.toLowerCase())) {
+          matchedMedicine = med;
+          break;
+        }
+      }
+      
+      report.recommendedMedicines.push({
+        symptom: symptom,
+        recommendationText: recText, // This is now ENGLISH
+        medicineName: matchedMedicine ? matchedMedicine.medicineName : null,
+        medicineId: matchedMedicine ? matchedMedicine.medicineId : null,
+        medicineType: matchedMedicine ? matchedMedicine.medicineType : 'OTC',
+        price: matchedMedicine ? parseFloat(matchedMedicine.price) : 0,
+        imageUrl: matchedMedicine ? matchedMedicine.imageUrl : null,
+        quantity: 1,
+        status: 'pending'
+      });
+    }
+  }
+
+  // Save summary to database - update the most recent chat for this user
+  if (session.userId) {
+    const latestChat = await prisma.chat.findFirst({
+      where: { userId: session.userId },
+      orderBy: { createdAt: 'desc' }
+    });
+    
+    if (latestChat) {
+      await prisma.chat.update({
+        where: { id: latestChat.id },
+        data: { summary: report },
+      });
+    }
+  }
+
+  return report;
+}
+
+// --- END: Duplicated functions ---
 
 module.exports = {
   startChat,
