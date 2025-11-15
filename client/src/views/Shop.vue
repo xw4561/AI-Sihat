@@ -101,8 +101,13 @@ function handleBranchSelected(branch) {
   fetchProducts(); // Now that branch is selected, fetch products
 }
 
-function addToCart(product) {
-  cart.addToCart(product);
+function addToCart(payload) {
+  // payload can be either a product (old behavior) or { product, quantity }
+  if (payload && payload.product) {
+    cart.addToCart(payload.product, payload.quantity || 1)
+  } else {
+    cart.addToCart(payload, 1)
+  }
 }
 </script>
 

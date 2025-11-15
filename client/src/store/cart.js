@@ -6,15 +6,16 @@ export const useCartStore = defineStore('cart', {
   }),
 
   actions: {
-    addToCart(product) {
+    addToCart(product, qty = 1) {
+      const quantityToAdd = parseInt(qty, 10) || 1
       const existing = this.items.find(i => i.id === product.id)
       if (existing) {
-        existing.quantity += 1
+        existing.quantity += quantityToAdd
       } else {
         this.items.push({ 
           ...product, 
           medicineId: product.id, // Preserve medicineId for backend
-          quantity: 1 
+          quantity: quantityToAdd 
         })
       }
     },

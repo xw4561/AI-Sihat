@@ -857,7 +857,7 @@ function addToCart(medication) {
     cartStore.addToCart({
       id: medication.medicineId,
       name: medication.name,
-      rice: parseFloat(medication.price || 0),
+      price: parseFloat(medication.price || 0),
       imageUrl: medication.imageUrl,
       type: medication.symptom
     })
