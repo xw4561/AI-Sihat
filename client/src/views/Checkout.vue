@@ -91,7 +91,7 @@
   const router = useRouter()
 
   function goBack() {
-    router.back()
+    router.push('/cart')
   }
 
   const customerName = ref('')

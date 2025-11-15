@@ -324,7 +324,7 @@ const extraMedicines = ref([]);
 const router = useRouter()
 
 function goBack() {
-  router.back()
+  router.push('/pharmacist')
 }
 
 onMounted(async () => {

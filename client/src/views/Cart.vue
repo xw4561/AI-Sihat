@@ -47,7 +47,7 @@ function removeItem(id) {
 }
 
 function goBack() {
-  router.back()
+  router.push('/customer')
 }
 </script>
 
