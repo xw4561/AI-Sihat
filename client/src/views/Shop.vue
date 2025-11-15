@@ -14,9 +14,9 @@
         <span class="back-arrow">←</span>
       </button>
       <h1>Pharmacy Store</h1>
-      <p class="branch-info clickable" @click="showSelector = true" title="Click to change branch">
+      <div class="branch-info" @click="showSelector = true" title="Click to change branch">
         Shopping at: <strong>{{ selectedBranch.name }} ▾</strong>
-      </p>
+      </div>
     </div>
 
     <div class="search-container">
@@ -142,14 +142,30 @@ function addToCart(payload) {
 
 <style scoped>
 .branch-info {
-  text-align: center;
-  font-size: 1rem;
-  color: #555;
-  background: #f4f4f4;
-  padding: 0.5rem;
-  border-radius: 6px;
-  margin-bottom: 1rem;
+  font-size: 0.95rem;      /* Slightly adjusted font size */
+  color: #4a5568;         /* A softer dark grey for the text */
+  background-color: #f7fafc; /* A very light, clean background */
+  border: 1px solid #e2e8f0;  /* A subtle border */
+  padding: 0.5rem 0.8rem;
+  border-radius: 8px;       /* Matches your search-bar radius */
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  white-space: nowrap;      /* Prevents the text from wrapping */
+  flex-shrink: 0;           /* Stops it from shrinking in the flex container */
+  /* Remove margin-bottom, as its parent .page-header already has it */
 }
+
+.branch-info:hover {
+  background-color: #ffffff; /* A clean white on hover */
+  border-color: #cbd5e0;    /* A slightly darker border on hover */
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04); /* Adds a subtle lift */
+}
+
+.branch-info strong {
+  color: #2b6cb0;           /* Makes the branch name pop with a nice blue */
+  font-weight: 600;
+}
+
 .search-container {
   margin-bottom: 1.5rem;
 }
