@@ -1,53 +1,100 @@
 {
   "CommonIntake": [
-	{
+    {
       "id": "1",
       "prompt": "Select Your Preferred Language",
+      "prompt_my": "Pilih Bahasa Pilihan Anda",
+      "prompt_zh": "请选择您的首选语言",
       "type": "single_choice",
-      "options": ["English", "Malay", "Chinese"],
+      "options": [
+        "English",
+        "Malay",
+        "Chinese"
+      ],
+      "options_my": [
+        "Inggeris",
+        "Melayu",
+        "Cina"
+      ],
+      "options_zh": [
+        "英语",
+        "马来语",
+        "华语"
+      ],
       "next_logic": "2"
     },
     {
       "id": "2",
       "prompt": "Can you describe your symptoms in your own words?",
-	  "prompt_my": "Boleh terangkan simptom anda dengan perkataan anda sendiri?",
+      "prompt_my": "Boleh terangkan simptom anda dengan perkataan anda sendiri?",
+      "prompt_zh": "您能用您自己的话描述您的症状吗？",
       "type": "text_input",
       "useGemini": true,
-	    "next_logic": "3"
+      "next_logic": "3"
     },
     {
       "id": "3",
       "prompt": "Please type your name (as in IC)",
-	  "prompt_my": "Sila taip nama anda (seperti dalam IC)",
+      "prompt_my": "Sila taip nama anda (seperti dalam IC)",
+      "prompt_zh": "请输入您的姓名（如身份证上的姓名）",
       "type": "text_input",
-	  "next_logic": "4"
+      "next_logic": "4"
     },
     {
       "id": "4",
       "prompt": "Your age (assume above 18)",
-	  "prompt_my": "Umur anda (andaikan atas 18 tahun)",
+      "prompt_my": "Umur anda (andaikan atas 18 tahun)",
+      "prompt_zh": "您的年龄（假设18岁以上）",
       "type": "number_input",
-	  "next_logic": "5"
+      "next_logic": "5"
     },
     {
       "id": "5",
       "prompt": "Your gender",
-	  "prompt_my": "Jantina anda",
+      "prompt_my": "Jantina anda",
+      "prompt_zh": "您的性别",
       "type": "single_choice",
-      "options": ["Male", "Female"]
+      "options": [
+        "Male",
+        "Female"
+      ],
+      "options_my": [
+        "Lelaki",
+        "Perempuan"
+      ],
+      "options_zh": [
+        "男性",
+        "女性"
+      ]
     },
     {
       "id": "6",
       "prompt": "Are you pregnant or breastfeeding?",
-	  "prompt_my": "Adakah anda mengandung atau menyusu?",
+      "prompt_my": "Adakah anda mengandung atau menyusu?",
+      "prompt_zh": "您是否怀孕或正在哺乳？",
       "type": "single_choice",
-      "options": ["Yes, pregnant", "Yes, breastfeeding", "Not for both"],
-	  "next_logic": "7"
+      "options": [
+        "Yes, pregnant",
+        "Yes, breastfeeding",
+        "Not for both"
+      ],
+      "options_my": [
+        "Ya, mengandung",
+        "Ya, menyusu",
+        "Tidak untuk kedua-duanya"
+      ],
+      "options_zh": [
+        "是，怀孕",
+        "是，哺乳",
+        "两者都不是"
+      ],
+      "next_logic": "7"
     },
     {
       "id": "7",
       "prompt": "What are your symptoms? (Select one or more)",
-	  "prompt_my": "Apakah simptom anda? (Pilih satu atau lebih)",
+      "prompt_my": "Apakah simptom anda? (Pilih satu atau lebih)",
+      "prompt_zh": "您有什么症状？（选择一个或多个）",
       "type": "multiple_choice",
       "options": [
         "Fever",
@@ -65,61 +112,174 @@
         "Itchy Skin",
         "Other (Specify)"
       ],
+      "options_my": [
+        "Demam",
+        "Batuk",
+        "Selesema",
+        "Selsema Biasa",
+        "Loya dan Muntah",
+        "Sembelit",
+        "Cirit-birit",
+        "Masalah Pencernaan/Pedih Ulu Hati",
+        "Sakit Senggugut",
+        "Sakit Sendi",
+        "Sakit Otot",
+        "Kembung Perut",
+        "Kulit Gatal",
+        "Lain-lain (Sila nyatakan)"
+      ],
+      "options_zh": [
+        "发烧",
+        "咳嗽",
+        "流感",
+        "感冒",
+        "恶心和呕吐",
+        "便秘",
+        "腹泻",
+        "消化不良/胃灼热",
+        "痛经",
+        "关节疼痛",
+        "肌肉疼痛",
+        "腹胀",
+        "皮肤瘙痒",
+        "其他（请注明）"
+      ],
       "next_logic": "8"
     },
-	 {
+    {
       "id": "8",
       "prompt": "How long do the symptoms persist?",
-	  "prompt_my": "Berapa lama simptom berterusan?",
+      "prompt_my": "Berapa lama simptom berterusan?",
+      "prompt_zh": "症状持续了多长时间？",
       "type": "single_choice",
-      "options": ["less than 1 day", "2 days", "3 days", "More than 3 days"],
+      "options": [
+        "less than 1 day",
+        "2 days",
+        "3 days",
+        "More than 3 days"
+      ],
+      "options_my": [
+        "kurang daripada 1 hari",
+        "2 hari",
+        "3 hari",
+        "Lebih daripada 3 hari"
+      ],
+      "options_zh": [
+        "少于1天",
+        "2天",
+        "3天",
+        "超过3天"
+      ],
       "logic_type": "DURATION_ROUTING",
       "routes": {
-        "R1": ["less than 1 day", "2 days"],
-        "R2": ["3 days", "More than 3 days"]
+        "R1": [
+          "less than 1 day",
+          "2 days"
+        ],
+        "R2": [
+          "3 days",
+          "More than 3 days"
+        ]
       },
       "next_logic": "9"
     },
     {
       "id": "9",
       "prompt": "What is your body temperature? (degrees Celsius)",
-	  "prompt_my": "Berapakah suhu badan anda? (darjah Celsius)",
+      "prompt_my": "Berapakah suhu badan anda? (darjah Celsius)",
+      "prompt_zh": "您的体温是多少？（摄氏度）",
       "type": "number_input",
-      "options": ["Enter Temperature"],
+      "options": [
+        "Enter Temperature"
+      ],
+      "options_my": [
+        "Masukkan Suhu"
+      ],
+      "options_zh": [
+        "输入体温"
+      ],
       "next_logic": "10"
     },
     {
       "id": "10",
       "prompt": "Do you have allergies to any medication?",
-	  "prompt_my": "Adakah anda alah kepada sebarang ubat?",
+      "prompt_my": "Adakah anda alah kepada sebarang ubat?",
+      "prompt_zh": "您对任何药物过敏吗？",
       "type": "single_choice",
-      "options": ["Yes (List down details)", "No"],
+      "options": [
+        "Yes (List down details)",
+        "No"
+      ],
+      "options_my": [
+        "Ya (Sila senaraikan butiran)",
+        "Tidak"
+      ],
+      "options_zh": [
+        "是（请列出详情）",
+        "否"
+      ],
       "next_logic": "11"
     },
     {
       "id": "11",
       "prompt": "Did you take any medication recently?",
-	  "prompt_my": "Adakah anda mengambil sebarang ubat baru-baru ini?",
+      "prompt_my": "Adakah anda mengambil sebarang ubat baru-baru ini?",
+      "prompt_zh": "您最近是否服用过任何药物？",
       "type": "single_choice",
-      "options": ["Yes (List down details)", "No"],
+      "options": [
+        "Yes (List down details)",
+        "No"
+      ],
+      "options_my": [
+        "Ya (Sila senaraikan butiran)",
+        "Tidak"
+      ],
+      "options_zh": [
+        "是（请列出详情）",
+        "否"
+      ],
       "next_logic": "SYMPTOM_ROUTING"
     }
   ],
-
   "Flu": [
     {
       "id": "FL1",
       "prompt": "Do you experience flu symptoms before?",
-	  "prompt_my": "Adakah anda pernah mengalami simptom selesema sebelum ini?",
+      "prompt_my": "Adakah anda pernah mengalami simptom selesema sebelum ini?",
+      "prompt_zh": "您以前是否经历过流感症状？",
       "type": "single_choice",
-      "options": ["Yes", "No"]
+      "options": [
+        "Yes",
+        "No"
+      ],
+      "options_my": [
+        "Ya",
+        "Tidak"
+      ],
+      "options_zh": [
+        "是",
+        "否"
+      ]
     },
     {
       "id": "FL2",
       "prompt": "Do you experience blocked nose?",
+      "prompt_my": "Adakah anda mengalami hidung tersumbat?",
+      "prompt_zh": "您是否感到鼻塞？",
       "type": "single_choice",
-      "options": ["Yes", "No"],
-      "next_logic": "FL_REC"
+      "options": [
+        "Yes",
+        "No"
+      ],
+      "next_logic": "FL_REC",
+      "options_my": [
+        "Ya",
+        "Tidak"
+      ],
+      "options_zh": [
+        "是",
+        "否"
+      ]
     },
     {
       "id": "R1",
@@ -129,6 +289,16 @@
         "Hurix's 600 Fluaway capsule improved: 3 tablets 4 times per days",
         "If your condition become serious or do not get well ,please refer to doctor for deeper check up",
         "Please have a good rest,drink enough water. Thank you for your time ."
+      ],
+      "prompt_my": [
+        "Kapsul Hurix's 600 Fluaway (diperbaiki): 3 biji 4 kali sehari",
+        "Jika keadaan anda menjadi serius atau tidak bertambah baik, sila rujuk doktor untuk pemeriksaan lanjut",
+        "Sila berehat secukupnya, minum air secukupnya. Terima kasih atas masa anda."
+      ],
+      "prompt_zh": [
+        "Hurix's 600 Fluaway 胶囊（改良版）：每次3粒，每日4次",
+        "如果您的病情变得严重或没有好转，请咨询医生进行更深入的检查",
+        "请好好休息，多喝水。感谢您的时间。"
       ],
       "next_logic": "AppFlow"
     },
@@ -141,18 +311,39 @@
         "I recommend you refer to doctor for deeper check up because your condition persist too many days",
         "Please have a good rest,drink enough water. Thank you for your time ."
       ],
+      "prompt_my": [
+        "Kapsul Hurix's 600 Fluaway (diperbaiki): 3 biji 4 kali sehari",
+        "Saya syorkan anda merujuk kepada doktor untuk pemeriksaan lanjut kerana keadaan anda berterusan terlalu lama",
+        "Sila berehat secukupnya, minum air secukupnya. Terima kasih atas masa anda."
+      ],
+      "prompt_zh": [
+        "Hurix's 600 Fluaway 胶囊（改良版）：每次3粒，每日4次",
+        "我建议您咨询医生进行更深入的检查，因为您的症状已持续多天",
+        "请好好休息，多喝水。感谢您的时间。"
+      ],
       "next_logic": "AppFlow"
     }
   ],
-
   "Fever": [
     {
       "id": "FE1",
       "prompt": "Do you experience fever symptoms before?",
-	  "prompt_my": "Adakah anda pernah mengalami simptom demam sebelum ini?",
+      "prompt_my": "Adakah anda pernah mengalami simptom demam sebelum ini?",
+      "prompt_zh": "您以前是否经历过发烧症状？",
       "type": "single_choice",
-      "options": ["Yes", "No"],
-      "next_logic": "FE_REC"
+      "options": [
+        "Yes",
+        "No"
+      ],
+      "next_logic": "FE_REC",
+      "options_my": [
+        "Ya",
+        "Tidak"
+      ],
+      "options_zh": [
+        "是",
+        "否"
+      ]
     },
     {
       "id": "R1",
@@ -163,6 +354,18 @@
         "If your condition become serious or do not get well ,please refer to doctor for deeper check up",
         "S/E : dizzy",
         "Please have a good rest,drink enough water. Thank you for your time ."
+      ],
+      "prompt_my": [
+        "Paracetamol (Panadol) 500mg: 2 biji tiga kali sehari, maksimum 8 biji sehari",
+        "Jika keadaan anda menjadi serius atau tidak bertambah baik, sila rujuk doktor untuk pemeriksaan lanjut",
+        "Kesan Sampingan: pening",
+        "Sila berehat secukupnya, minum air secukupnya. Terima kasih atas masa anda."
+      ],
+      "prompt_zh": [
+        "扑热息痛 (Panadol) 500毫克：每次2片，每日三次，每日最多8片",
+        "如果您的病情变得严重或没有好转，请咨询医生进行更深入的检查",
+        "副作用：头晕",
+        "请好好休息，多喝水。感谢您的时间。"
       ],
       "next_logic": "AppFlow"
     },
@@ -176,38 +379,100 @@
         "S/E : dizzy",
         "Please have a good rest,drink enough water. Thank you for your time ."
       ],
+      "prompt_my": [
+        "Paracetamol (Panadol) 500mg: 2 biji tiga kali sehari, maksimum 8 biji sehari",
+        "Saya syorkan anda merujuk kepada doktor untuk pemeriksaan lanjut kerana keadaan anda berterusan terlalu lama",
+        "Kesan Sampingan: pening",
+        "Sila berehat secukupnya, minum air secukupnya. Terima kasih atas masa anda."
+      ],
+      "prompt_zh": [
+        "扑热息痛 (Panadol) 500毫克：每次2片，每日三次，每日最多8片",
+        "我建议您咨询医生进行更深入的检查，因为您的症状已持续多天",
+        "副作用：头晕",
+        "请好好休息，多喝水。感谢您的时间。"
+      ],
       "next_logic": "AppFlow"
     }
   ],
-
   "Cough": [
     {
       "id": "CA1",
       "prompt": "Do you feel sore throat?",
-	  "prompt_my": "Adakah anda rasa sakit tekak?",
+      "prompt_my": "Adakah anda rasa sakit tekak?",
+      "prompt_zh": "您是否感到喉咙痛？",
       "type": "single_choice",
-      "options": ["Yes", "No"],
+      "options": [
+        "Yes",
+        "No"
+      ],
+      "options_my": [
+        "Ya",
+        "Tidak"
+      ],
+      "options_zh": [
+        "是",
+        "否"
+      ],
       "next_logic": "CA2"
     },
     {
       "id": "CA2",
       "prompt": "Do you have phlegm?",
+      "prompt_my": "Adakah anda ada kahak?",
+      "prompt_zh": "您有痰吗？",
       "type": "single_choice",
-      "options": ["Yes", "No"],
+      "options": [
+        "Yes",
+        "No"
+      ],
+      "options_my": [
+        "Ya",
+        "Tidak"
+      ],
+      "options_zh": [
+        "是",
+        "否"
+      ],
       "next_logic": "BRANCH_ON_PHLEGM"
     },
     {
       "id": "CA3_WET",
       "prompt": "Do you experience phlegm before?",
+      "prompt_my": "Adakah anda pernah mengalami kahak sebelum ini?",
+      "prompt_zh": "您以前有过痰吗？",
       "type": "single_choice",
-      "options": ["Yes", "No"],
+      "options": [
+        "Yes",
+        "No"
+      ],
+      "options_my": [
+        "Ya",
+        "Tidak"
+      ],
+      "options_zh": [
+        "是",
+        "否"
+      ],
       "next_logic": "CA4_REC_WET"
     },
     {
       "id": "CA3_DRY",
       "prompt": "Do you experience phlegm before?",
+      "prompt_my": "Adakah anda pernah mengalami kahak sebelum ini?",
+      "prompt_zh": "您以前有过痰吗？",
       "type": "single_choice",
-      "options": ["Yes", "No"],
+      "options": [
+        "Yes",
+        "No"
+      ],
+      "options_my": [
+        "Ya",
+        "Tidak"
+      ],
+      "options_zh": [
+        "是",
+        "否"
+      ],
       "next_logic": "CA4_REC_DRY"
     },
     {
@@ -219,6 +484,18 @@
         "If your conditin become serious or do not get well ,pls refer to doctor for deeper check up",
         "Avoid spicy,greasy and fast food as they might worsen the constipation",
         "Please have a good rest,drink enough water. Thank you for your time ."
+      ],
+      "prompt_my": [
+        "Breacol Expectorant (Guaifenesin): 10-20ml setiap 4 jam",
+        "Jika keadaan anda menjadi serius atau tidak bertambah baik, sila rujuk doktor untuk pemeriksaan lanjut",
+        "Elakkan makanan pedas, berminyak dan makanan segera kerana ia mungkin memburukkan sembelit",
+        "Sila berehat secukupnya, minum air secukupnya. Terima kasih atas masa anda."
+      ],
+      "prompt_zh": [
+        "Breacol 祛痰剂 (Guaifenesin)：每4小时10-20毫升",
+        "如果您的病情变得严重或没有好转，请咨询医生进行更深入的检查",
+        "避免辛辣、油腻和快餐食品，因为它们可能会加重便秘",
+        "请好好休息，多喝水。感谢您的时间。"
       ],
       "next_logic": "AppFlow"
     },
@@ -232,6 +509,18 @@
         "Avoid spicy,greasy and fast food as they might worsen the constipation",
         "Please have a good rest,drink enough water. Thank you for your time ."
       ],
+      "prompt_my": [
+        "Breacol Expectorant (Guaifenesin): 10-20ml setiap 4 jam",
+        "Saya syorkan anda merujuk kepada doktor untuk pemeriksaan lanjut kerana keadaan anda berterusan terlalu lama",
+        "Elakkan makanan pedas, berminyak dan makanan segera kerana ia mungkin memburukkan sembelit",
+        "Sila berehat secukupnya, minum air secukupnya. Terima kasih atas masa anda."
+      ],
+      "prompt_zh": [
+        "Breacol 祛痰剂 (Guaifenesin)：每4小时10-20毫升",
+        "我建议您咨询医生进行更深入的检查，因为您的症状已持续多天",
+        "避免辛辣、油腻和快餐食品，因为它们可能会加重便秘",
+        "请好好休息，多喝水。感谢您的时间。"
+      ],
       "next_logic": "AppFlow"
     },
     {
@@ -243,6 +532,18 @@
         "If your condition become serious or do not get well ,please refer to doctor for deeper check up",
         "Avoid spicy,greasy and fast food as they might worsen the constipation",
         "Please have a good rest,drink enough water. Thank you for your time ."
+      ],
+      "prompt_my": [
+        "Sirap Batuk Kering Duro Herb (Guaifenesin): 15ml 4 kali sehari",
+        "Jika keadaan anda menjadi serius atau tidak bertambah baik, sila rujuk doktor untuk pemeriksaan lanjut",
+        "Elakkan makanan pedas, berminyak dan makanan segera kerana ia mungkin memburukkan sembelit",
+        "Sila berehat secukupnya, minum air secukupnya. Terima kasih atas masa anda."
+      ],
+      "prompt_zh": [
+        "Duro Herb 干咳糖浆 (Guaifenesin)：每次15毫升，每日4次",
+        "如果您的病情变得严重或没有好转，请咨询医生进行更深入的检查",
+        "避免辛辣、油腻和快餐食品，因为它们可能会加重便秘",
+        "请好好休息，多喝水。感谢您的时间。"
       ],
       "next_logic": "AppFlow"
     },
@@ -256,6 +557,18 @@
         "Avoid spicy,greasy and fast food as they might worsen the constipation",
         "Please have a good rest,drink enough water. Thank you for your time ."
       ],
+      "prompt_my": [
+        "Sirap Batuk Kering Duro Herb (Guaifenesin): 15ml 4 kali sehari",
+        "Saya syorkan anda merujuk kepada doktor untuk pemeriksaan lanjut kerana keadaan anda berterusan terlalu lama",
+        "Elakkan makanan pedas, berminyak dan makanan segera kerana ia mungkin memburukkan sembelit",
+        "Sila berehat secukupnya, minum air secukupnya. Terima kasih atas masa anda."
+      ],
+      "prompt_zh": [
+        "Duro Herb 干咳糖浆 (Guaifenesin)：每次15毫升，每日4次",
+        "我建议您咨询医生进行更深入的检查，因为您的症状已持续多天",
+        "避免辛辣、油腻和快餐食品，因为它们可能会加重便秘",
+        "请好好休息，多喝水。感谢您的时间。"
+      ],
       "next_logic": "AppFlow"
     }
   ],
@@ -263,15 +576,41 @@
     {
       "id": "CO1",
       "prompt": "Do you experience cold symptoms before?",
+      "prompt_my": "Adakah anda pernah mengalami simptom selsema sebelum ini?",
+      "prompt_zh": "您以前是否经历过感冒症状？",
       "type": "single_choice",
-      "options": ["Yes", "No"],
+      "options": [
+        "Yes",
+        "No"
+      ],
+      "options_my": [
+        "Ya",
+        "Tidak"
+      ],
+      "options_zh": [
+        "是",
+        "否"
+      ],
       "next_logic": "CO2"
     },
     {
       "id": "CO2",
       "prompt": "Do you experience blocked nose?",
+      "prompt_my": "Adakah anda mengalami hidung tersumbat?",
+      "prompt_zh": "您是否感到鼻塞？",
       "type": "single_choice",
-      "options": ["Yes", "No"],
+      "options": [
+        "Yes",
+        "No"
+      ],
+      "options_my": [
+        "Ya",
+        "Tidak"
+      ],
+      "options_zh": [
+        "是",
+        "否"
+      ],
       "next_logic": "CO_REC"
     },
     {
@@ -282,6 +621,16 @@
         "Hurix's 600 Fluaway capsule improved: 3 tablets 4 times per days",
         "If your condition become serious or do not get well ,please refer to doctor for deeper check up",
         "Please have a good rest,drink enough water. Thank you for your time ."
+      ],
+      "prompt_my": [
+        "Kapsul Hurix's 600 Fluaway (diperbaiki): 3 biji 4 kali sehari",
+        "Jika keadaan anda menjadi serius atau tidak bertambah baik, sila rujuk doktor untuk pemeriksaan lanjut",
+        "Sila berehat secukupnya, minum air secukupnya. Terima kasih atas masa anda."
+      ],
+      "prompt_zh": [
+        "Hurix's 600 Fluaway 胶囊（改良版）：每次3粒，每日4次",
+        "如果您的病情变得严重或没有好转，请咨询医生进行更深入的检查",
+        "请好好休息，多喝水。感谢您的时间。"
       ],
       "next_logic": "AppFlow"
     },
@@ -294,6 +643,16 @@
         "I recommend you refer to doctor for deeper check up because your condition persist too many days",
         "Please have a good rest,drink enough water. Thank you for your time ."
       ],
+      "prompt_my": [
+        "Kapsul Hurix's 600 Fluaway (diperbaiki): 3 biji 4 kali sehari",
+        "Saya syorkan anda merujuk kepada doktor untuk pemeriksaan lanjut kerana keadaan anda berterusan terlalu lama",
+        "Sila berehat secukupnya, minum air secukupnya. Terima kasih atas masa anda."
+      ],
+      "prompt_zh": [
+        "Hurix's 600 Fluaway 胶囊（改良版）：每次3粒，每日4次",
+        "我建议您咨询医生进行更深入的检查，因为您的症状已持续多天",
+        "请好好休息，多喝水。感谢您的时间。"
+      ],
       "next_logic": "AppFlow"
     }
   ],
@@ -301,21 +660,49 @@
     {
       "id": "NV1",
       "prompt": "Do you experience nausea and vomiting before?",
+      "prompt_my": "Adakah anda pernah mengalami loya dan muntah sebelum ini?",
+      "prompt_zh": "您以前是否经历过恶心和呕吐？",
       "type": "single_choice",
-      "options": ["Yes", "No"],
+      "options": [
+        "Yes",
+        "No"
+      ],
+      "options_my": [
+        "Ya",
+        "Tidak"
+      ],
+      "options_zh": [
+        "是",
+        "否"
+      ],
       "next_logic": "NV2"
     },
     {
       "id": "NV2",
       "prompt": "How many time you vomiting",
+      "prompt_my": "Berapa kali anda muntah",
+      "prompt_zh": "您呕吐了多少次",
       "type": "number_input",
       "next_logic": "NV3"
     },
     {
       "id": "NV3",
       "prompt": "Do you feel thirsty",
+      "prompt_my": "Adakah anda rasa dahaga",
+      "prompt_zh": "您是否感到口渴",
       "type": "single_choice",
-      "options": ["Yes", "No"],
+      "options": [
+        "Yes",
+        "No"
+      ],
+      "options_my": [
+        "Ya",
+        "Tidak"
+      ],
+      "options_zh": [
+        "是",
+        "否"
+      ],
       "next_logic": "NV_REC"
     },
     {
@@ -329,6 +716,20 @@
         "S/E : dizzy",
         "Please have a good rest,drink enough water. Thank you for your time ."
       ],
+      "prompt_my": [
+        "Garam rehidrasi oral (B plus): larutkan 1 uncang dalam 200ml air masak sejuk, 1-2 uncang untuk cirit-birit.",
+        "Cadangan ahli farmasi: datang ke farmasi kami untuk mendapatkan ubat yang lebih sesuai untuk menyelesaikan masalah anda",
+        "Jika keadaan anda menjadi serius atau tidak bertambah baik, sila rujuk doktor untuk pemeriksaan lanjut",
+        "Kesan Sampingan: pening",
+        "Sila berehat secukupnya, minum air secukupnya. Terima kasih atas masa anda."
+      ],
+      "prompt_zh": [
+        "口服补液盐 (B plus)：将1小袋溶于200毫升冷开水中，1-2小袋用于腹泻。",
+        "药剂师建议：请到我们的药房获取更适合的药物来解决您的问题",
+        "如果您的病情变得严重或没有好转，请咨询医生进行更深入的检查",
+        "副作用：头晕",
+        "请好好休息，多喝水。感谢您的时间。"
+      ],
       "next_logic": "AppFlow"
     },
     {
@@ -341,6 +742,18 @@
         "S/E : dizzy",
         "Please have a good rest,drink enough water. Thank you for your time ."
       ],
+      "prompt_my": [
+        "Garam rehidrasi oral (B plus): larutkan 1 uncang dalam 200ml air masak sejuk, 1-2 uncang untuk cirit-birit.",
+        "Saya syorkan anda merujuk kepada doktor untuk pemeriksaan lanjut kerana keadaan anda berterusan terlalu lama",
+        "Kesan Sampingan: pening",
+        "Sila berehat secukupnya, minum air secukupnya. Terima kasih atas masa anda."
+      ],
+      "prompt_zh": [
+        "口服补液盐 (B plus)：将1小袋溶于200毫升冷开水中，1-2小袋用于腹泻。",
+        "我建议您咨询医生进行更深入的检查，因为您的症状已持续多天",
+        "副作用：头晕",
+        "请好好休息，多喝水。感谢您的时间。"
+      ],
       "next_logic": "AppFlow"
     }
   ],
@@ -348,22 +761,61 @@
     {
       "id": "IH1",
       "prompt": "Do you experience indigestion/heartburn before?",
+      "prompt_my": "Adakah anda pernah mengalami masalah pencernaan/pedih ulu hati sebelum ini?",
+      "prompt_zh": "您以前是否经历过消化不良/胃灼热？",
       "type": "single_choice",
-      "options": ["Yes", "No"],
+      "options": [
+        "Yes",
+        "No"
+      ],
+      "options_my": [
+        "Ya",
+        "Tidak"
+      ],
+      "options_zh": [
+        "是",
+        "否"
+      ],
       "next_logic": "IH2"
     },
     {
       "id": "IH2",
       "prompt": "Do you have chest pain :",
+      "prompt_my": "Adakah anda mengalami sakit dada:",
+      "prompt_zh": "您有胸痛吗：",
       "type": "single_choice",
-      "options": ["Yes", "No"],
+      "options": [
+        "Yes",
+        "No"
+      ],
+      "options_my": [
+        "Ya",
+        "Tidak"
+      ],
+      "options_zh": [
+        "是",
+        "否"
+      ],
       "next_logic": "IH3"
     },
     {
       "id": "IH3",
       "prompt": "Do you have sore throat",
+      "prompt_my": "Adakah anda mengalami sakit tekak",
+      "prompt_zh": "您有喉咙痛吗",
       "type": "single_choice",
-      "options": ["Yes", "No"],
+      "options": [
+        "Yes",
+        "No"
+      ],
+      "options_my": [
+        "Ya",
+        "Tidak"
+      ],
+      "options_zh": [
+        "是",
+        "否"
+      ],
       "next_logic": "IH_REC"
     },
     {
@@ -376,6 +828,20 @@
         "S/E : No",
         "Advise: Avoid spicy, greasy , caffeine food . Dont lie down right after eating",
         "Please have a good rest,drink enough water. Thank you for your time ."
+      ],
+      "prompt_my": [
+        "Antasid (Gaviscon): 1 uncang (10-20ml) 1 jam selepas makan, jika anda mengambil ubat lain, ambil satu jam sebelum atau selepas mengambil antasid",
+        "Jika keadaan anda menjadi serius atau tidak bertambah baik, sila rujuk doktor untuk pemeriksaan lanjut",
+        "Kesan Sampingan: Tiada",
+        "Nasihat: Elakkan makanan pedas, berminyak, berkafein. Jangan baring sejurus selepas makan",
+        "Sila berehat secukupnya, minum air secukupnya. Terima kasih atas masa anda."
+      ],
+      "prompt_zh": [
+        "抗酸剂 (Gaviscon)：1小袋（10-20毫升），饭后1小时服用，如果您服用其他药物，请在服用抗酸剂之前或之后一小时服用",
+        "如果您的病情变得严重或没有好转，请咨询医生进行更深入的检查",
+        "副作用：无",
+        "建议：避免辛辣、油腻、含咖啡因的食物。饭后不要马上躺下",
+        "请好好休息，多喝水。感谢您的时间。"
       ],
       "next_logic": "AppFlow"
     },
@@ -390,6 +856,20 @@
         "Advise: Avoid spicy, greasy , caffine food . / Dont lie down right after eatoing",
         "Please have a good rest,drink enough water. Thank you for your time ."
       ],
+      "prompt_my": [
+        "Antasid (Gaviscon): 1 uncang (10-20ml) 1 jam selepas makan, jika anda mengambil ubat lain, ambil satu jam sebelum atau selepas mengambil antasid",
+        "Saya syorkan anda merujuk kepada doktor untuk pemeriksaan lanjut kerana keadaan anda berterusan terlalu lama",
+        "Kesan Sampingan: Tiada",
+        "Nasihat: Elakkan makanan pedas, berminyak, berkafein. / Jangan baring sejurus selepas makan",
+        "Sila berehat secukupnya, minum air secukupnya. Terima kasih atas masa anda."
+      ],
+      "prompt_zh": [
+        "抗酸剂 (Gaviscon)：1小袋（10-20毫升），饭后1小时服用，如果您服用其他药物，请在服用抗酸剂之前或之后一小时服用",
+        "我建议您咨询医生进行更深入的检查，因为您的症状已持续多天",
+        "副作用：无",
+        "建议：避免辛辣、油腻、含咖啡因的食物。/ 饭后不要马上躺下",
+        "请好好休息，多喝水。感谢您的时间。"
+      ],
       "next_logic": "AppFlow"
     }
   ],
@@ -397,55 +877,137 @@
     {
       "id": "DI1",
       "prompt": "Do you experience diarrhoea before?",
+      "prompt_my": "Adakah anda pernah mengalami cirit-birit sebelum ini?",
+      "prompt_zh": "您以前是否经历过腹泻？",
       "type": "single_choice",
-      "options": ["Yes , When___?", "No"],
+      "options": [
+        "Yes , When___?",
+        "No"
+      ],
+      "options_my": [
+        "Ya, Bila___?",
+        "Tidak"
+      ],
+      "options_zh": [
+        "是，何时___？",
+        "否"
+      ],
       "next_logic": "DI2"
     },
     {
       "id": "DI2",
       "prompt": "Do you have abdominal discomfort ?",
+      "prompt_my": "Adakah anda rasa tidak selesa di bahagian perut?",
+      "prompt_zh": "您是否有腹部不适？",
       "type": "single_choice",
-      "options": ["Yes", "No"],
+      "options": [
+        "Yes",
+        "No"
+      ],
+      "options_my": [
+        "Ya",
+        "Tidak"
+      ],
+      "options_zh": [
+        "是",
+        "否"
+      ],
       "next_logic": "DI3"
     },
     {
       "id": "DI3",
       "prompt": "Normally , how is your stool frequency?",
+      "prompt_my": "Biasanya, berapakah kekerapan anda membuang air besar?",
+      "prompt_zh": "通常情况下，您的大便频率是多少？",
       "type": "number_input",
       "next_logic": "DI4"
     },
     {
       "id": "DI4",
       "prompt": "How is your stool frequency now?",
+      "prompt_my": "Bagaimanakah kekerapan membuang air besar anda sekarang?",
+      "prompt_zh": "您现在的大便频率是多少？",
       "type": "number_input",
       "next_logic": "DI5"
     },
     {
       "id": "DI5",
       "prompt": "Do you start any new medication?",
+      "prompt_my": "Adakah anda mula mengambil sebarang ubat baru?",
+      "prompt_zh": "您是否开始服用任何新药物？",
       "type": "single_choice",
-      "options": ["Yes , What__?", "No"],
+      "options": [
+        "Yes , What__?",
+        "No"
+      ],
+      "options_my": [
+        "Ya, Apa__?",
+        "Tidak"
+      ],
+      "options_zh": [
+        "是，什么__？",
+        "否"
+      ],
       "next_logic": "DI6"
     },
     {
       "id": "DI6",
       "prompt": "Do you feel thirsty ?",
+      "prompt_my": "Adakah anda rasa dahaga?",
+      "prompt_zh": "您是否感到口渴？",
       "type": "single_choice",
-      "options": ["Yes", "No"],
+      "options": [
+        "Yes",
+        "No"
+      ],
+      "options_my": [
+        "Ya",
+        "Tidak"
+      ],
+      "options_zh": [
+        "是",
+        "否"
+      ],
       "next_logic": "DI7"
     },
     {
       "id": "DI7",
       "prompt": "Do you stool have blood ?",
+      "prompt_my": "Adakah najis anda mengandungi darah?",
+      "prompt_zh": "您的大便带血吗？",
       "type": "single_choice",
-      "options": ["Yes", "No"],
+      "options": [
+        "Yes",
+        "No"
+      ],
+      "options_my": [
+        "Ya",
+        "Tidak"
+      ],
+      "options_zh": [
+        "是",
+        "否"
+      ],
       "next_logic": "DI8"
     },
     {
       "id": "DI8",
       "prompt": "Did you go travel or try any new food",
+      "prompt_my": "Adakah anda pergi melancong atau mencuba makanan baru",
+      "prompt_zh": "您是否去旅行或尝试过任何新食物",
       "type": "single_choice",
-      "options": ["Yes", "No"],
+      "options": [
+        "Yes",
+        "No"
+      ],
+      "options_my": [
+        "Ya",
+        "Tidak"
+      ],
+      "options_zh": [
+        "是",
+        "否"
+      ],
       "next_logic": "DI_REC"
     },
     {
@@ -460,6 +1022,24 @@
         "Avoid spicy,greasy and fast food because it might worsen the diarrhoe",
         "Maintain or increase fluid intake to prevent dehydration",
         "Please have a good rest .Thank you for your time ."
+      ],
+      "prompt_my": [
+        "Arang Diaktifkan (Norit): 2 biji setiap 4 jam sehari, anda tidak sepatutnya mengambil arang diaktifkan dengan ubat lain, saya cadangkan anda mengambilnya sekurang-kurangnya 2 jam sebelum atau selepas mengambil ubat lain kerana ia akan menyingkirkan ubat anda bersama-sama dengan toksin penyebab cirit-birit",
+        "Garam rehidrasi oral (B plus): larutkan 1 uncang dalam 200ml air masak sejuk, 1-2 uncang untuk cirit-birit.",
+        "Jika keadaan anda menjadi serius atau tidak bertambah baik, sila rujuk doktor untuk pemeriksaan lanjut",
+        "Kesan Sampingan: sembelit dan gangguan gastrousus (Norit)",
+        "Elakkan makanan pedas, berminyak dan makanan segera kerana ia mungkin memburukkan cirit-birit",
+        "Kekalkan atau tingkatkan pengambilan cecair untuk mengelakkan dehidrasi",
+        "Sila berehat secukupnya. Terima kasih atas masa anda."
+      ],
+      "prompt_zh": [
+        "活性炭 (Norit)：每天每4小时2片，您不应将活性炭与其他药物一同服用，我建议您在服用其他药物之前或之后至少2小时服用，因为它会连同引起腹泻的毒素一起清除您的药物",
+        "口服补液盐 (B plus)：将1小袋溶于200毫升冷开水中，1-2小袋用于腹泻。",
+        "如果您的病情变得严重或没有好转，请咨询医生进行更深入的检查",
+        "副作用：便秘和胃肠道疾病 (Norit)",
+        "避免辛辣、油腻和快餐食品，因为它们可能会加重腹泻",
+        "保持或增加液体摄入量以防止脱水",
+        "请好好休息。感谢您的时间。"
       ],
       "next_logic": "AppFlow"
     },
@@ -476,42 +1056,102 @@
         "Maintain or increase fluid intake to prevent dehydration",
         "Please have a good rest .Thank you for your time ."
       ],
+      "prompt_my": [
+        "Arang Diaktifkan (Norit): 2 biji setiap 4 jam sehari, anda tidak sepatutnya mengambil arang diaktifkan dengan ubat lain, saya cadangkan anda mengambilnya sekurang-kurangnya 2 jam sebelum atau selepas mengambil ubat lain kerana ia akan menyingkirkan ubat anda bersama-sama dengan toksin penyebab cirit-birit",
+        "Garam rehidrasi oral (B plus): larutkan 1 uncang dalam 200ml air masak sejuk, 1-2 uncang untuk cirit-birit.",
+        "Saya syorkan anda merujuk kepada doktor untuk pemeriksaan lanjut kerana keadaan anda berterusan terlalu lama",
+        "Kesan Sampingan: sembelit dan gangguan gastrousus (Norit)",
+        "Elakkan makanan pedas, berminyak dan makanan segera kerana ia mungkin memburukkan cirit-birit",
+        "Kekalkan atau tingkatkan pengambilan cecair untuk mengelakkan dehidrasi",
+        "Sila berehat secukupnya. Terima kasih atas masa anda."
+      ],
+      "prompt_zh": [
+        "活性炭 (Norit)：每天每4小时2片，您不应将活性炭与其他药物一同服用，我建议您在服用其他药物之前或之后至少2小时服用，因为它会连同引起腹泻的毒素一起清除您的药物",
+        "口服补液盐 (B plus)：将1小袋溶于200毫升冷开水中，1-2小袋用于腹泻。",
+        "我建议您咨询医生进行更深入的检查，因为您的症状已持续多天",
+        "副作用：便秘和胃肠道疾病 (Norit)",
+        "避免辛辣、油腻和快餐食品，因为它们可能会加重腹泻",
+        "保持或增加液体摄入量以防止脱水",
+        "请好好休息。感谢您的时间。"
+      ],
       "next_logic": "AppFlow"
     }
   ],
-
   "Constipation": [
     {
       "id": "CN1",
       "prompt": "Do you experience constipation before?",
+      "prompt_my": "Adakah anda pernah mengalami sembelit sebelum ini?",
+      "prompt_zh": "您以前是否经历过便秘？",
       "type": "single_choice",
-      "options": ["Yes , When___?", "No"],
+      "options": [
+        "Yes , When___?",
+        "No"
+      ],
+      "options_my": [
+        "Ya, Bila___?",
+        "Tidak"
+      ],
+      "options_zh": [
+        "是，何时___？",
+        "否"
+      ],
       "next_logic": "CN2"
     },
     {
       "id": "CN2",
       "prompt": "Do you have abdominal discomfort ?",
+      "prompt_my": "Adakah anda rasa tidak selesa di bahagian perut?",
+      "prompt_zh": "您是否有腹部不适？",
       "type": "single_choice",
-      "options": ["Yes", "No"],
+      "options": [
+        "Yes",
+        "No"
+      ],
+      "options_my": [
+        "Ya",
+        "Tidak"
+      ],
+      "options_zh": [
+        "是",
+        "否"
+      ],
       "next_logic": "CN3"
     },
     {
       "id": "CN3",
       "prompt": "Normally , how is your stool frequency?",
+      "prompt_my": "Biasanya, berapakah kekerapan anda membuang air besar?",
+      "prompt_zh": "通常情况下，您的大便频率是多少？",
       "type": "number_input",
       "next_logic": "CN4"
     },
     {
       "id": "CN4",
       "prompt": "How is your stool frequency now?",
+      "prompt_my": "Bagaimanakah kekerapan membuang air besar anda sekarang?",
+      "prompt_zh": "您现在的大便频率是多少？",
       "type": "number_input",
       "next_logic": "CN5"
     },
     {
       "id": "CN5",
       "prompt": "Do you start any new medication?",
+      "prompt_my": "Adakah anda mula mengambil sebarang ubat baru?",
+      "prompt_zh": "您是否开始服用任何新药物？",
       "type": "single_choice",
-      "options": ["Yes , What__?", "No"],
+      "options": [
+        "Yes , What__?",
+        "No"
+      ],
+      "options_my": [
+        "Ya, Apa__?",
+        "Tidak"
+      ],
+      "options_zh": [
+        "是，什么__？",
+        "否"
+      ],
       "next_logic": "CN_REC"
     },
     {
@@ -524,6 +1164,20 @@
         "S/E : You might feel abdominal pain but this is the normal side effects for this Lactul",
         "Avoid spicy,greasy and fast food because it might worsen the constipation",
         "Please have a good rest,drink enough water. Thank you for your time ."
+      ],
+      "prompt_my": [
+        "Larutan Lactul (Lactulose): 15ml dua kali sehari",
+        "Jika keadaan anda menjadi serius atau tidak bertambah baik, sila rujuk doktor untuk pemeriksaan lanjut",
+        "Kesan Sampingan: Anda mungkin berasa sakit perut tetapi ini adalah kesan sampingan biasa untuk Lactul ini",
+        "Elakkan makanan pedas, berminyak dan makanan segera kerana ia mungkin memburukkan sembelit",
+        "Sila berehat secukupnya, minum air secukupnya. Terima kasih atas masa anda."
+      ],
+      "prompt_zh": [
+        "Lactul 溶液 (Lactulose)：每次15毫升，每日两次",
+        "如果您的病情变得严重或没有好转，请咨询医生进行更深入的检查",
+        "副作用：您可能会感到腹痛，但这是 Lactul 的正常副作用",
+        "避免辛辣、油腻和快餐食品，因为它们可能会加重便秘",
+        "请好好休息，多喝水。感谢您的时间。"
       ],
       "next_logic": "AppFlow"
     },
@@ -538,6 +1192,20 @@
         "Avoid spicy,greasy and fast food because it might worsen the constipation",
         "Please have a good rest,drink enough water. Thank you for your time ."
       ],
+      "prompt_my": [
+        "Larutan Lactul (Lactulose): 15ml dua kali sehari",
+        "Saya syorkan anda merujuk kepada doktor untuk pemeriksaan lanjut kerana keadaan anda berterusan terlalu lama",
+        "Kesan Sampingan: Anda mungkin berasa sakit perut tetapi ini adalah kesan sampingan biasa untuk Lactul ini",
+        "Elakkan makanan pedas, berminyak dan makanan segera kerana ia mungkin memburukkan sembelit",
+        "Sila berehat secukupnya, minum air secukupnya. Terima kasih atas masa anda."
+      ],
+      "prompt_zh": [
+        "Lactul 溶液 (Lactulose)：每次15毫升，每日两次",
+        "我建议您咨询医生进行更深入的检查，因为您的症状已持续多天",
+        "副作用：您可能会感到腹痛，但这是 Lactul 的正常副作用",
+        "避免辛辣、油腻和快餐食品，因为它们可能会加重便秘",
+        "请好好休息，多喝水。感谢您的时间。"
+      ],
       "next_logic": "AppFlow"
     }
   ],
@@ -545,13 +1213,28 @@
     {
       "id": "MP1",
       "prompt": "Do you experience menstrual pain before?",
+      "prompt_my": "Adakah anda pernah mengalami sakit senggugut sebelum ini?",
+      "prompt_zh": "您以前是否经历过痛经？",
       "type": "single_choice",
-      "options": ["Yes", "No"],
+      "options": [
+        "Yes",
+        "No"
+      ],
+      "options_my": [
+        "Ya",
+        "Tidak"
+      ],
+      "options_zh": [
+        "是",
+        "否"
+      ],
       "next_logic": "MP2"
     },
     {
       "id": "MP2",
       "prompt": "Can you rate your pain level? （1-10）",
+      "prompt_my": "Bolehkah anda menilai tahap kesakitan anda? (1-10)",
+      "prompt_zh": "您能评价一下您的疼痛程度吗？（1-10）",
       "type": "number_input",
       "next_logic": "MP_REC"
     },
@@ -565,6 +1248,18 @@
         "S/E : uncomfortable chest, difficulty to sleep, shaking ",
         "Please have a good rest,drink enough water. Thank you for your time ."
       ],
+      "prompt_my": [
+        "Paracetamol (Panadol) 500mg dan Kafein 65mg: 2 biji setiap 4 jam, maksimum 8 biji sehari",
+        "Jika keadaan anda menjadi serius atau tidak bertambah baik, sila rujuk doktor untuk pemeriksaan lanjut",
+        "Kesan Sampingan: dada tidak selesa, sukar tidur, menggeletar",
+        "Sila berehat secukupnya, minum air secukupnya. Terima kasih atas masa anda."
+      ],
+      "prompt_zh": [
+        "扑热息痛 (Panadol) 500毫克和咖啡因 65毫克：每次2片，每4小时一次，每日最多8片",
+        "如果您的病情变得严重或没有好转，请咨询医生进行更深入的检查",
+        "副作用：胸部不适、入睡困难、颤抖",
+        "请好好休息，多喝水。感谢您的时间。"
+      ],
       "next_logic": "AppFlow"
     },
     {
@@ -577,6 +1272,18 @@
         "S/E : uncomfortable chest, difficulty to sleep, shaking ",
         "Please have a good rest,drink enough water. Thank you for your time ."
       ],
+      "prompt_my": [
+        "Paracetamol (Panadol) 500mg dan Kafein 65mg: 2 biji setiap 4 jam, maksimum 8 biji sehari",
+        "Saya syorkan anda merujuk kepada doktor untuk pemeriksaan lanjut kerana keadaan anda berterusan terlalu lama",
+        "Kesan Sampingan: dada tidak selesa, sukar tidur, menggeletar",
+        "Sila berehat secukupnya, minum air secukupnya. Terima kasih atas masa anda."
+      ],
+      "prompt_zh": [
+        "扑热息痛 (Panadol) 500毫克和咖啡因 65毫克：每次2片，每4小时一次，每日最多8片",
+        "我建议您咨询医生进行更深入的检查，因为您的症状已持续多天",
+        "副作用：胸部不适、入睡困难、颤抖",
+        "请好好休息，多喝水。感谢您的时间。"
+      ],
       "next_logic": "AppFlow"
     }
   ],
@@ -584,19 +1291,36 @@
     {
       "id": "JP1",
       "prompt": "Which joint you feel pain?",
+      "prompt_my": "Sendi mana yang anda rasa sakit?",
+      "prompt_zh": "您哪个关节感到疼痛？",
       "type": "text_input",
       "next_logic": "JP2"
     },
     {
       "id": "JP2",
       "prompt": "Do you experience joint pain before?",
+      "prompt_my": "Adakah anda pernah mengalami sakit sendi sebelum ini?",
+      "prompt_zh": "您以前是否经历过关节疼痛？",
       "type": "single_choice",
-      "options": ["Yes", "No"],
+      "options": [
+        "Yes",
+        "No"
+      ],
+      "options_my": [
+        "Ya",
+        "Tidak"
+      ],
+      "options_zh": [
+        "是",
+        "否"
+      ],
       "next_logic": "JP3"
     },
     {
       "id": "JP3",
       "prompt": "Can you rate your pain level? (1-10)",
+      "prompt_my": "Bolehkah anda menilai tahap kesakitan anda? (1-10)",
+      "prompt_zh": "您能评价一下您的疼痛程度吗？（1-10）",
       "type": "number_input",
       "next_logic": "JP_REC"
     },
@@ -610,6 +1334,18 @@
         "S/E : No",
         "Please have a good rest,drink enough water , avoid doing vigorous activity. Thank you for your time ."
       ],
+      "prompt_my": [
+        "Paracetamol (Panadol Extend) 665mg: 2 biji setiap 8 jam, maksimum 6 biji sehari",
+        "Jika keadaan anda menjadi serius atau tidak bertambah baik, sila rujuk doktor untuk pemeriksaan lanjut",
+        "Kesan Sampingan: Tiada",
+        "Sila berehat secukupnya, minum air secukupnya, elakkan melakukan aktiviti berat. Terima kasih atas masa anda."
+      ],
+      "prompt_zh": [
+        "扑热息痛 (Panadol Extend) 665毫克：每次2片，每8小时一次，每日最多6片",
+        "如果您的病情变得严重或没有好转，请咨询医生进行更深入的检查",
+        "副作用：无",
+        "请好好休息，多喝水，避免剧烈运动。感谢您的时间。"
+      ],
       "next_logic": "AppFlow"
     },
     {
@@ -622,6 +1358,18 @@
         "S/E : No",
         "Please have a good rest,drink enough water , avoid doing vigorous activity. Thank you for your time ."
       ],
+      "prompt_my": [
+        "Paracetamol (Panadol Extend) 665mg: 2 biji setiap 8 jam, maksimum 6 biji sehari",
+        "Saya syorkan anda merujuk kepada doktor untuk pemeriksaan lanjut kerana keadaan anda berterusan terlalu lama",
+        "Kesan Sampingan: Tiada",
+        "Sila berehat secukupnya, minum air secukupnya, elakkan melakukan aktiviti berat. Terima kasih atas masa anda."
+      ],
+      "prompt_zh": [
+        "扑热息痛 (Panadol Extend) 665毫克：每次2片，每8小时一次，每日最多6片",
+        "我建议您咨询医生进行更深入的检查，因为您的症状已持续多天",
+        "副作用：无",
+        "请好好休息，多喝水，避免剧烈运动。感谢您的时间。"
+      ],
       "next_logic": "AppFlow"
     }
   ],
@@ -629,27 +1377,57 @@
     {
       "id": "MU1",
       "prompt": "Where is the location of muscle you feel pain?",
+      "prompt_my": "Di manakah lokasi otot yang anda rasa sakit?",
+      "prompt_zh": "您感到疼痛的肌肉位置在哪里？",
       "type": "text_input",
       "next_logic": "MU2"
     },
     {
       "id": "MU2",
       "prompt": "Do you experience muscle pain before?",
+      "prompt_my": "Adakah anda pernah mengalami sakit otot sebelum ini?",
+      "prompt_zh": "您以前是否经历过肌肉疼痛？",
       "type": "single_choice",
-      "options": ["Yes", "No"],
+      "options": [
+        "Yes",
+        "No"
+      ],
+      "options_my": [
+        "Ya",
+        "Tidak"
+      ],
+      "options_zh": [
+        "是",
+        "否"
+      ],
       "next_logic": "MU3"
     },
     {
       "id": "MU3",
       "prompt": "Can you rate your pain level? (1-10)",
+      "prompt_my": "Bolehkah anda menilai tahap kesakitan anda? (1-10)",
+      "prompt_zh": "您能评价一下您的疼痛程度吗？（1-10）",
       "type": "number_input",
       "next_logic": "MU4"
     },
     {
       "id": "MU4",
       "prompt": "Did you do any vigorous activity recently?",
+      "prompt_my": "Adakah anda melakukan aktiviti berat baru-baru ini?",
+      "prompt_zh": "您最近是否进行了任何剧烈活动？",
       "type": "single_choice",
-      "options": ["Yes , What__?", "No"],
+      "options": [
+        "Yes , What__?",
+        "No"
+      ],
+      "options_my": [
+        "Ya, Apa__?",
+        "Tidak"
+      ],
+      "options_zh": [
+        "是，什么__？",
+        "否"
+      ],
       "next_logic": "MU_REC"
     },
     {
@@ -661,6 +1439,18 @@
         "If your condition become serious or do not get well ,please refer to doctor for deeper check up",
         "S/E : No",
         "Please have a good rest,drink enough water , avoid doing vigorous activity. Thank you for your time ."
+      ],
+      "prompt_my": [
+        "Paracetamol (Panadol Extend untuk otot dan sendi) 665mg: 2 biji setiap 8 jam, maksimum 6 biji sehari",
+        "Jika keadaan anda menjadi serius atau tidak bertambah baik, sila rujuk doktor untuk pemeriksaan lanjut",
+        "Kesan Sampingan: Tiada",
+        "Sila berehat secukupnya, minum air secukupnya, elakkan melakukan aktiviti berat. Terima kasih atas masa anda."
+      ],
+      "prompt_zh": [
+        "扑热息痛 (Panadol Extend 肌肉和关节) 665毫克：每次2片，每8小时一次，每日最多6片",
+        "如果您的病情变得严重或没有好转，请咨询医生进行更深入的检查",
+        "副作用：无",
+        "请好好休息，多喝水，避免剧烈运动。感谢您的时间。"
       ],
       "next_logic": "AppFlow"
     },
@@ -674,6 +1464,18 @@
         "S/E : No",
         "Please have a good rest,drink enough water , avoid doing vigorous activity. Thank you for your time ."
       ],
+      "prompt_my": [
+        "Paracetamol (Panadol Extend untuk otot dan sendi) 665mg: 2 biji setiap 8 jam, maksimum 6 biji sehari",
+        "Saya syorkan anda merujuk kepada doktor untuk pemeriksaan lanjut kerana keadaan anda berterusan terlalu lama",
+        "Kesan Sampingan: Tiada",
+        "Sila berehat secukupnya, minum air secukupnya, elakkan melakukan aktiviti berat. Terima kasih atas masa anda."
+      ],
+      "prompt_zh": [
+        "扑热息痛 (Panadol Extend 肌肉和关节) 665毫克：每次2片，每8小时一次，每日最多6片",
+        "我建议您咨询医生进行更深入的检查，因为您的症状已持续多天",
+        "副作用：无",
+        "请好好休息，多喝水，避免剧烈运动。感谢您的时间。"
+      ],
       "next_logic": "AppFlow"
     }
   ],
@@ -681,29 +1483,81 @@
     {
       "id": "BL1",
       "prompt": "Do you experience bloat before?",
+      "prompt_my": "Adakah anda pernah mengalami kembung perut sebelum ini?",
+      "prompt_zh": "您以前是否经历过腹胀？",
       "type": "single_choice",
-      "options": ["Yes", "No"],
+      "options": [
+        "Yes",
+        "No"
+      ],
+      "options_my": [
+        "Ya",
+        "Tidak"
+      ],
+      "options_zh": [
+        "是",
+        "否"
+      ],
       "next_logic": "BL2"
     },
     {
       "id": "BL2",
       "prompt": "Do you have chest pain :",
+      "prompt_my": "Adakah anda mengalami sakit dada:",
+      "prompt_zh": "您有胸痛吗：",
       "type": "single_choice",
-      "options": ["Yes", "No"],
+      "options": [
+        "Yes",
+        "No"
+      ],
+      "options_my": [
+        "Ya",
+        "Tidak"
+      ],
+      "options_zh": [
+        "是",
+        "否"
+      ],
       "next_logic": "BL3"
     },
     {
       "id": "BL3",
       "prompt": "Do you have sore throat",
+      "prompt_my": "Adakah anda mengalami sakit tekak",
+      "prompt_zh": "您有喉咙痛吗",
       "type": "single_choice",
-      "options": ["Yes", "No"],
+      "options": [
+        "Yes",
+        "No"
+      ],
+      "options_my": [
+        "Ya",
+        "Tidak"
+      ],
+      "options_zh": [
+        "是",
+        "否"
+      ],
       "next_logic": "BL4"
     },
     {
       "id": "BL4",
       "prompt": "Do you fart a lot?",
+      "prompt_my": "Adakah anda kerap kentut?",
+      "prompt_zh": "您是否经常放屁？",
       "type": "single_choice",
-      "options": ["Yes", "No"],
+      "options": [
+        "Yes",
+        "No"
+      ],
+      "options_my": [
+        "Ya",
+        "Tidak"
+      ],
+      "options_zh": [
+        "是",
+        "否"
+      ],
       "next_logic": "BL_REC"
     },
     {
@@ -716,6 +1570,20 @@
         "S/E : No",
         "Advise: Avoid spicy, greasy , caffeine food . / Dont lie down right after eating",
         "Please have a good rest,drink enough water. Thank you for your time ."
+      ],
+      "prompt_my": [
+        "Simethicone (Gazgo) 200mg: 1 softgel 3 hingga 4 kali sehari, selepas makan atau sebelum tidur",
+        "Jika keadaan anda menjadi serius atau tidak bertambah baik, sila rujuk doktor untuk pemeriksaan lanjut",
+        "Kesan Sampingan: Tiada",
+        "Nasihat: Elakkan makanan pedas, berminyak, berkafein. / Jangan baring sejurus selepas makan",
+        "Sila berehat secukupnya, minum air secukupnya. Terima kasih atas masa anda."
+      ],
+      "prompt_zh": [
+        "西甲硅油 (Gazgo) 200毫克：每次1粒软胶囊，每日3至4次，饭后或睡前服用",
+        "如果您的病情变得严重或没有好转，请咨询医生进行更深入的检查",
+        "副作用：无",
+        "建议：避免辛辣、油腻、含咖啡因的食物。/ 饭后不要马上躺下",
+        "请好好休息，多喝水。感谢您的时间。"
       ],
       "next_logic": "AppFlow"
     },
@@ -730,6 +1598,20 @@
         "Advise: Avoid spicy, greasy , caffeine food . / Dont lie down right after eating",
         "Please have a good rest,drink enough water. Thank you for your time ."
       ],
+      "prompt_my": [
+        "Simethicone (Gazgo) 200mg: 1 softgel 3 hingga 4 kali sehari, selepas makan atau sebelum tidur",
+        "Saya syorkan anda merujuk kepada doktor untuk pemeriksaan lanjut kerana keadaan anda berterusan terlalu lama",
+        "Kesan Sampingan: Tiada",
+        "Nasihat: Elakkan makanan pedas, berminyak, berkafein. / Jangan baring sejurus selepas makan",
+        "Sila berehat secukupnya, minum air secukupnya. Terima kasih atas masa anda."
+      ],
+      "prompt_zh": [
+        "西甲硅油 (Gazgo) 200毫克：每次1粒软胶囊，每日3至4次，饭后或睡前服用",
+        "我建议您咨询医生进行更深入的检查，因为您的症状已持续多天",
+        "副作用：无",
+        "建议：避免辛辣、油腻、含咖啡因的食物。/ 饭后不要马上躺下",
+        "请好好休息，多喝水。感谢您的时间。"
+      ],
       "next_logic": "AppFlow"
     }
   ],
@@ -737,21 +1619,52 @@
     {
       "id": "IS1",
       "prompt": "What is the body part you feel itchy?",
+      "prompt_my": "Bahagian badan mana yang anda rasa gatal?",
+      "prompt_zh": "您身体哪个部位感到瘙痒？",
       "type": "text_input",
       "next_logic": "IS2"
     },
     {
       "id": "IS2",
       "prompt": "Do you experience itchy skin before?",
+      "prompt_my": "Adakah anda pernah mengalami kulit gatal sebelum ini?",
+      "prompt_zh": "您以前是否经历过皮肤瘙痒？",
       "type": "single_choice",
-      "options": ["Yes", "No"],
+      "options": [
+        "Yes",
+        "No"
+      ],
+      "options_my": [
+        "Ya",
+        "Tidak"
+      ],
+      "options_zh": [
+        "是",
+        "否"
+      ],
       "next_logic": "IS3"
     },
     {
       "id": "IS3",
       "prompt": "Does the area appear redness?",
+      "prompt_my": "Adakah kawasan itu kelihatan kemerahan?",
+      "prompt_zh": "该区域是否出现发红？",
       "type": "single_choice",
-      "options": ["Yes", "No", "Not sure"],
+      "options": [
+        "Yes",
+        "No",
+        "Not sure"
+      ],
+      "options_my": [
+        "Ya",
+        "Tidak",
+        "Tidak pasti"
+      ],
+      "options_zh": [
+        "是",
+        "否",
+        "不确定"
+      ],
       "next_logic": "IS_REC"
     },
     {
@@ -763,6 +1676,18 @@
         "If your condition become serious or do not get well ,please refer to doctor for deeper check up",
         "S/E : No",
         "Please have a good rest,drink enough water , avoid doing vigorous activity. Thank you for your time ."
+      ],
+      "prompt_my": [
+        "Krim Bepanthen Itchy Relief: Sapu pada kulit sahaja, elakkan kawasan sensitif seperti bibir, faraj.",
+        "Jika keadaan anda menjadi serius atau tidak bertambah baik, sila rujuk doktor untuk pemeriksaan lanjut",
+        "Kesan Sampingan: Tiada",
+        "Sila berehat secukupnya, minum air secukupnya, elakkan melakukan aktiviti berat. Terima kasih atas masa anda."
+      ],
+      "prompt_zh": [
+        "Bepanthen 止痒舒缓霜：仅涂抹于皮肤，避免嘴唇、阴道等敏感区域。",
+        "如果您的病情变得严重或没有好转，请咨询医生进行更深入的检查",
+        "副作用：无",
+        "请好好休息，多喝水，避免剧烈运动。感谢您的时间。"
       ],
       "next_logic": "AppFlow"
     },
@@ -776,14 +1701,27 @@
         "S/E : No",
         "Please have a good rest,drink enough water , avoid doing vigorous activity. Thank you for your time ."
       ],
+      "prompt_my": [
+        "Krim Bepanthen Itchy Relief: Sapu pada kulit sahaja",
+        "Saya syorkan anda merujuk kepada doktor untuk pemeriksaan lanjut kerana keadaan anda berterusan terlalu lama",
+        "Kesan Sampingan: Tiada",
+        "Sila berehat secukupnya, minum air secukupnya, elakkan melakukan aktiviti berat. Terima kasih atas masa anda."
+      ],
+      "prompt_zh": [
+        "Bepanthen 止痒舒缓霜：仅涂抹于皮肤",
+        "我建议您咨询医生进行更深入的检查，因为您的症状已持续多天",
+        "副作用：无",
+        "请好好休息，多喝水，避免剧烈运动。感谢您的时间。"
+      ],
       "next_logic": "AppFlow"
     }
   ],
-
   "AppFlow": [
     {
       "id": "A1",
       "prompt": "Would you like to add these medications to your cart?",
+      "prompt_my": "Adakah anda ingin menambah ubat-ubatan ini ke troli anda?",
+      "prompt_zh": "您想将这些药物添加到您的购物车吗？",
       "type": "medication_cart",
       "medications": [],
       "next_logic": "A2"
@@ -791,6 +1729,8 @@
     {
       "id": "A2",
       "prompt": "Thank you for using AI-Sihat! Your medications have been added to cart. You can proceed to checkout from the cart page. Wish you a speedy recovery!",
+      "prompt_my": "Terima kasih kerana menggunakan AI-Sihat! Ubat-ubatan anda telah ditambah ke troli. Anda boleh meneruskan ke 'checkout' dari halaman troli. Semoga anda cepat sembuh!",
+      "prompt_zh": "感谢您使用 AI-Sihat！您的药物已添加到购物车。您可以从购物车页面继续结帐。祝您早日康复！",
       "type": "completion_message",
       "next_logic": null
     }
