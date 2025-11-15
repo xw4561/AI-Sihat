@@ -20,7 +20,7 @@ export default defineConfig({
       },
       '/ai-sihat': {
         target: process.env.VITE_API_URL || 'http://localhost:8080',
-        changeOrigin: true,
+        changeOrigin: true
         // rewrite: (path) => path.replace(/^\/ai-sihat/, '')
       }
     }

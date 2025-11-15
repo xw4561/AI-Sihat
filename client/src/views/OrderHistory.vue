@@ -132,7 +132,7 @@ async function fetchOrders() {
       return;
     }
 
-    const response = await axios.get(`http://localhost:8080/ai-sihat/order/user/${userId}`);
+    const response = await axios.get(`/ai-sihat/order/user/${userId}`);
     orders.value = response.data;
   } catch (err) {
     console.error('Failed to fetch orders:', err);
