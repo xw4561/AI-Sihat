@@ -727,6 +727,7 @@ function handleBranchSelected(branch) {
   // If this is the *first time* they are selecting, start the chat.
   if (isChanging || !sessionId.value) {
     refreshChat(); // This calls startSession()
+  }
 }
 
 // Auto-advance past heading-only prompt so user only sees the combined recommendation bubble
