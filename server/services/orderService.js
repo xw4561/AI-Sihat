@@ -207,9 +207,35 @@ async function getOrderById(orderId) {
  * @returns {Promise<object>} Updated order
  */
 async function updateOrderStatus(orderId, status) {
-  const validStatuses = ["pending", "completed", "cancelled"];
+  // Allow new lifecycle statuses used by pharmacists
+  const validStatuses = ["pending", "completed", "cancelled", "picked_up", "delivered"];
   if (!validStatuses.includes(status)) {
-    throw new Error("Invalid status. Must be: pending, completed, or cancelled");
+    throw new Error("Invalid status. Must be one of: " + validStatuses.join(', '));
+  }
+
+  // Fetch order to enforce business rules based on customerAddress
+  const existing = await prisma.order.findUnique({ where: { orderId } });
+  if (!existing) throw new Error('Order not found');
+
+  // Business rules:
+  // - If marking 'picked_up', the order must be a pickup (customerAddress == null)
+  // - If marking 'delivered', the order must be a delivery (customerAddress != null)
+  if (status === 'picked_up') {
+    if (existing.customerAddress !== null) {
+      throw new Error('Only pickup orders (no customer address) can be marked as picked up');
+    }
+    if (existing.status === 'picked_up') {
+      throw new Error('Order is already marked as picked up');
+    }
+  }
+
+  if (status === 'delivered') {
+    if (!existing.customerAddress) {
+      throw new Error('Only delivery orders (with a customer address) can be marked as delivered');
+    }
+    if (existing.status === 'delivered') {
+      throw new Error('Order is already marked as delivered');
+    }
   }
 
   const order = await prisma.order.update({

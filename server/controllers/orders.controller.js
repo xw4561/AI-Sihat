@@ -384,3 +384,70 @@ exports.findAllPrescriptions = async (req, res) => {
     res.status(400).json({ error: error.message });
   }
 };
+
+// Mark order as picked up by pharmacist
+exports.markOrderPickedUp = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updated = await require('../services/orderService').updateOrderStatus(id, 'picked_up');
+    res.status(200).json({ message: 'Order marked as picked up', order: updated });
+  } catch (error) {
+    console.error('Mark picked up error:', error);
+    res.status(400).json({ error: error.message });
+  }
+};
+
+// Mark order as delivered by pharmacist
+exports.markOrderDelivered = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updated = await require('../services/orderService').updateOrderStatus(id, 'delivered');
+    res.status(200).json({ message: 'Order marked as delivered', order: updated });
+  } catch (error) {
+    console.error('Mark delivered error:', error);
+    res.status(400).json({ error: error.message });
+  }
+};
+
+// Get orders for pharmacist's branch (server-side filtered)
+exports.getOrdersForBranch = async (req, res) => {
+  try {
+    const userId = req.body?.userId;
+    if (!userId) return res.status(400).json({ error: 'Missing userId' });
+
+    const branchId = await getPharmacistBranch(userId);
+
+    // Optional status filter (all/pending/completed)
+    const status = req.body?.status || 'all';
+    const allowedStatuses = ['all', 'pending', 'completed', 'cancelled'];
+    if (!allowedStatuses.includes(status)) {
+      return res.status(400).json({ error: 'Invalid status filter' });
+    }
+
+    const whereClause = { branchId };
+    if (status && status !== 'all') {
+      // 'completed' should include picked_up, delivered and any explicit completed flag
+      if (status === 'completed') {
+        whereClause.status = { in: ['picked_up', 'delivered', 'completed'] };
+      } else {
+        whereClause.status = status;
+      }
+    }
+
+    const orders = await prisma.order.findMany({
+      where: whereClause,
+      include: {
+        items: { include: { medicine: true } },
+        user: { select: { userId: true, username: true, email: true } },
+        branch: true
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    res.status(200).json(orders);
+  } catch (error) {
+    console.error('Get orders for branch error:', error);
+    const status = error.message.includes('denied') ? 403 : 400;
+    res.status(status).json({ error: error.message });
+  }
+};

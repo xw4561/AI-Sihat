@@ -5,7 +5,8 @@ import AdminHome from '../views/AdminHome.vue'
 import CustomerHome from '../views/CustomerHome.vue'
 import PharmacistHome from '../views/PharmacistHome.vue'
 import PharmacistOrders from '../views/PharmacistOrders.vue'
-import Chat from '../views/Chat.vue'
+import PharmacistConfirm from '../views/PharmacistConfirm.vue'
+import Chat from '../views/chat.vue'
 import APITest from '../views/APITest.vue'
 import DatabaseManager from '../views/DatabaseManager.vue'
 import Profile from '../views/Profile.vue'
@@ -70,6 +71,12 @@ const routes = [
     path: '/pharmacist/orders',
     name: 'PharmacistOrders',
     component: PharmacistOrders,
+    meta: { requiresAuth: true, role: 'pharmacist' }
+  },
+  {
+    path: '/pharmacist/confirm',
+    name: 'PharmacistConfirm',
+    component: PharmacistConfirm,
     meta: { requiresAuth: true, role: 'pharmacist' }
   },
   {

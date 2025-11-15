@@ -5,10 +5,13 @@ module.exports = (app) => {
   router.post("/", controller.create);           // Create order
   router.get("/user/:userId", controller.findByUser);  // Get orders by user (must be before /:id)
   router.post("/pending-ai", controller.getPendingAiOrders);  // Get pending prescriptions for pharmacist
+  router.post("/branch", controller.getOrdersForBranch); // Get orders for pharmacist's branch
   router.get("/", controller.findAll);           // Get all orders
   router.get("/:id", controller.findOne);        // Get order by id
   router.put("/:id/approve", controller.approveOrder);  // Approve prescription (pharmacist)
   router.put("/:id/reject", controller.rejectOrder);    // Reject prescription (pharmacist)
+  router.put("/:id/picked-up", controller.markOrderPickedUp); // Mark order picked up
+  router.put("/:id/delivered", controller.markOrderDelivered); // Mark order delivered
   router.delete("/:id", controller.delete);      // Delete order
 
   app.use("/ai-sihat/order", router);
