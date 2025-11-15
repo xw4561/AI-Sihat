@@ -57,6 +57,27 @@
             <p><strong>Allergies:</strong> {{ selectedOrder.summary.allergies }}</p>
             <p><strong>Current Medication:</strong> {{ selectedOrder.summary.medication }}</p>
           </div>
+          
+          <!-- Symptom-Specific Questions -->
+          <div v-if="selectedOrder.summary.allAnswers" v-for="symptom in getGroupedSymptomQuestions(selectedOrder.summary.allAnswers)" :key="symptom.name" class="symptom-qa-section">
+            <h6 class="symptom-header"> {{ symptom.name }}</h6>
+            <div class="qa-list">
+              <div v-for="qa in symptom.questions" :key="qa.id" class="qa-item">
+                <div class="question-label">{{ qa.label }}:</div>
+                <div class="answer-text">
+                  <template v-if="typeof qa.answer === 'object' && qa.answer.userInput">
+                    {{ qa.answer.userInput }}
+                  </template>
+                  <template v-else-if="Array.isArray(qa.answer)">
+                    {{ qa.answer.join(', ') }}
+                  </template>
+                  <template v-else>
+                    {{ qa.answer }}
+                  </template>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
         <div v-else>
           <p>No report available for this order.</p>
@@ -126,13 +147,37 @@
                 
                 <div class="form-group">
                   <label>{{ medSlot.action === 'reject' ? 'Alternative Medicine:' : 'Select Medicine:' }}</label>
-                  <select v-model="medSlot.alternativeMedicineId" @change="onAlternativeSelect(idx)" class="form-control">
-                    <option value="">Select medicine from database</option>
-                    <option v-for="med in medicines" :key="med.medicineId" :value="med.medicineId">
-                      {{ med.medicineName }} ({{ med.medicineType }}) - RM{{ med.price }} - Stock: {{ med.medicineQuantity }}
-                    </option>
-                    <option value="__new__">+ Add New Medicine</option>
-                  </select>
+                  <div style="position: relative;">
+                    <input 
+                      v-model="medSlot.searchQuery" 
+                      @input="medSlot.showDropdown = true; medSlot.isNew = false"
+                      @focus="medSlot.showDropdown = true"
+                      type="text" 
+                      class="form-control search-input" 
+                      placeholder="Search medicine by name..."
+                    />
+                    <div v-if="medSlot.showDropdown" class="medicine-dropdown">
+                      <div 
+                        v-for="med in filteredMedicines(medSlot.searchQuery)" 
+                        :key="med.medicineId" 
+                        @click="selectMedicine(idx, med)"
+                        class="medicine-option">
+                        <div class="medicine-details">
+                          <strong>{{ med.medicineName }}</strong>
+                          <span>{{ med.medicineType }} • RM{{ parseFloat(med.price).toFixed(2) }} • Stock: {{ med.medicineQuantity }}</span>
+                        </div>
+                      </div>
+                      <div v-if="filteredMedicines(medSlot.searchQuery).length === 0" class="no-results">
+                        No medicines found. Try a different search term.
+                      </div>
+                    </div>
+                  </div>
+                  <button 
+                    type="button" 
+                    @click="medSlot.isNew = true; medSlot.showDropdown = false; medSlot.searchQuery = ''"
+                    class="btn-add-medicine">
+                    ➕ Add New Medicine (Not in Database)
+                  </button>
                 </div>
                 
                 <!-- New Medicine Form -->
@@ -179,13 +224,37 @@
                 <div class="medicine-select-group">
                   <div class="form-group">
                     <label>Medicine:</label>
-                    <select v-model="extra.medicineId" @change="onExtraMedicineSelect(idx)" class="form-control">
-                      <option value="">Select existing medicine</option>
-                      <option v-for="med in medicines" :key="med.medicineId" :value="med.medicineId">
-                        {{ med.medicineName }} ({{ med.medicineType }}) - RM{{ med.price }} - Stock: {{ med.medicineQuantity }}
-                      </option>
-                      <option value="__new__">+ Add New Medicine</option>
-                    </select>
+                    <div style="position: relative;">
+                      <input 
+                        v-model="extra.searchQuery" 
+                        @input="extra.showDropdown = true; extra.isNew = false"
+                        @focus="extra.showDropdown = true"
+                        type="text" 
+                        class="form-control search-input" 
+                        placeholder="Search medicine by name..."
+                      />
+                      <div v-if="extra.showDropdown" class="medicine-dropdown">
+                        <div 
+                          v-for="med in filteredMedicines(extra.searchQuery)" 
+                          :key="med.medicineId" 
+                          @click="selectExtraMedicine(idx, med)"
+                          class="medicine-option">
+                          <div class="medicine-details">
+                            <strong>{{ med.medicineName }}</strong>
+                            <span>{{ med.medicineType }} • RM{{ parseFloat(med.price).toFixed(2) }} • Stock: {{ med.medicineQuantity }}</span>
+                          </div>
+                        </div>
+                        <div v-if="filteredMedicines(extra.searchQuery).length === 0" class="no-results">
+                          No medicines found. Try a different search term.
+                        </div>
+                      </div>
+                    </div>
+                    <button 
+                      type="button" 
+                      @click="extra.isNew = true; extra.showDropdown = false; extra.searchQuery = ''"
+                      class="btn-add-medicine">
+                      ➕ Add New Medicine (Not in Database)
+                    </button>
                   </div>
                   
                   <!-- New Medicine Form for Extra -->
@@ -235,7 +304,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 import axios from 'axios';
 
 const orders = ref([]);
@@ -250,7 +319,26 @@ const extraMedicines = ref([]);
 onMounted(async () => {
   await fetchOrders();
   await fetchMedicines();
+  document.addEventListener('click', handleClickOutside);
 });
+
+onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutside);
+});
+
+function handleClickOutside(event) {
+  // Check if click is outside all medicine dropdowns
+  if (!event.target.closest('.search-input') && !event.target.closest('.medicine-dropdown')) {
+    // Close all medicine slot dropdowns
+    medicineSlots.value.forEach(slot => {
+      slot.showDropdown = false;
+    });
+    // Close all extra medicine dropdowns
+    extraMedicines.value.forEach(extra => {
+      extra.showDropdown = false;
+    });
+  }
+}
 
 async function fetchOrders() {
   try {
@@ -275,11 +363,198 @@ async function fetchOrders() {
 
 async function fetchMedicines() {
   try {
-    const response = await axios.get('/ai-sihat/medicine');
+    const response = await axios.get('/ai-sihat/medicines');
     medicines.value = response.data;
+    console.log('Fetched medicines:', medicines.value.length);
+    console.log('Sample medicine:', medicines.value[0]);
+    console.log('Paracetamol search:', medicines.value.filter(m => m.medicineName.toLowerCase().includes('paracetamol')));
   } catch (error) {
     console.error('Error fetching medicines:', error);
   }
+}
+
+function filteredMedicines(query) {
+  if (!query || query.trim() === '') {
+    const firstTen = medicines.value.slice(0, 10);
+    console.log('Showing first 10 medicines:', firstTen.map(m => m.medicineName));
+    return firstTen;
+  }
+  const searchTerm = query.toLowerCase();
+  const filtered = medicines.value.filter(med => 
+    med.medicineName.toLowerCase().includes(searchTerm)
+  );
+  console.log(`Filtered by "${query}":`, filtered.length, 'results', filtered.map(m => m.medicineName));
+  return filtered;
+}
+
+function isSymptomQuestion(questionId) {
+  // Skip common questions (1-11) and only show symptom-specific questions
+  const numericId = parseInt(questionId, 10);
+  if (!isNaN(numericId) && numericId >= 1 && numericId <= 11) {
+    return false;
+  }
+  // Include questions with prefixes like FL1, FE1, CO1, etc.
+  return /^[A-Z]+\d+$/.test(questionId) || /^Q[A-Z]+\d+$/.test(questionId);
+}
+
+function getSymptomName(questionId) {
+  // Extract symptom name from question ID
+  const prefix = questionId.match(/^([A-Z]+)/)?.[1] || '';
+  
+  const symptomMap = {
+    'FL': 'Flu',
+    'FE': 'Fever',
+    'CO': 'Cough',
+    'CA': 'Cough',
+    'CL': 'Cold',
+    'NV': 'Nausea and Vomiting',
+    'CN': 'Constipation',
+    'DI': 'Diarrhoea',
+    'IH': 'Indigestion/Heartburn',
+    'MP': 'Menstrual Pain',
+    'JP': 'Joint Pain',
+    'MU': 'Muscle Pain',
+    'BL': 'Bloat',
+    'IS': 'Itchy Skin',
+    'QFL': 'Flu',
+    'QFE': 'Fever',
+    'QCO': 'Cough',
+    'QCL': 'Cold',
+    'QCA': 'Common Questions',
+    'QE': 'Extra Questions'
+  };
+  
+  return symptomMap[prefix] || 'Symptom';
+}
+
+function getGroupedSymptomQuestions(allAnswers) {
+  if (!allAnswers) return [];
+  
+  // Question label mappings - convert technical questions to simple labels
+  const questionLabels = {
+    // Cough
+    'CA1': 'Sore throat',
+    'CA2': 'Have phlegm',
+    'CA3_WET': 'Experienced phlegm before',
+    'CA3_DRY': 'Experienced dry cough before',
+    
+    // Flu
+    'FL1': 'Experienced flu before',
+    'FL2': 'Blocked nose',
+    
+    // Fever
+    'FE1': 'Experienced fever before',
+    
+    // Cold
+    'CO1': 'Experienced cold before',
+    'CO2': 'Blocked nose',
+    
+    // Nausea and Vomiting
+    'NV1': 'Experienced nausea/vomiting before',
+    'NV2': 'Vomiting frequency',
+    'NV3': 'Feel thirsty',
+    
+    // Indigestion/Heartburn
+    'IH1': 'Experienced indigestion/heartburn before',
+    'IH2': 'Have chest pain',
+    'IH3': 'Have sore throat',
+    
+    // Diarrhoea
+    'DI1': 'Experienced diarrhoea before',
+    'DI2': 'Abdominal discomfort',
+    'DI3': 'Normal stool frequency',
+    'DI4': 'Current stool frequency',
+    'DI5': 'Started new medication',
+    'DI6': 'Feel thirsty',
+    'DI7': 'Blood in stool',
+    'DI8': 'Recent travel or new food',
+    
+    // Constipation
+    'CN1': 'Experienced constipation before',
+    'CN2': 'Abdominal discomfort',
+    'CN3': 'Normal stool frequency',
+    'CN4': 'Current stool frequency',
+    'CN5': 'Started new medication',
+    
+    // Menstrual Pain
+    'MP1': 'Experienced menstrual pain before',
+    'MP2': 'Pain level (1-10)',
+    
+    // Joint Pain
+    'JP1': 'Which joint',
+    'JP2': 'Experienced joint pain before',
+    'JP3': 'Pain level (1-10)',
+    
+    // Muscle Pain
+    'MU1': 'Muscle location',
+    'MU2': 'Experienced muscle pain before',
+    'MU3': 'Pain level (1-10)',
+    'MU4': 'Recent vigorous activity',
+    
+    // Bloat
+    'BL1': 'Experienced bloat before',
+    'BL2': 'Have chest pain',
+    'BL3': 'Have sore throat',
+    'BL4': 'Excessive flatulence',
+    
+    // Itchy Skin
+    'IS1': 'Body part affected',
+    'IS2': 'Experienced itchy skin before',
+    'IS3': 'Have rash',
+    'IS4': 'Rash color',
+    'IS5': 'Recent new products/food'
+  };
+  
+  const grouped = {};
+  
+  // Group questions by symptom
+  Object.keys(allAnswers).forEach(qId => {
+    if (isSymptomQuestion(qId)) {
+      const symptomName = getSymptomName(qId);
+      
+      if (!grouped[symptomName]) {
+        grouped[symptomName] = [];
+      }
+      
+      const label = questionLabels[qId] || `Question ${qId}`;
+      
+      grouped[symptomName].push({
+        id: qId,
+        label: label,
+        answer: allAnswers[qId]
+      });
+    }
+  });
+  
+  // Convert to array format
+  return Object.keys(grouped).map(symptomName => ({
+    name: symptomName,
+    questions: grouped[symptomName]
+  }));
+}
+
+function selectMedicine(idx, med) {
+  const slot = medicineSlots.value[idx];
+  slot.alternativeMedicineId = med.medicineId;
+  slot.newMedicineName = med.medicineName;
+  slot.newMedicineType = med.medicineType;
+  slot.newPrice = parseFloat(med.price);
+  slot.newImageUrl = med.imageUrl;
+  slot.searchQuery = med.medicineName;
+  slot.showDropdown = false;
+  slot.isNew = false;
+}
+
+function selectExtraMedicine(idx, med) {
+  const extra = extraMedicines.value[idx];
+  extra.medicineId = med.medicineId;
+  extra.medicineName = med.medicineName;
+  extra.medicineType = med.medicineType;
+  extra.price = parseFloat(med.price);
+  extra.imageUrl = med.imageUrl;
+  extra.searchQuery = med.medicineName;
+  extra.showDropdown = false;
+  extra.isNew = false;
 }
 
 function viewReport(order) {
@@ -319,7 +594,10 @@ function openApproveModal(order) {
       newMedicineType: 'OTC',
       newPrice: 0,
       newImageUrl: '',
-      rejectionReason: ''
+      rejectionReason: '',
+      // Search fields
+      searchQuery: '',
+      showDropdown: false
     }));
   } else {
     // Fallback if no recommendations (shouldn't happen)
@@ -341,7 +619,10 @@ function openApproveModal(order) {
       newMedicineType: 'OTC',
       newPrice: 0,
       newImageUrl: '',
-      rejectionReason: ''
+      rejectionReason: '',
+      // Search fields
+      searchQuery: '',
+      showDropdown: false
     }));
   }
   
@@ -365,46 +646,14 @@ function addExtraMedicine() {
     price: 0,
     imageUrl: '',
     isNew: false,
-    reason: ''
+    reason: '',
+    searchQuery: '',
+    showDropdown: false
   });
 }
 
 function removeExtraMedicine(idx) {
   extraMedicines.value.splice(idx, 1);
-}
-
-function onAlternativeSelect(idx) {
-  const slot = medicineSlots.value[idx];
-  if (slot.alternativeMedicineId === '__new__') {
-    slot.isNew = true;
-    slot.alternativeMedicineId = null;
-  } else {
-    slot.isNew = false;
-    const selected = medicines.value.find(m => m.medicineId === slot.alternativeMedicineId);
-    if (selected) {
-      slot.newMedicineName = selected.medicineName;
-      slot.newMedicineType = selected.medicineType;
-      slot.newPrice = parseFloat(selected.price);
-      slot.newImageUrl = selected.imageUrl;
-    }
-  }
-}
-
-function onExtraMedicineSelect(idx) {
-  const extra = extraMedicines.value[idx];
-  if (extra.medicineId === '__new__') {
-    extra.isNew = true;
-    extra.medicineId = null;
-  } else {
-    extra.isNew = false;
-    const selected = medicines.value.find(m => m.medicineId === extra.medicineId);
-    if (selected) {
-      extra.medicineName = selected.medicineName;
-      extra.medicineType = selected.medicineType;
-      extra.price = parseFloat(selected.price);
-      extra.imageUrl = selected.imageUrl;
-    }
-  }
 }
 
 async function submitReview() {
@@ -969,5 +1218,155 @@ h2 {
   border-radius: 6px;
   border: 1px solid #ffc107;
   font-weight: 600;
+}
+
+.qa-list {
+  max-height: 400px;
+  overflow-y: auto;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 1rem;
+  background: #fafafa;
+}
+
+.symptom-qa-section {
+  margin-bottom: 1.5rem;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  overflow: hidden;
+  background: white;
+}
+
+.symptom-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 0.8rem 1rem;
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.qa-item {
+  padding: 1rem;
+  border-bottom: 1px solid #f0f0f0;
+  background: white;
+}
+
+.qa-item:last-child {
+  border-bottom: none;
+}
+
+.question-label {
+  font-weight: bold;
+  color: #3498db;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.answer-text {
+  color: #2c3e50;
+  line-height: 1.6;
+  padding-left: 0.5rem;
+}
+
+.answer-text strong {
+  color: #34495e;
+}
+
+.ai-response {
+  color: #7f8c8d;
+  font-style: italic;
+  margin-top: 0.5rem;
+  display: block;
+}
+
+/* Medicine Search Dropdown Styles */
+.search-input {
+  width: 100%;
+  padding: 0.6rem;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  transition: border-color 0.2s;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #3498db;
+  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+}
+
+.medicine-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  max-height: 250px;
+  overflow-y: auto;
+  background: white;
+  border: 1px solid #ddd;
+  border-top: none;
+  border-radius: 0 0 6px 6px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  z-index: 100;
+  margin-top: -1px;
+}
+
+.medicine-option {
+  padding: 0.8rem;
+  cursor: pointer;
+  border-bottom: 1px solid #f0f0f0;
+  transition: background-color 0.15s;
+}
+
+.medicine-option:hover {
+  background-color: #f8f9fa;
+}
+
+.medicine-option:last-child {
+  border-bottom: none;
+}
+
+.medicine-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.medicine-details strong {
+  color: #2c3e50;
+  font-size: 0.95rem;
+}
+
+.medicine-details span {
+  color: #7f8c8d;
+  font-size: 0.85rem;
+}
+
+.no-results {
+  padding: 1rem;
+  text-align: center;
+  color: #95a5a6;
+  font-style: italic;
+}
+
+.btn-add-medicine {
+  background: #27ae60;
+  color: white;
+  border: none;
+  padding: 0.7rem 1.2rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background-color 0.2s;
+  margin-top: 0.5rem;
+}
+
+.btn-add-medicine:hover {
+  background-color: #229954;
+}
+
+.btn-add-medicine:active {
+  transform: scale(0.98);
 }
 </style>

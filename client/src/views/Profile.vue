@@ -1,7 +1,12 @@
 <template>
   <div class="profile-page">
     <div class="card">
-      <h2>My Profile</h2>
+      <div class="page-header">
+        <button class="btn-back" @click="goBack" title="Go back">
+          <span class="back-arrow">←</span>
+        </button>
+        <h2>My Profile</h2>
+      </div>
 
       <!-- Display Mode -->
       <div v-if="!isEditing && user" class="profile-details">
@@ -136,6 +141,16 @@ function formatDate(val) {
   }
 }
 
+function goBack() {
+  const role = user.value?.role;
+  if (role === 'ADMIN') {
+    router.push('/admin');
+  } else if (role === 'PHARMACIST') {
+    router.push('/pharmacist');
+  } else {
+    router.push('/customer');
+  }
+}
 
 function editProfile() {
   // Create a deep copy for editing to avoid mutating the original object
@@ -228,6 +243,44 @@ function logout() {
   padding: 2rem;
   border-radius: 12px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.page-header h2 {
+  margin: 0;
+  flex: 1;
+  text-align: center;
+}
+
+.btn-back {
+  background: none;
+  border: 2px solid transparent;
+  cursor: pointer;
+  padding: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.btn-back:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+  border-color: rgba(0, 0, 0, 0.1);
+  transform: translateX(-2px);
+}
+
+.back-arrow {
+  font-size: 1.5rem;
+  color: #333;
+  line-height: 1;
+  font-weight: 600;
 }
 
 h2 {

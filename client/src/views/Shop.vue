@@ -7,19 +7,27 @@
 
   <!-- Show Shop Content only if a branch is selected -->
   <div v-else-if="selectedBranch" class="shopping">
-    <h1>🛒 Pharmacy Store</h1>
+    <div class="page-header">
+      <button class="btn-back" @click="$router.push('/customer')" title="Go back">
+        <span class="back-arrow">←</span>
+      </button>
+      <h1>Pharmacy Store</h1>
     <p class="branch-info">
       Shopping at: <strong>{{ selectedBranch.name }}</strong>
     </p>
 
-    <div v-if="loadingProducts" class="loader">Loading products...</div>
-    <div v-else class="grid">
-      <ProductCard
-        v-for="p in products"
-        :key="p.id"
-        :product="p"
-        @add-to-cart="addToCart"
-      />
+    </div>
+
+    <div class="products-area">
+      <div v-if="loadingProducts" class="loader">Loading products...</div>
+      <div v-else class="grid">
+        <ProductCard
+          v-for="p in products"
+          :key="p.id"
+          :product="p"
+          @add-to-cart="addToCart"
+        />
+      </div>
     </div>
 
     <router-link to="/cart" class="cart-button">
@@ -117,6 +125,46 @@ function addToCart(product) {
   padding: 1rem;
   text-align: center;
 }
+
+.page-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+  padding: 0.5rem 0;
+}
+
+.page-header h1 {
+  margin: 0;
+  flex: 1;
+}
+
+.btn-back {
+  background: none;
+  border: 2px solid transparent;
+  cursor: pointer;
+  padding: 0.4rem 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.btn-back:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+  border-color: rgba(0, 0, 0, 0.1);
+  transform: translateX(-2px);
+}
+
+.back-arrow {
+  font-size: 1.5rem;
+  color: #333;
+  line-height: 1;
+  font-weight: 600;
+}
+
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
