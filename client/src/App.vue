@@ -1,8 +1,10 @@
 <template>
   <div id="app">
-    <header v-if="showNavbar">
+     <header v-if="showNavbar">
       <h1>🏥 AI-Sihat</h1>
-    </header>
+      <button class="back-btn" @click="router.back()">← Back</button>
+  </header>
+
     <main>
       <router-view />
     </main>
