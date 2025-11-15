@@ -5,63 +5,35 @@
   <!-- Show Chat Content only if a branch is selected -->
   <div v-else-if="selectedBranch" class="chat card">
     <div class="chat-header">
-      <div class="title">AI_SIHAT CHAT</div>
-      <div class="subtitle">
-        Connected to: <strong>{{ selectedBranch.name }}</strong>
-        <div class="header-left">
-          <button class="btn-back" @click="goBack" title="Go back">
-            <span class="back-arrow">←</span>
-          </button>
-          <div class="title">AI_SIHAT CHAT</div>
-        </div>
-        <div class="controls">
-          <button class="btn" @click="refreshChat" :disabled="loading">Start New Chat</button>
-        </div>
+      <div class="header-left">
+        <button class="btn-back" @click="goBack" title="Go back">
+          <span class="back-arrow">←</span>
+        </button>
+        <div class="title">AI_SIHAT CHAT</div>
       </div>
 
-      <div v-if="error" class="error">{{ error }}</div>
+      <div class="controls">
+        <button class="btn" @click="refreshChat" :disabled="loading">Start New Chat</button>
+      </div>
+    </div>
+    <div class="subtitle"
+      style="padding: 0.5rem 1rem; background: #fafafa; border-bottom: 1px solid #e6e6e6; font-size: 0.9rem; color: #555; flex-shrink: 0;">
+      Connected to: <strong>{{ selectedBranch.name }}</strong>
+    </div>
 
-      <div class="messages" ref="messagesRef">
-        <div v-if="!sessionId && !loading" class="empty">Initializing chat...</div>
-        <div v-if="loading" class="status">Loading...</div>
+    <div v-if="error" class="error">{{ error }}</div>
 
-        <template v-for="(item, idx) in filteredHistory" :key="idx">
-          <div class="bubble bot">
-            <div class="bubble-content">
-              <template v-if="Array.isArray(item.q.prompt)">
-                <div class="recommendation-heading">{{ recommendationHeading }}</div>
-                <div
-                  v-for="(section, sIdx) in parseRecommendationSections(item.q.prompt, item.q.symptomName, sessionLangCode)"
-                  :key="sIdx" class="recommendation-section">
-                  <div class="recommendation-line symptom-header">{{ section.symptomHeader }}</div>
-                  <template v-for="(subsection, subIdx) in section.subsections" :key="subIdx">
-                    <div v-if="subsection.title" class="section-title">{{ subsection.title }}</div>
-                    <div v-for="(line, lineIdx) in subsection.lines" :key="lineIdx" :class="subsection.class">
-                      {{ line }}
-                    </div>
-                  </template>
-                </div>
-              </template>
-              <template v-else>
-                {{ item.q.prompt }}
-              </template>
-            </div>
-          </div>
-          <div class="bubble user">
-            <div class="bubble-content">{{ formatAnswer(item.a) }}</div>
-          </div>
-        </template>
+    <div class="messages" ref="messagesRef">
+      <div v-if="!sessionId && !loading" class="empty">Initializing chat...</div>
+      <div v-if="loading" class="status">Loading...</div>
 
-        <div v-if="showPlaceholder" class="bubble user placeholder">
-          <div class="bubble-content">Can you describe your symptoms in your own words?</div>
-        </div>
-
-        <div v-if="currentQuestion && !isRecommendationHeading(currentQuestion.prompt)" class="bubble bot current">
+      <template v-for="(item, idx) in filteredHistory" :key="idx">
+        <div class="bubble bot">
           <div class="bubble-content">
-            <template v-if="Array.isArray(currentQuestion.prompt)">
+            <template v-if="Array.isArray(item.q.prompt)">
               <div class="recommendation-heading">{{ recommendationHeading }}</div>
               <div
-                v-for="(section, sIdx) in parseRecommendationSections(currentQuestion.prompt, currentQuestion.symptomName, sessionLangCode)"
+                v-for="(section, sIdx) in parseRecommendationSections(item.q.prompt, item.q.symptomName, sessionLangCode)"
                 :key="sIdx" class="recommendation-section">
                 <div class="recommendation-line symptom-header">{{ section.symptomHeader }}</div>
                 <template v-for="(subsection, subIdx) in section.subsections" :key="subIdx">
@@ -72,116 +44,155 @@
                 </template>
               </div>
             </template>
-            <template v-else-if="currentQuestion.showAllTranslations && currentQuestion.translations">
-              <div class="language-selection-prompt">
-                <div class="lang-line"><strong>English:</strong> {{ currentQuestion.translations.en }}</div>
-                <div class="lang-line"><strong>Malay:</strong> {{ currentQuestion.translations.my }}</div>
-                <div class="lang-line"><strong>中文:</strong> {{ currentQuestion.translations.zh }}</div>
-              </div>
-            </template>
             <template v-else>
-              {{ currentQuestion.prompt }}
+              {{ item.q.prompt }}
             </template>
           </div>
         </div>
+        <div class="bubble user">
+          <div class="bubble-content">{{ formatAnswer(item.a) }}</div>
+        </div>
+      </template>
 
-        <div v-if="currentQuestion && currentQuestion.type === 'single_choice'" class="quick-replies-wrapper">
-          <div class="quick-replies below">
-            <template v-if="currentQuestion.optionsWithTranslations">
-              <button v-for="opt in currentQuestion.optionsWithTranslations" :key="opt.value"
-                :class="['chip', 'lang-option', { selected: singleChoice === opt.value }]"
-                @click="selectQuick(opt.value)">
-                <div class="lang-option-content">
-                  <span class="lang-name">{{ opt.display.en }}</span>
-                  <span class="lang-separator">/</span>
-                  <span class="lang-name">{{ opt.display.my }}</span>
-                  <span class="lang-separator">/</span>
-                  <span class="lang-name">{{ opt.display.zh }}</span>
+      <div v-if="showPlaceholder" class="bubble user placeholder">
+        <div class="bubble-content">Can you describe your symptoms in your own words?</div>
+      </div>
+
+      <div v-if="currentQuestion && !isRecommendationHeading(currentQuestion.prompt)" class="bubble bot current">
+        <div class="bubble-content">
+          <template v-if="Array.isArray(currentQuestion.prompt)">
+            <div class="recommendation-heading">{{ recommendationHeading }}</div>
+            <div
+              v-for="(section, sIdx) in parseRecommendationSections(currentQuestion.prompt, currentQuestion.symptomName, sessionLangCode)"
+              :key="sIdx" class="recommendation-section">
+              <div class="recommendation-line symptom-header">{{ section.symptomHeader }}</div>
+              <template v-for="(subsection, subIdx) in section.subsections" :key="subIdx">
+                <div v-if="subsection.title" class="section-title">{{ subsection.title }}</div>
+                <div v-for="(line, lineIdx) in subsection.lines" :key="lineIdx" :class="subsection.class">
+                  {{ line }}
                 </div>
-              </button>
-            </template>
-            <template v-else>
-              <button v-for="opt in currentQuestion.options" :key="opt"
-                :class="['chip', { selected: singleChoice === opt }]" @click="selectQuick(opt)">{{ opt }}</button>
-            </template>
-          </div>
-        </div>
-
-        <div v-else-if="currentQuestion && currentQuestion.type === 'multiple_choice'" class="quick-replies-wrapper">
-          <div class="quick-replies below">
-            <button v-for="opt in currentQuestion.options" :key="opt"
-              :class="['chip', { selected: multiChoice.includes(opt) }]" @click="toggleMulti(opt)">{{ opt }}</button>
-          </div>
-        </div>
-
-        <div v-if="currentQuestion && Array.isArray(currentQuestion.prompt)" class="quick-replies below centered">
-          <button class="chip continue-btn" @click="continueFromRecommendation" :disabled="loading">
-            <span>{{ continueText }}</span>
-            <span class="arrow">→</span>
-          </button>
-        </div>
-
-        <div v-if="currentQuestion && currentQuestion.type === 'waiting_approval'" class="waiting-approval">
-          <div class="waiting-icon">
-            <div class="spinner"></div>
-          </div>
-          <div class="waiting-text">{{ currentQuestion.prompt }}</div>
-          <div class="waiting-subtext">{{ currentQuestion.subtext || (sessionLangCode.value === 'ms' ? "Ini biasanya mengambil masa beberapa minit. Anda akan diberitahu sebaik sahaja ahli farmasi menyemak konsultasi anda." : (sessionLangCode.value === 'zh' ? '这通常需要几分钟。药剂师审核您的咨询后，您将收到通知。' : "This usually takes a few minutes. You'll be notified once the pharmacist reviews your consultation.")) }}</div>
-        </div>
-
-        <div v-if="currentQuestion && currentQuestion.type === 'medication_cart'" class="medication-cart">
-          <div class="cart-title">{{ t.availableMeds }}</div>
-          <div class="medications-grid">
-            <div v-for="(med, idx) in currentQuestion.medications" :key="idx" class="medication-card">
-              <div class="med-image-placeholder">
-                <img v-if="med.imageUrl" :src="med.imageUrl" :alt="med.name" class="med-image" />
-                <span v-else class="image-icon">📦</span>
-              </div>
-              <div class="med-info">
-                <div class="med-name">{{ med.name }}</div>
-                <div class="med-symptom">{{ t.forSymptom }} {{ med.symptom }}</div>
-                <div v-if="med.wasRejected" class="rejection-info">
-                  <span class="rejection-badge">{{ t.alternative }}</span>
-                  <p class="rejection-reason">{{ t.originalRejected }} {{ med.rejectionReason }}</p>
-                </div>
-              </div>
-              <button class="btn-add-cart" :class="{ 'added': addedToCart.find(m => m.name === med.name) }"
-                @click="addToCart(med)">
-                {{addedToCart.find(m => m.name === med.name) ? t.added : t.addToCart}}
-              </button>
+              </template>
             </div>
-          </div>
-          <div class="cart-actions">
-            <button class="chip continue-btn" @click="continueFromCart" :disabled="loading">
-              <span>{{ addedToCart.length > 0 ? t.finish : t.skip }}</span>
-              <span class="arrow">→</span>
-            </button>
-            <router-link v-if="addedToCart.length > 0" to="/cart" class="chip view-cart-btn">
-              <span>{{ t.viewCart }} ({{ addedToCart.length }})</span>
-            </router-link>
-          </div>
-        </div>
-
-        <div v-if="currentQuestion && currentQuestion.type === 'completion_message'" class="completion-message">
-          <div class="completion-icon">✅</div>
-          <div class="completion-text">{{ currentQuestion.prompt }}</div>
-        </div>
-
-        <div v-if="sessionId && !currentQuestion && !loading" class="done">No further questions. Conversation complete.
+          </template>
+          <template v-else-if="currentQuestion.showAllTranslations && currentQuestion.translations && !isLanguageQuestion(currentQuestion)">
+            <div class="language-selection-prompt">
+              <div class="lang-line"><strong>English:</strong> {{ currentQuestion.translations.en }}</div>
+              <div class="lang-line"><strong>Malay:</strong> {{ currentQuestion.translations.my }}</div>
+              <div class="lang-line"><strong>中文:</strong> {{ currentQuestion.translations.zh }}</div>
+            </div>
+          </template>
+          <template v-else>
+            {{ currentQuestion.prompt }}
+          </template>
         </div>
       </div>
 
-      <div
-        v-if="currentQuestion && !Array.isArray(currentQuestion.prompt) && currentQuestion.type !== 'medication_cart' && currentQuestion.type !== 'completion_message' && currentQuestion.type !== 'waiting_approval'"
-        class="composer">
-        <input
-          v-if="sessionId && !loading && currentQuestion && ((currentQuestion.type !== 'multiple_choice' && currentQuestion.type !== 'single_choice') || otherSymptomSelected || yesSelected)"
-          v-model="textAnswer" :type="currentQuestion && currentQuestion.type === 'number_input' ? 'number' : 'text'"
-          placeholder="Type your answer..." @keydown.enter.prevent="sendAnswer" />
-
-        <div class="composer-actions">
-          <button class="btn primary" @click="sendAnswer" :disabled="loading || !canSubmit">Send</button>
+      <div v-if="currentQuestion && currentQuestion.type === 'single_choice' && !isLanguageQuestion(currentQuestion)" class="quick-replies-wrapper">
+        <div class="quick-replies below">
+          <template v-if="currentQuestion.optionsWithTranslations">
+            <button v-for="opt in currentQuestion.optionsWithTranslations" :key="opt.value"
+              :class="['chip', 'lang-option', { selected: singleChoice === opt.value }]"
+              @click="selectQuick(opt.value)">
+              <div class="lang-option-content">
+                <span class="lang-name">{{ opt.display.en }}</span>
+                <span class="lang-separator">/</span>
+                <span class="lang-name">{{ opt.display.my }}</span>
+                <span class="lang-separator">/</span>
+                <span class="lang-name">{{ opt.display.zh }}</span>
+              </div>
+            </button>
+          </template>
+          <template v-else>
+            <button v-for="opt in currentQuestion.options" :key="opt"
+              :class="['chip', { selected: singleChoice === opt }]" @click="selectQuick(opt)">{{ opt }}</button>
+          </template>
         </div>
+      </div>
+
+      <!-- Compact language chips when backend asks the language selection question -->
+      <div v-if="currentQuestion && isLanguageQuestion(currentQuestion)" class="quick-replies-wrapper">
+        <div class="quick-replies below">
+          <button v-for="l in languages" :key="l.code" :class="['chip', 'lang-option']" @click="selectQuick(l.label)">
+            {{ l.label }}
+          </button>
+        </div>
+      </div>
+
+      <div v-else-if="currentQuestion && currentQuestion.type === 'multiple_choice'" class="quick-replies-wrapper">
+        <div class="quick-replies below">
+          <button v-for="opt in currentQuestion.options" :key="opt"
+            :class="['chip', { selected: multiChoice.includes(opt) }]" @click="toggleMulti(opt)">{{ opt }}</button>
+        </div>
+      </div>
+
+      <div v-if="currentQuestion && Array.isArray(currentQuestion.prompt)" class="quick-replies below centered">
+        <button class="chip continue-btn" @click="continueFromRecommendation" :disabled="loading">
+          <span>{{ continueText }}</span>
+          <span class="arrow">→</span>
+        </button>
+      </div>
+
+      <div v-if="currentQuestion && currentQuestion.type === 'waiting_approval'" class="waiting-approval">
+        <div class="waiting-icon">
+          <div class="spinner"></div>
+        </div>
+        <div class="waiting-text">{{ currentQuestion.prompt }}</div>
+        <div class="waiting-subtext">
+          {{ currentQuestion.subtext || (sessionLangCode.value === 'ms' ? 'Ini biasanya mengambil masa beberapa minit. Anda akan diberitahu sebaik sahaja ahli farmasi menyemak konsultasi anda.' : (sessionLangCode.value === 'zh' ? '这通常需要几分钟。药剂师审核您的咨询后，您将收到通知。' : "This usually takes a few minutes. You'll be notified once the pharmacist reviews your consultation.")) }}
+        </div>
+      </div>
+
+      <div v-if="currentQuestion && currentQuestion.type === 'medication_cart'" class="medication-cart">
+        <div class="cart-title">{{ t.availableMeds }}</div>
+        <div class="medications-grid">
+          <div v-for="(med, idx) in currentQuestion.medications" :key="idx" class="medication-card">
+            <div class="med-image-placeholder">
+              <img v-if="med.imageUrl" :src="med.imageUrl" :alt="med.name" class="med-image" />
+              <span v-else class="image-icon">📦</span>
+            </div>
+            <div class="med-info">
+              <div class="med-name">{{ med.name }}</div>
+              <div class="med-symptom">{{ t.forSymptom }} {{ med.symptom }}</div>
+              <div v-if="med.wasRejected" class="rejection-info">
+                <span class="rejection-badge">{{ t.alternative }}</span>
+                <p class="rejection-reason">{{ t.originalRejected }} {{ med.rejectionReason }}</p>
+              </div>
+            </div>
+            <button class="btn-add-cart" :class="{ 'added': addedToCart.find(m => m.name === med.name) }"
+              @click="addToCart(med)">
+              {{addedToCart.find(m => m.name === med.name) ? t.added : t.addToCart}}
+            </button>
+          </div>
+        </div>
+        <div class="cart-actions">
+          <button class="chip continue-btn" @click="continueFromCart" :disabled="loading">
+            <span>{{ addedToCart.length > 0 ? t.finish : t.skip }}</span>
+            <span class="arrow">→</span>
+          </button>
+          <router-link v-if="addedToCart.length > 0" to="/cart" class="chip view-cart-btn">
+            <span>{{ t.viewCart }} ({{ addedToCart.length }})</span>
+          </router-link>
+        </div>
+      </div>
+
+      <div v-if="currentQuestion && currentQuestion.type === 'completion_message'" class="completion-message">
+        <div class="completion-icon">✅</div>
+        <div class="completion-text">{{ currentQuestion.prompt }}</div>
+      </div>
+
+      <div v-if="sessionId && !currentQuestion && !loading" class="done">No further questions. Conversation complete.
+      </div>
+    </div>
+    <div
+      v-if="currentQuestion && !Array.isArray(currentQuestion.prompt) && currentQuestion.type !== 'medication_cart' && currentQuestion.type !== 'completion_message' && currentQuestion.type !== 'waiting_approval'"
+      class="composer">
+      <input
+        v-if="sessionId && !loading && currentQuestion && ((currentQuestion.type !== 'multiple_choice' && currentQuestion.type !== 'single_choice') || otherSymptomSelected || yesSelected)"
+        v-model="textAnswer" :type="currentQuestion && currentQuestion.type === 'number_input' ? 'number' : 'text'"
+        placeholder="Type your answer..." @keydown.enter.prevent="sendAnswer" />
+
+      <div class="composer-actions">
+        <button class="btn primary" @click="sendAnswer" :disabled="loading || !canSubmit">Send</button>
       </div>
     </div>
   </div>
@@ -586,11 +597,11 @@ async function sendAnswer() {
     const t = previousQuestion.type;
 
     if (previousQuestion.showAllTranslations) {
-        const selectedLangData = previousQuestion.optionsWithTranslations.find(o => o.value === payload.answer);
-        if (selectedLangData) {
-            const langKey = sessionLangCode.value === 'ms' ? 'my' : (sessionLangCode.value === 'zh' ? 'zh' : 'en');
-            displayedAnswer = selectedLangData.display[langKey] || payload.answer;
-        }
+      const selectedLangData = previousQuestion.optionsWithTranslations.find(o => o.value === payload.answer);
+      if (selectedLangData) {
+        const langKey = sessionLangCode.value === 'ms' ? 'my' : (sessionLangCode.value === 'zh' ? 'zh' : 'en');
+        displayedAnswer = selectedLangData.display[langKey] || payload.answer;
+      }
     } else if (t === 'single_choice') {
       if (yesSelected.value) {
         displayedAnswer = textAnswer.value; // Text input is the display value
@@ -603,9 +614,9 @@ async function sendAnswer() {
       if (otherSymptomSelected.value && textAnswer.value) {
         // Find and replace "Other" placeholder with the text
         const otherIndex = displayedMulti.findIndex(opt => {
-            const mapping = previousQuestion.optionMapping || {};
-            const original = mapping[opt] || opt;
-            return String(original).toLowerCase().includes('other');
+          const mapping = previousQuestion.optionMapping || {};
+          const original = mapping[opt] || opt;
+          return String(original).toLowerCase().includes('other');
         });
         if (otherIndex > -1) {
           displayedMulti.splice(otherIndex, 1);
@@ -739,7 +750,7 @@ function selectQuick(opt) {
   const lowerOrig = String(original).toLowerCase();
   // Check for "yes (details)", "yes , what", "yes , when", "other (specify)"
   const requiresInput = (lowerOrig.startsWith('yes') && (lowerOrig.includes('details') || lowerOrig.includes('what') || lowerOrig.includes('when'))) ||
-                        (lowerOrig.startsWith('other') && lowerOrig.includes('specify'));
+    (lowerOrig.startsWith('other') && lowerOrig.includes('specify'));
   // --- END FIX ---
 
   if (requiresInput) {
@@ -752,6 +763,9 @@ function selectQuick(opt) {
     sendAnswer();
   }
 }
+
+// Handler for the header language dropdown
+// removed header change handler — language is selected via compact chips
 
 function toggleMulti(opt) {
   // Determine if this option is the 'Other' type by checking mapping/original text
@@ -1013,10 +1027,10 @@ function parseRecommendationSections(promptArray, symptomName = null, lang = 'en
         class: 'recommendation-line side-effect'
       };
 
-    // Check for "See Doctor" (if your condition, refer to doctor, i recommend, jika keadaan, sila rujuk, saya syorkan, 如果您的病情, 请咨询医生, 我建议您)
+      // Check for "See Doctor" (if your condition, refer to doctor, i recommend, jika keadaan, sila rujuk, saya syorkan, 如果您的病情, 请咨询医生, 我建议您)
     } else if (lowerLine.includes('if your condition') || lowerLine.includes('refer to doctor') || lowerLine.includes('i recommend') ||
-               lowerLine.includes('jika keadaan') || lowerLine.includes('sila rujuk') || lowerLine.includes('saya syorkan') ||
-               trimmedLine.includes('如果您的病情') || trimmedLine.includes('请咨询医生') || trimmedLine.includes('我建议您')) {
+      lowerLine.includes('jika keadaan') || lowerLine.includes('sila rujuk') || lowerLine.includes('saya syorkan') ||
+      trimmedLine.includes('如果您的病情') || trimmedLine.includes('请咨询医生') || trimmedLine.includes('我建议您')) {
       if (currentSubsection) currentSymptomSection.subsections.push(currentSubsection);
       currentSubsection = {
         title: T.doctor,
@@ -1024,10 +1038,10 @@ function parseRecommendationSections(promptArray, symptomName = null, lang = 'en
         class: 'recommendation-line warning'
       };
 
-    // Check for "Advice" (advise:, advice:, avoid, drink enough water, have a good rest, elakkan, minum air, berehat, 建议：, 避免, 多喝水, 好好休息)
+      // Check for "Advice" (advise:, advice:, avoid, drink enough water, have a good rest, elakkan, minum air, berehat, 建议：, 避免, 多喝水, 好好休息)
     } else if (lowerLine.startsWith('advise:') || lowerLine.startsWith('advice:') || (lowerLine.includes('avoid') && !lowerLine.includes('medication')) || lowerLine.includes('drink enough water') || lowerLine.includes('have a good rest') ||
-               lowerLine.startsWith('nasihat:') || (lowerLine.includes('elakkan') && !lowerLine.includes('ubat')) || lowerLine.includes('minum air') || lowerLine.includes('berehat') ||
-               trimmedLine.startsWith('建议：') || (trimmedLine.includes('避免') && !trimmedLine.includes('药物')) || trimmedLine.includes('多喝水') || trimmedLine.includes('好好休息')) {
+      lowerLine.startsWith('nasihat:') || (lowerLine.includes('elakkan') && !lowerLine.includes('ubat')) || lowerLine.includes('minum air') || lowerLine.includes('berehat') ||
+      trimmedLine.startsWith('建议：') || (trimmedLine.includes('避免') && !trimmedLine.includes('药物')) || trimmedLine.includes('多喝水') || trimmedLine.includes('好好休息')) {
 
       // Check if current subsection is already an advice section
       if (currentSubsection && currentSubsection.class === 'recommendation-line advice') {
@@ -1041,7 +1055,7 @@ function parseRecommendationSections(promptArray, symptomName = null, lang = 'en
         };
       }
 
-    // Check for "Thank you" (thank you for your time, terima kasih, 感谢您的时间)
+      // Check for "Thank you" (thank you for your time, terima kasih, 感谢您的时间)
     } else if (lowerLine.includes('thank you for your time') || lowerLine.includes('terima kasih') || trimmedLine.includes('感谢您的时间')) {
       if (currentSubsection) currentSymptomSection.subsections.push(currentSubsection);
       currentSubsection = {
@@ -1054,15 +1068,15 @@ function parseRecommendationSections(promptArray, symptomName = null, lang = 'en
     } else if (trimmedLine.length > 0) {
       // Check if current subsection is already a medication section
       if (currentSubsection && currentSubsection.class === 'recommendation-line medication') {
-          currentSubsection.lines.push(trimmedLine);
+        currentSubsection.lines.push(trimmedLine);
       } else {
-          // Start new medication subsection
-          if (currentSubsection) currentSymptomSection.subsections.push(currentSubsection);
-          currentSubsection = {
-            title: T.medication,
-            lines: [trimmedLine],
-            class: 'recommendation-line medication'
-          };
+        // Start new medication subsection
+        if (currentSubsection) currentSymptomSection.subsections.push(currentSubsection);
+        currentSubsection = {
+          title: T.medication,
+          lines: [trimmedLine],
+          class: 'recommendation-line medication'
+        };
       }
     }
   });
@@ -1715,6 +1729,8 @@ function formatAnswer(a) {
   min-width: auto;
   padding: 0.75rem 1rem;
 }
+
+/* (header select removed) */
 
 .lang-option-content {
   display: flex;

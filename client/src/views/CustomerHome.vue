@@ -54,12 +54,15 @@
 
 <script setup>
 import { ref, onMounted, computed } from 'vue';
+import { useRouter } from 'vue-router'
 import { useCartStore } from '../store/cart';
 
 const customerName = ref('Customer');
 const cart = useCartStore();
 
 const cartItemCount = computed(() => cart.items.length);
+
+const router = useRouter();
 
 // Safely get user name from the user *object* in localStorage
 onMounted(() => {
