@@ -123,4 +123,30 @@ main {
   top: -6px;
   right: -10px;
 }
+
+.branch-trigger {
+  cursor: pointer;
+  background-color: #f0f7f4; /* A light, clean green */
+  border: 1px solid #cce8dd; /* A soft border */
+  color: #2c5a46;            /* Darker green text for contrast */
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  flex-shrink: 0; /* Prevents it from shrinking in a flex container */
+  text-decoration: none;
+  display: inline-block; /* Behaves like a button */
+}
+
+.branch-trigger:hover {
+  background-color: #e6f3ec;
+  border-color: #42b983; /* Use your primary green on hover */
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+  transform: translateY(-1px);
+}
+
+.branch-trigger strong {
+  color: #42b983; /* Makes the branch name stand out */
+}
 </style>
