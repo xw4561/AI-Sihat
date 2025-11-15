@@ -129,7 +129,6 @@ model Prescription {
   status          String   @default("pending") @db.VarChar(20)
   customerName    String   @map("customer_name") @db.VarChar(255)
   customerPhone   String   @map("customer_phone") @db.VarChar(50)
-  customerAddress String?  @map("customer_address")
   createdAt       DateTime @default(now()) @map("created_at")
   approvedAt      DateTime? @map("approved_at")
   rejectedAt      DateTime? @map("rejected_at")
