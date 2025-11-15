@@ -369,7 +369,7 @@ const showStatus = (message, type = 'success') => {
   statusType.value = type
   setTimeout(() => {
     statusMessage.value = ''
-  }, 3000)
+  }, 8080)
 }
 
 // Users API

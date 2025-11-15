@@ -58,14 +58,14 @@ npm start
 npm run dev
 ```
 
-Server runs at `http://localhost:3000`
+Server runs at `http://localhost:8080`
 
 ## Testing the Connection
 
 ### Check Database Health
 ```powershell
 # In PowerShell, test the health endpoint:
-Invoke-RestMethod http://localhost:3000/api/db/health
+Invoke-RestMethod http://localhost:8080/api/db/health
 # Should return: @{ ok = True; dialect = "postgresql" }
 ```
 
@@ -121,7 +121,7 @@ npx prisma studio
 |----------|----------|---------|-------|
 | `DATABASE_URL` | Yes | `postgresql://...` | PostgreSQL connection string |
 | `DIRECT_URL` | No | `postgresql://...` | For pooling; can match DATABASE_URL |
-| `PORT` | No | `3000` | Server port |
+| `PORT` | No | `8080` | Server port |
 | `NODE_ENV` | No | `development` | Environment type |
 | `CORS_ORIGIN` | No | `http://localhost:5173` | Allowed frontend origin |
 | `GOOGLE_GENAI_API_KEY` | No | (API key) | For Gemini chat feature |

@@ -40,7 +40,7 @@ npm run install:all
 
 1. Create `server/.env` file with required environment variables:
    ```env
-   PORT=3000
+   PORT=8080
    GEMINI_API_KEY=your_api_key_here
    
    # Connection pooling for queries (port 6543)
@@ -69,7 +69,7 @@ npm run dev
 ```
 
 - **Frontend**: http://localhost:5173
-- **Backend**: http://localhost:3000
+- **Backend**: http://localhost:8080
 
 For individual services:
 - `npm run dev:client` - Frontend only
@@ -87,7 +87,7 @@ npm run dev:server     # Run backend only
 ## Architecture
 
 - **Frontend**: Vite dev server on port 5173 with API proxy to backend
-- **Backend**: Express server on port 3000
+- **Backend**: Express server on port 8080
 - **Database**: PostgreSQL with Prisma ORM
 
 For detailed API endpoints and architecture, see [`server/README.md`](./server/README.md).

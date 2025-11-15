@@ -16,7 +16,7 @@ const corsOptions = allowedOrigins.length > 0 ? { origin: allowedOrigins } : und
 app.use(cors(corsOptions));
 app.use(express.json());
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8080;
 
 // Simple health/test endpoint (useful for client/dev checks)
 app.get("/api/test", (req, res) => {

@@ -88,7 +88,7 @@ Create a `.env` file in the server directory:
 
 ```env
 # Server Configuration
-PORT=3000
+PORT=8080
 NODE_ENV=development
 
 # Gemini AI (Required for chat recommendations)
@@ -169,7 +169,7 @@ Expected output:
 npm run dev
 ```
 
-Server will run on **http://localhost:3000** with auto-restart on file changes.
+Server will run on **http://localhost:8080** with auto-restart on file changes.
 
 ### Production Mode
 
@@ -547,8 +547,8 @@ npx prisma migrate reset
 ### Port Already in Use
 
 ```powershell
-# Find process using port 3000
-netstat -ano | findstr :3000
+# Find process using port 8080
+netstat -ano | findstr :8080
 
 # Kill the process
 taskkill /PID <PID> /F
