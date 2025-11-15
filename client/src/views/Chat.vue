@@ -288,7 +288,7 @@ const t = computed(() => {
 // --- END: I18n Translations ---
 
 function goBack() {
-  router.back()
+  router.push('/customer')
 }
 
 // Save chat state to localStorage
