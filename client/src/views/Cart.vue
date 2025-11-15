@@ -1,6 +1,11 @@
 <template>
   <div class="cart-page">
-    <h1>🛒 Your Cart</h1>
+    <div class="page-header">
+      <button class="btn-back" @click="goBack" title="Go back">
+        <span class="back-arrow">←</span>
+      </button>
+      <h1>🛒 Your Cart</h1>
+    </div>
 
     <div v-if="cart.items.length === 0" class="empty-cart">
       <p>Your cart is empty. Go back to shop to add items.</p>
@@ -32,10 +37,17 @@
 
 <script setup>
 import { useCartStore } from '../store/cart'
+import { useRouter } from 'vue-router'
+
 const cart = useCartStore()
+const router = useRouter()
 
 function removeItem(id) {
   cart.removeFromCart(id)
+}
+
+function goBack() {
+  router.back()
 }
 </script>
 
@@ -125,4 +137,26 @@ function removeItem(id) {
   background: #86d9b5;
   transform: translateY(-2px);
 }
+
+/* Header back button styles (kept small and consistent) */
+.page-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+.btn-back {
+  background: none;
+  border: 2px solid transparent;
+  cursor: pointer;
+  padding: 0.3rem 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+.btn-back:hover { transform: translateX(-2px); background-color: rgba(0,0,0,0.03); }
+.back-arrow { font-size: 1.2rem; color: #333; line-height: 1; font-weight: 600; }
 </style>
