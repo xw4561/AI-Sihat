@@ -28,8 +28,12 @@ const showNavbar = computed(() => {
 });
 
 function logout() {
+  localStorage.removeItem('user');
   localStorage.removeItem('token');
-  router.push('/login');
+  localStorage.removeItem('userId');
+  localStorage.removeItem('userName');
+  localStorage.removeItem('userEmail');
+  localStorage.removeItem('userRole');
 }
 </script>
 

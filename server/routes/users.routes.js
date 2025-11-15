@@ -7,6 +7,8 @@ module.exports = (app) => {
   router.get("/:id", controller.findOne);       // Get user by id
   router.put("/:id", controller.update);        // Update user (username, email, password)
   router.put("/:id/points", controller.updatePoints); // Update user points
+  router.put("/:id/select-branch", controller.selectBranch); // Update user's selected branch
+
   router.post("/delete", controller.delete);    // Delete user (POST style)
 
   app.use("/ai-sihat/user", router);

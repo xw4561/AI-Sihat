@@ -17,13 +17,33 @@ model User {
   points    Int      @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  branch               PharmacyBranch? @relation("BranchAccount")
+  lastSelectedBranchId String?         @map("last_selected_branch_id")
+  lastSelectedBranch   PharmacyBranch? @relation("UserLastBranch", fields: [lastSelectedBranchId], references: [branchId])
   chats     Chat[]
   orders    Order[]
-  prescriptions Prescription[]
-  approvedPrescriptions Prescription[] @relation("PharmacistPrescriptions")
-
+  prescriptionsAsPharmacist Prescription[] @relation("PharmacistPrescriptions") 
+  prescriptionsAsCustomer   Prescription[] @relation("CustomerPrescriptions")
   @@index([email])
+  @@index([lastSelectedBranchId])
   @@map("users")
+}
+
+model PharmacyBranch {
+  branchId  String   @id @default(cuid()) @map("branch_id")
+  name      String   @db.VarChar(100)
+  address   String   @db.VarChar(255)
+  phone     String?  @db.VarChar(50)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId    String @unique @map("user_id")
+  user      User   @relation("BranchAccount", fields: [userId], references: [userId])
+  chats Chat[]
+  orders Order[]
+  selectedByUsers User[] @relation("UserLastBranch")
+
+  @@map("pharmacy_branches")
 }
 
 model Medicine {
@@ -58,6 +78,8 @@ model Order {
   items           OrderItem[]
   user            User        @relation(fields: [userId], references: [userId], onDelete: Cascade)
   prescription    Prescription? @relation(fields: [prescriptionId], references: [prescriptionId])
+  branchId        String         @map("branch_id")
+  branch          PharmacyBranch @relation(fields: [branchId], references: [branchId])
 
   @@index([userId])
   @@index([prescriptionId])
@@ -89,9 +111,12 @@ model Chat {
   createdAt      DateTime @default(now())
   summary        Json?
   user           User?    @relation(fields: [userId], references: [userId])
+  branchId       String?         @map("branch_id")
+  branch         PharmacyBranch? @relation(fields: [branchId], references: [branchId])
   prescriptions  Prescription[]
 
   @@map("chats")
+  @@index([branchId])
 }
 
 model Prescription {
@@ -108,7 +133,7 @@ model Prescription {
   rejectedAt      DateTime? @map("rejected_at")
   rejectionReason String?  @map("rejection_reason")
   chat            Chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)
-  user            User     @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  user            User     @relation("CustomerPrescriptions", fields: [userId], references: [userId], onDelete: Cascade)
   pharmacist      User?    @relation("PharmacistPrescriptions", fields: [pharmacistId], references: [userId])
   items           PrescriptionItem[]
   orders          Order[]

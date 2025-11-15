@@ -17,7 +17,6 @@
             <input v-model="newUser.password" type="password" placeholder="Password" required />
             <select v-model="newUser.role" required>
               <option value="USER">User</option>
-              <option value="PHARMACIST">Pharmacist</option>
               <option value="ADMIN">Admin</option>
             </select>
             <button type="submit" class="btn-add">Add User</button>
@@ -61,6 +60,67 @@
         </div>
       </div>
     </div>
+
+    <!-- === NEW PHARMACY BRANCH SECTION === -->
+    <div class="section">
+      <h3>🏥 Pharmacy Branches</h3>
+
+      <!-- Add Branch Form -->
+      <div class="form-card">
+        <h4>Add New Branch (creates Pharmacist account)</h4>
+        <form @submit.prevent="addBranch">
+          <div class="form-row" style="flex-wrap: wrap;">
+            <!-- Branch Details -->
+            <input v-model="newBranch.name" type="text" placeholder="Branch Name" required />
+            <input v-model="newBranch.address" type="text" placeholder="Branch Address" required style="flex-basis: 300px;" />
+            <input v-model="newBranch.phone" type="text" placeholder="Branch Phone" />
+          </div>
+          <div class="form-row" style="flex-wrap: wrap; margin-top: 10px;">
+            <!-- Login Details -->
+            <input v-model="newBranch.username" type="text" placeholder="Pharmacy Name" required />
+            <input v-model="newBranch.email" type="email" placeholder="Pharmacy Login Email" required />
+            <input v-model="newBranch.password" type="password" placeholder="Pharmacy Password" required />
+            <button type="submit" class="btn-add">Add Branch</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Branches List -->
+      <div class="data-card">
+        <div class="card-header">
+          <h4>All Branches</h4>
+          <button @click="loadBranches" class="btn-refresh">🔄 Refresh</button>
+        </div>
+        <div v-if="branchesLoading" class="loading">Loading branches...</div>
+        <div v-else-if="branches.length === 0" class="empty">No branches found</div>
+        <div v-else class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Branch ID</th>
+                <th>Branch Name</th>
+                <th>Address</th>
+              <th>Phone</th>
+                <th>Pharmacist Login</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="branch in branches" :key="branch.branchId">
+                <td>{{ branch.branchId.substring(0, 8) }}...</td>
+                <td>{{ branch.name }}</td>
+                <td>{{ branch.address }}</td>
+                <td>{{ branch.phone }}</td>
+                <td>{{ branch.user?.email }} ({{ branch.user?.username }})</td>
+                <td>
+                  <button @click="deleteBranch(branch.branchId)" class="btn-delete">Delete</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
 
     <!-- Medicines Section -->
     <div class="section">
@@ -327,6 +387,16 @@ import axios from 'axios'
 const users = ref([])
 const usersLoading = ref(false)
 const newUser = ref({ username: '', email: '', password: '', role: 'USER' })
+const branches = ref([])
+const branchesLoading = ref(false)
+const newBranch = ref({
+  name: '',
+  address: '',
+  phone: '',
+  username: '',
+  email: '',
+  password: ''
+})
 
 // Medicines
 const medicines = ref([])
@@ -396,16 +466,12 @@ const addUser = async () => {
     
     // If role is not USER (default), change it using admin route
     if (newUser.value.role !== 'USER') {
-      const allUsers = await axios.get('/ai-sihat/user')
-      const createdUser = allUsers.data.find(u => u.email === newUser.value.email)
-      if (createdUser) {
-        await axios.put('/api/auth/change-role', {
-          adminEmail: 'admin@gmail.com',
-          adminPassword: 'admin@123',
-          targetEmail: newUser.value.email,
-          newRole: newUser.value.role
-        })
-      }
+      await axios.put('/api/auth/change-role', {
+        adminEmail: 'admin@gmail.com', // This should be your logged-in admin's email
+        adminPassword: 'admin@123', // This is insecure, should use token
+        targetEmail: newUser.value.email,
+        newRole: newUser.value.role
+      })
     }
     
     showStatus('✅ User added successfully!', 'success')
@@ -417,15 +483,60 @@ const addUser = async () => {
 }
 
 const deleteUser = async (id) => {
+  // Find user to check role
+  const user = users.value.find(u => u.userId === id);
+  if (user && user.role === 'PHARMACIST') {
+    alert('PHARMACIST accounts must be deleted from the "Pharmacy Branches" section.');
+    return;
+  }
+  
   if (!confirm('Delete this user? This will also delete all their orders and chats.')) return
   try {
     await axios.post('/ai-sihat/user/delete', { id })
     showStatus('✅ User deleted successfully!', 'success')
     await loadUsers()
-    await loadOrders() // Refresh orders since they cascade delete
+    await loadOrders()
   } catch (err) {
     showStatus(err.response?.data?.error || 'Failed to delete user', 'error')
   }
+}
+
+// BRANCH FUNCTIONS
+const loadBranches = async () => {
+  branchesLoading.value = true
+  try {
+    const response = await axios.get('/ai-sihat/pharmacy')
+    branches.value = response.data
+  } catch (err) {
+    showStatus(err.response?.data?.error || 'Failed to load branches', 'error')
+  } finally {
+    branchesLoading.value = false
+  }
+}
+
+const addBranch = async () => {
+  try {
+    await axios.post('/ai-sihat/pharmacy', newBranch.value) 
+    showStatus('✅ Pharmacy Branch added successfully!', 'success')
+    newBranch.value = { name: '', address: '', phone: '', username: '', email: '', password: '' }
+    await loadBranches()
+    await loadUsers() // Refresh user list to see new pharmacist
+  } catch (err) {
+    const errorMsg = err.response?.data?.error || 'Failed to add branch'
+    showStatus(errorMsg, 'error')
+  }
+}
+
+const deleteBranch = async (id) => {
+  if (!confirm('Delete this branch? This will also delete the associated pharmacist account.')) return
+  try {
+    await axios.delete(`/ai-sihat/pharmacy/${id}`)
+    showStatus('✅ Branch deleted successfully!', 'success')
+    await loadBranches()
+    await loadUsers() // Refresh user list
+  } catch (err) {
+    showStatus(err.response?.data?.error || 'Failed to delete branch', 'error')
+ }
 }
 
 // Medicines API

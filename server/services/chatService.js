@@ -481,10 +481,43 @@ function getNextQuestion(section, currentId, sessionData) {
  * @returns {Promise<object>} { sessionId, currentQuestion }
  */
 async function startChat(userId = null) {
+  // VALIDATE: A user must be logged in to start a chat
+  if (!userId) {
+    throw new Error("User ID is required to start a chat.");
+  }
+
+  // Find the user to get their selected branch
+  const user = await prisma.user.findUnique({
+    where: { userId: userId },
+    select: { lastSelectedBranchId: true },
+  });
+
+  // VALIDATE: Did the user select a branch?
+  if (!user || !user.lastSelectedBranchId) {
+    throw new Error(
+      "No branch selected. Please select a pharmacy branch to start a chat."
+    );
+  }
+
   const { v4: uuidv4 } = await import('uuid');
   const section = "CommonIntake";
   const firstQ = getFirstQuestion(section);
   const sessionId = uuidv4();
+
+  let newChat;
+  // Save session in database (with branchId)
+  try {
+    newChat = await prisma.chat.create({
+      data: {
+        userId: userId,
+        branchId: user.lastSelectedBranchId, // <-- THE FIX
+        summary: {},
+      },
+    });
+  } catch (err) {
+    console.error('Failed to create chat record:', err);
+    throw new Error("Could not start chat session in database.");
+  }
 
   // Save session in memory
   sessionService.createSession(sessionId, {
@@ -492,28 +525,15 @@ async function startChat(userId = null) {
     answers: {},
     currentId: firstQ?.id,
     userId,
+    chatID: newChat.id,
     symptomQueue: [], // Queue to track multiple symptoms
     currentSymptomIndex: 0, // Track which symptom we're currently on
     allRecommendations: [] // Collect all recommendations
   });
-
-  // Save session in database (single record)
-  try {
-    const chat = await prisma.chat.create({
-      data: {
-        userId,
-      },
-    });
-    
-    // Store chatId in session for later use
-    sessionService.updateSession(sessionId, { chatId: chat.id });
-  } catch (err) {
-    console.error('Failed to create chat record:', err);
-  }
-
   return {
     sessionId,
     currentQuestion: localizeQuestion(firstQ, 'English'),
+    chat: newChat // Return the new chat object
   };
 }
 

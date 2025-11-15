@@ -2,7 +2,9 @@
   <div class="customer-home">
     <h2>Welcome, {{ customerName }}!</h2>
     <div class="options-container">
-      <router-link to="/chat" class="option-box">
+      
+      <!-- Changed to <div> with @click to check login -->
+      <div class="option-box" @click="navigateTo('/chat')">
         <div class="symbol">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="48" height="48" fill="gray">
             <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H7l-4 4V6c0-1.1.9-2 2-2z"/>
@@ -10,17 +12,19 @@
         </div>
         <h3>Chat</h3>
         <p>Start a conversation with our AI assistant.</p>
-      </router-link>
-      <router-link to="/shop" class="option-box">
+      </div>
+      
+      <!-- Changed to <div> with @click to check login -->
+      <div class="option-box" @click="navigateTo('/shop')">
         <div class="symbol">
-          <!-- You can use a shopping cart icon -->
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="48" height="48" fill="gray">
             <path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zm0-2h13v-2H8.42l-.93-2H20V6H6.21l-.94-2H2v2h2l3.6 7.59-1.35 2.44C5.52 16.37 6.16 18 7 18zM17 18c-1.1 0-1.99.9-1.99 2S15.9 22 17 22s2-.9 2-2-.9-2-2-2z"/>
           </svg>
         </div>
         <h3>Shopping</h3>
         <p>Browse and order medicines online.</p>
-      </router-link>
+      </div>
+
       <router-link to="/profile" class="option-box">
         <div class="symbol">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="48" height="48" fill="gray">
@@ -36,15 +40,38 @@
 
 <script setup>
 import { ref, onMounted } from 'vue';
+import { useRouter } from 'vue-router'; 
 
 const customerName = ref('Customer');
+const router = useRouter();
 
+// Safely get user name from the user *object* in localStorage
 onMounted(() => {
-  const storedName = localStorage.getItem('userName');
-  if (storedName) {
-    customerName.value = storedName;
+  const userStr = localStorage.getItem('user');
+  if (userStr) {
+    try {
+      const user = JSON.parse(userStr);
+      customerName.value = user.username || 'Customer'; 
+    } catch (e) {
+      console.error("Failed to parse user from localStorage", e);
+      // Clear bad data if parsing fails
+      localStorage.removeItem('user');
+      localStorage.removeItem('token');
+      customerName.value = 'Customer';
+    }
   }
 });
+
+// Handle navigation and check for login
+function navigateTo(path) {
+  const user = localStorage.getItem('user');
+  if (!user) {
+    alert("Please log in to use this feature.");
+    router.push('/login'); // Redirect to your login page
+  } else {
+    router.push(path);
+  }
+}
 </script>
 
 <style scoped>

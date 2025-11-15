@@ -215,6 +215,54 @@ async function authenticateUser(email, password) {
   return userWithoutPassword;
 }
 
+/**
+ * Update a user's selected pharmacy branch
+ * @param {string} userId - The ID of the user
+ * @param {string} branchId - The ID of the pharmacy branch
+ * @returns {Promise<object>} Updated user (without password)
+ */
+async function selectBranch(userId, branchId) {
+  // Validate that the branchId was provided
+  if (!branchId) {
+    throw new Error("branchId is required");
+  }
+
+  // Check if the pharmacy branch actually exists
+  const branch = await prisma.pharmacyBranch.findUnique({
+    where: { branchId: branchId },
+  });
+
+  if (!branch) {
+    throw new Error("Pharmacy branch not found");
+  }
+
+  // Update the user with the new branchId
+  try {
+    const updatedUser = await prisma.user.update({
+      where: { userId: userId },
+      data: { lastSelectedBranchId: branchId },
+      select: {
+        // Return safe data, matching getAllUsers
+        userId: true,
+        username: true,
+        email: true,
+        role: true,
+        points: true,
+        createdAt: true,
+        updatedAt: true,
+        lastSelectedBranchId: true, // Return the newly set field
+      },
+    });
+    return updatedUser;
+  } catch (error) {
+    // Handle case where the user doesn't exist
+    if (error.code === "P2025") {
+      throw new Error("User not found");
+    }
+    throw error;
+  }
+}
+
 module.exports = {
   createUser,
   getAllUsers,
@@ -223,5 +271,6 @@ module.exports = {
   updateUserPoints,
   addUserPoints,
   deleteUser,
-  authenticateUser
+  authenticateUser,
+  selectBranch
 };

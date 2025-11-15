@@ -1,6 +1,22 @@
 const { validationResult } = require("express-validator");
 const orderService = require("../services/orderService");
 const prisma = require("../prisma/client");
+const { Role } = require("../prisma/client");
+
+const getPharmacistBranch = async (userId) => {
+  if (!userId) {
+    throw new Error("Authentication required.");
+  }
+  const pharmacyBranch = await prisma.pharmacyBranch.findUnique({
+    where: { userId: userId },
+    select: { branchId: true },
+  });
+
+  if (!pharmacyBranch) {
+    throw new Error("Access denied. Not associated with a pharmacy branch.");
+  }
+  return pharmacyBranch.branchId;
+};
 
 exports.create = async (req, res) => {
   try {
@@ -65,10 +81,20 @@ exports.delete = async (req, res) => {
 // Get pending prescriptions with chat data for pharmacist review
 exports.getPendingAiOrders = async (req, res) => {
   try {
-    const prescriptions = await prisma.prescription.findMany({
-      where: {
-        status: "pending"
-      },
+    const { userId, role } = req.user;
+    let whereClause = { status: "pending" };
+
+    if (role === Role.PHARMACIST) {
+      const branchId = await getPharmacistBranch(userId);
+      whereClause.chat = {
+        branchId: branchId,
+      };
+    } else if (role !== Role.ADMIN) {
+      return res.status(403).json({ error: "Access denied." });
+    }
+
+     const prescriptions = await prisma.prescription.findMany({
+      where: whereClause,
       include: {
         user: {
           select: {
@@ -88,7 +114,8 @@ exports.getPendingAiOrders = async (req, res) => {
     res.status(200).json(prescriptions);
   } catch (error) {
     console.error("Get pending prescriptions error:", error);
-    res.status(400).json({ error: error.message });
+    const status = error.message.includes("denied") ? 403 : 400;
+    res.status(status).json({ error: error.message });
   }
 };
 

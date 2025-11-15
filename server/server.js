@@ -69,6 +69,13 @@ try {
   console.warn("ℹ️ API route mounting skipped:", e?.message || e);
 }
 
+try {
+  require("./routes/pharmacy.routes.js")(app);
+  console.log("✅ Pharmacy routes loaded");
+} catch (e) {
+  console.warn("ℹ️ Pharmacy routes mounting skipped:", e?.message || e);
+}
+
 // Log registered routes (helpful for debugging missing endpoints)
 try {
   const routes = [];

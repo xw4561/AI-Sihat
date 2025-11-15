@@ -1,7 +1,17 @@
 <template>
-  <div class="chat card">
+  <!-- Show Branch Selector if showSelector is true -->
+  <BranchSelector 
+    v-if="showSelector" 
+    @branch-selected="handleBranchSelected" 
+  />
+
+  <!-- Show Chat Content only if a branch is selected -->
+  <div v-else-if="selectedBranch" class="chat card">
     <div class="chat-header">
       <div class="title">AI_SIHAT CHAT</div>
+      <div class="subtitle">
+        Connected to: <strong>{{ selectedBranch.name }}</strong>
+      </div>
       <div class="controls">
         <button class="btn" @click="refreshChat" :disabled="loading">Start New Chat</button>
       </div>
@@ -10,7 +20,7 @@
     <div v-if="error" class="error">{{ error }}</div>
 
     <div class="messages" ref="messagesRef">
-  <div v-if="!sessionId && !loading" class="empty">Initializing chat...</div>
+      <div v-if="!sessionId && !loading" class="empty">Initializing chat...</div>
       <div v-if="loading" class="status">Loading...</div>
 
       <!-- Render history as alternating bot/user bubbles (filter out standalone recommendation heading) -->
@@ -146,8 +156,8 @@
       <div v-if="sessionId && !currentQuestion && !loading" class="done">No further questions. Conversation complete.</div>
     </div>
 
-  <!-- Composer - Hide completely when showing recommendation array, medication cart, completion message, or waiting for approval -->
-  <div v-if="currentQuestion && !Array.isArray(currentQuestion.prompt) && currentQuestion.type !== 'medication_cart' && currentQuestion.type !== 'completion_message' && currentQuestion.type !== 'waiting_approval'" class="composer">
+    <!-- Composer - Hide completely when showing recommendation array, medication cart, completion message, or waiting for approval -->
+    <div v-if="currentQuestion && !Array.isArray(currentQuestion.prompt) && currentQuestion.type !== 'medication_cart' && currentQuestion.type !== 'completion_message' && currentQuestion.type !== 'waiting_approval'" class="composer">
       <!-- Show input whenever session exists (bot asks first). Send button remains disabled until canSubmit is true. -->
       <input v-if="sessionId && !loading && currentQuestion && ((currentQuestion.type !== 'multiple_choice' && currentQuestion.type !== 'single_choice') || otherSymptomSelected || yesSelected)" v-model="textAnswer" :type="currentQuestion && currentQuestion.type === 'number_input' ? 'number' : 'text'" placeholder="Type your answer..." @keydown.enter.prevent="sendAnswer" />
 
@@ -156,15 +166,26 @@
       </div>
     </div>
   </div>
+
+  <!-- Show a loader while checking localStorage -->
+  <div v-else class="loader">
+    Loading...
+  </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import axios from 'axios'
 import { useCartStore } from '../store/cart'
+import BranchSelector from './components/BranchSelector.vue' // Import the modal
 
-const cartStore = useCartStore()
+const cartStore = useCartStore();
 
+// Local state for branch
+const selectedBranch = ref(null);
+const showSelector = ref(false);
+
+// (All your existing refs)
 const sessionId = ref('')
 const currentQuestion = ref(null)
 const loading = ref(false)
@@ -254,24 +275,39 @@ const canSubmit = computed(() => {
 })
 
 async function startSession() {
+  if (!selectedBranch.value) return;
+
   try {
     loading.value = true
     error.value = ''
     history.value = []
-    
-    // Get logged-in user ID from localStorage
-    let userId = null
-    try {
-      const userStr = localStorage.getItem('user')
-      if (userStr) {
-        const user = JSON.parse(userStr)
-        userId = user.userId
-      }
-    } catch (e) {
-      console.warn('Could not retrieve user ID:', e)
+
+    // Get user string from localStorage
+    const userStr = localStorage.getItem('user');
+    if (!userStr) {
+      error.value = "You must be logged in to start a chat.";
+      loading.value = false;
+      return;
     }
-    
-    const res = await axios.post('/api/chat/start', { userId })
+    let user;
+    try {
+      // Parse the user object
+      user = JSON.parse(userStr);
+    } catch (e) {
+      error.value = "Your user data is corrupted. Please log out and log in again.";
+      loading.value = false;
+      return;
+    } 
+
+    // Check if user.userId actually exists
+    if (!user || !user.userId) {
+      error.value = "User ID not found in your login data. Please log out and log in again.";
+      loading.value = false;
+      return;
+    }
+
+    // Send the correct userId to the backend
+    const res = await axios.post('/api/chat/start', { userId: user.userId })
     sessionId.value = res.data.sessionId
     currentQuestion.value = res.data.currentQuestion
 
@@ -293,117 +329,137 @@ function refreshChat() {
 }
 
 function buildAnswerPayload() {
-  const t = currentQuestion.value.type
-  if (t === 'single_choice') {
-    // For 'Yes' with details, send just the text. Otherwise, send the selected option.
-    if (yesSelected.value) {
-      return textAnswer.value
-    }
-    return singleChoice.value
-  }
-  if (t === 'multiple_choice') {
-    // Combine selected chips and the text input if 'Other' was selected
-    const payload = [...multiChoice.value]
-    if (otherSymptomSelected.value && textAnswer.value) {
-      // Remove 'Other (Specify)' and add the actual text
-      const otherIndex = payload.indexOf('Other (Specify)')
-      if (otherIndex > -1) {
-        payload.splice(otherIndex, 1)
-      }
-      payload.push(textAnswer.value)
-    }
-    return payload
-  }
-  if (t === 'number_input') return Number(textAnswer.value)
-  return String(textAnswer.value)
+  const t = currentQuestion.value.type
+  if (t === 'single_choice') {
+    // For 'Yes' with details, send just the text. Otherwise, send the selected option.
+    if (yesSelected.value) {
+      return textAnswer.value
+    }
+    return singleChoice.value
+  }
+  if (t === 'multiple_choice') {
+    // Combine selected chips and the text input if 'Other' was selected
+    const payload = [...multiChoice.value]
+    if (otherSymptomSelected.value && textAnswer.value) {
+      // Remove 'Other (Specify)' and add the actual text
+      const otherIndex = payload.indexOf('Other (Specify)')
+      if (otherIndex > -1) {
+        payload.splice(otherIndex, 1)
+      }
+      payload.push(textAnswer.value)
+    }
+    return payload
+  }
+  if (t === 'number_input') return Number(textAnswer.value)
+  return String(textAnswer.value)
 }
 
 async function sendAnswer() {
-  if (!sessionId.value || !currentQuestion.value) return
-  try {
-    loading.value = true
-    error.value = ''
+  if (!sessionId.value || !currentQuestion.value) return
+  try {
+    loading.value = true
+    error.value = ''
 
-    const payload = {
-      sessionId: sessionId.value,
-      answer: buildAnswerPayload()
-    }
+    const payload = {
+      sessionId: sessionId.value,
+      answer: buildAnswerPayload()
+    }
 
-    // Hide placeholder after first answer
-    showPlaceholder.value = false
+    // Hide placeholder after first answer
+    showPlaceholder.value = false
 
-    // Store previous question type to determine if we should add to history
-    const previousQuestionType = currentQuestion.value.type
-    
-    // Only add to history if it's not a special type (medication_cart should not appear in history)
-    if (previousQuestionType !== 'medication_cart') {
-      history.value.push({ q: currentQuestion.value, a: payload.answer })
-    }
-    
-    // Clear current question to show "loading" state
-    const previousQuestion = currentQuestion.value
-    currentQuestion.value = null
-    
-    // Reset input immediately so user sees their answer was captured
-    resetInput()
+    // Store previous question type to determine if we should add to history
+    const previousQuestionType = currentQuestion.value.type
+    
+    // Only add to history if it's not a special type (medication_cart should not appear in history)
+    if (previousQuestionType !== 'medication_cart') {
+      history.value.push({ q: currentQuestion.value, a: payload.answer })
+    }
+    
+    // Clear current question to show "loading" state
+    const previousQuestion = currentQuestion.value
+    currentQuestion.value = null
+    
+    // Reset input immediately so user sees their answer was captured
+    resetInput()
 
-    // Now send to backend
-    const res = await axios.post('/api/chat/ask', payload)
+    // Now send to backend
+    const res = await axios.post('/api/chat/ask', payload)
 
-    // Update with next question from backend
-    currentQuestion.value = res.data.nextQuestion
-    
-    // If completion_message, add it to history as a regular bot message instead of showing special UI
-    if (currentQuestion.value && currentQuestion.value.type === 'completion_message') {
-      // Add user's cart summary to history
-      history.value.push({ 
-        q: { prompt: "Cart Summary", type: "text" }, 
-        a: payload.answer 
-      })
-      // Add bot's thank you message to history
-      history.value.push({ 
-        q: { prompt: currentQuestion.value.prompt, type: "text" }, 
-        a: "acknowledged" 
-      })
-      // Clear current question so it doesn't show the special completion UI
-      currentQuestion.value = null
-    }
-    
-    // Debug: Log medication cart data
-    if (currentQuestion.value && currentQuestion.value.type === 'medication_cart') {
-      console.log('Received medication_cart question:', currentQuestion.value)
-      console.log('Medications array:', currentQuestion.value.medications)
-    }
-  } catch (e) {
-    error.value = e.response?.data?.error || e.message || 'Failed to send answer'
-    // On error, restore the question so user can try again
-    if (history.value.length > 0) {
-      const lastEntry = history.value.pop()
-      currentQuestion.value = lastEntry.q
-    }
-  } finally {
-    loading.value = false
-  }
+    // Update with next question from backend
+    currentQuestion.value = res.data.nextQuestion
+    
+    // If completion_message, add it to history as a regular bot message instead of showing special UI
+    if (currentQuestion.value && currentQuestion.value.type === 'completion_message') {
+      // Add user's cart summary to history
+      history.value.push({ 
+        q: { prompt: "Cart Summary", type: "text" }, 
+        a: payload.answer 
+      })
+      // Add bot's thank you message to history
+      history.value.push({ 
+        q: { prompt: currentQuestion.value.prompt, type: "text" }, 
+        a: "acknowledged" 
+      })
+      // Clear current question so it doesn't show the special completion UI
+      currentQuestion.value = null
+    }
+    
+    // Debug: Log medication cart data
+    if (currentQuestion.value && currentQuestion.value.type === 'medication_cart') {
+      console.log('Received medication_cart question:', currentQuestion.value)
+      console.log('Medications array:', currentQuestion.value.medications)
+    }
+  } catch (e) {
+    error.value = e.response?.data?.error || e.message || 'Failed to send answer'
+    // On error, restore the question so user can try again
+    if (history.value.length > 0) {
+      const lastEntry = history.value.pop()
+      currentQuestion.value = lastEntry.q
+    }
+  } finally {
+    loading.value = false
+  }
 }
 
 // UI helpers: auto-scroll messages container
 const messagesRef = ref(null)
 const scrollToBottom = async () => {
-  await nextTick()
-  const el = messagesRef.value
-  if (el) el.scrollTop = el.scrollHeight
+  await nextTick()
+  const el = messagesRef.value
+  if (el) el.scrollTop = el.scrollHeight
 }
 
 watch([history, currentQuestion, loading], () => {
-  scrollToBottom()
+  scrollToBottom()
 })
 
 onMounted(() => scrollToBottom())
 
-// auto-start chat when view mounts
+// Check localStorage on load
 onMounted(() => {
-  startSession()
-})
+  const storedBranch = localStorage.getItem('selectedBranch');
+  if (storedBranch) {
+    try {
+      selectedBranch.value = JSON.parse(storedBranch);
+      startSession(); // Branch exists, start chat
+    } catch (e) {
+      console.error("Failed to parse branch, forcing re-selection:", e);
+      localStorage.removeItem('selectedBranch');
+      showSelector.value = true; // Data was bad, force selection
+    }
+  } else {
+    // No branch saved, show the modal
+    showSelector.value = true;
+  }
+});
+
+// Handle event from BranchSelector
+function handleBranchSelected(branch) {
+  selectedBranch.value = branch;
+  showSelector.value = false;
+  startSession(); // Now that branch is selected, start chat
+}
 
 // Auto-advance past heading-only prompt so user only sees the combined recommendation bubble
 watch(currentQuestion, (q) => {
@@ -419,7 +475,7 @@ function selectQuick(opt) {
   // Patterns: "Yes (List down details)", "Yes, When___?", "Yes , What__?"
   const requiresInput = opt.toLowerCase().includes('yes') && 
                         (opt.includes('(') || opt.includes('_'))
-  
+
   if (requiresInput) {
     yesSelected.value = true;
     // Don't send answer immediately, wait for user input
@@ -431,44 +487,44 @@ function selectQuick(opt) {
 }
 
 function toggleMulti(opt) {
-  if (opt === 'Other (Specify)') {
-    otherSymptomSelected.value = !otherSymptomSelected.value
-    // also add/remove from multichoice to show visual selection
-    const idx = multiChoice.value.indexOf(opt)
-    if (idx === -1 && otherSymptomSelected.value) {
-      multiChoice.value.push(opt)
-    } else if (idx > -1 && !otherSymptomSelected.value) {
-      multiChoice.value.splice(idx, 1)
-    }
-    return
-  }
+  if (opt === 'Other (Specify)') {
+    otherSymptomSelected.value = !otherSymptomSelected.value
+    // also add/remove from multichoice to show visual selection
+    const idx = multiChoice.value.indexOf(opt)
+    if (idx === -1 && otherSymptomSelected.value) {
+MultiChoice.value.push(opt)
+    } else if (idx > -1 && !otherSymptomSelected.value) {
+      multiChoice.value.splice(idx, 1)
+    }
+    return
+  }
 
-  const idx = multiChoice.value.indexOf(opt)
-  if (idx === -1) multiChoice.value.push(opt)
-  else multiChoice.value.splice(idx, 1)
+  const idx = multiChoice.value.indexOf(opt)
+  if (idx === -1) multiChoice.value.push(opt)
+  else multiChoice.value.splice(idx, 1)
 }
 
 async function continueFromRecommendation() {
   // For recommendation_display type, create order and wait for pharmacist approval
   if (loading.value) return
-  
+
   try {
     loading.value = true
     // Create prescription from chat session
     const res = await axios.post('/api/chat/complete', {
       sessionId: sessionId.value
     })
-    
+
     prescriptionId.value = res.data.prescription.prescriptionId
     orderStatus.value = 'pending'
     chatComplete.value = true
-    
+
     // Show waiting message
     currentQuestion.value = {
       type: 'waiting_approval',
       prompt: 'Thank you! Your consultation has been submitted to our pharmacist for review. Please wait for approval...'
     }
-    
+
     // Start polling for approval status
     pollOrderStatus()
   } catch (e) {
@@ -481,26 +537,26 @@ function addToCart(medication) {
   // Add medication to cart tracking
   if (!addedToCart.value.find(m => m.name === medication.name)) {
     addedToCart.value.push(medication)
-    
+
     // Add to actual cart store
     cartStore.addToCart({
       id: medication.medicineId,
       name: medication.name,
-      price: parseFloat(medication.price || 0),
+      rice: parseFloat(medication.price || 0),
       imageUrl: medication.imageUrl,
       type: medication.symptom
-    })
-  }
+      })
+    }
 }
 
 async function pollOrderStatus() {
   if (!prescriptionId.value) return
-  
+
   const pollInterval = setInterval(async () => {
     try {
       const res = await axios.get(`/ai-sihat/prescriptions/${prescriptionId.value}`)
       const prescription = res.data
-      
+
       if (prescription.status === 'approved') {
         clearInterval(pollInterval)
         orderStatus.value = 'approved'
@@ -509,7 +565,7 @@ async function pollOrderStatus() {
         // Get approved medicines from prescription items
         if (prescription.items && prescription.items.length > 0) {
           approvedMedicines.value = prescription.items.map(item => ({
-            ...item.medicine,
+             ...item.medicine,
             quantity: item.quantity,
             symptom: item.symptom,
             notes: item.notes,
@@ -517,7 +573,7 @@ async function pollOrderStatus() {
             rejectionReason: item.rejectionReason
           }))
         }
-        
+ 
         // Show approved medicines
         currentQuestion.value = {
           type: 'medication_cart',
@@ -546,7 +602,7 @@ async function pollOrderStatus() {
       console.error('Error polling prescription status:', e)
     }
   }, 5000) // Poll every 5 seconds
-  
+
   // Stop polling after 5 minutes
   setTimeout(() => {
     clearInterval(pollInterval)
@@ -560,7 +616,7 @@ async function pollOrderStatus() {
 function continueFromCart() {
   // User finished reviewing approved medications
   if (loading.value) return
-  
+
   // Show completion message
   currentQuestion.value = {
     type: 'completion_message',
@@ -570,16 +626,16 @@ function continueFromCart() {
 
 function parseRecommendationSections(promptArray, symptomName = null) {
   if (!Array.isArray(promptArray)) return []
-  
+
   const sections = []
   let currentSymptomSection = null
   let currentSubsection = null
-  
+
   // Check if prompt has symptom headers (multi-symptom) or not (single symptom)
   const hasSymptomHeaders = promptArray.some(line => 
     line.trim().startsWith('---') && line.trim().endsWith('---')
   )
-  
+
   // If no symptom headers, create a default section for single symptom
   if (!hasSymptomHeaders) {
     currentSymptomSection = {
@@ -587,10 +643,10 @@ function parseRecommendationSections(promptArray, symptomName = null) {
       subsections: []
     }
   }
-  
+
   promptArray.forEach(line => {
     const trimmedLine = line.trim()
-    
+
     // Check if this is a symptom header (starts with ---)
     if (trimmedLine.startsWith('---') && trimmedLine.endsWith('---')) {
       // Save previous symptom section if exists
@@ -606,39 +662,39 @@ function parseRecommendationSections(promptArray, symptomName = null) {
       currentSubsection = null
       return
     }
-    
-    if (!currentSymptomSection) return
-    
-    // Detect subsection types by keywords
-    if (trimmedLine.startsWith('S/E')) {
-      if (currentSubsection) currentSymptomSection.subsections.push(currentSubsection)
-      currentSubsection = {
-        title: '⚠️ Side Effects:',
-        lines: [trimmedLine.replace('S/E :', '').replace('S/E:', '').trim()],
-        class: 'recommendation-line side-effect'
-      }
-    } else if (trimmedLine.toLowerCase().includes('if your condition') || trimmedLine.toLowerCase().includes('refer to doctor') || trimmedLine.toLowerCase().includes('i recommend')) {
-      if (currentSubsection) currentSymptomSection.subsections.push(currentSubsection)
-      currentSubsection = {
-        title: '🏥 When to See a Doctor:',
-        lines: [trimmedLine],
-        class: 'recommendation-line warning'
-      }
-    } else if (trimmedLine.toLowerCase().startsWith('advise:') || trimmedLine.toLowerCase().startsWith('advice:') || (trimmedLine.toLowerCase().includes('avoid') && !trimmedLine.toLowerCase().includes('medication')) || trimmedLine.toLowerCase().includes('drink enough water') || trimmedLine.toLowerCase().includes('have a good rest')) {
-      // Check if current subsection is already an advice section
-      if (currentSubsection && currentSubsection.class === 'recommendation-line advice') {
-        // Add to existing advice section instead of creating a new one
-        currentSubsection.lines.push(trimmedLine.replace(/^Advise:/i, '').replace(/^Advice:/i, '').trim())
-      } else {
-        // Create new advice section
-        if (currentSubsection) currentSymptomSection.subsections.push(currentSubsection)
-        currentSubsection = {
-          title: '💡 Advice:',
-          lines: [trimmedLine.replace(/^Advise:/i, '').replace(/^Advice:/i, '').trim()],
-          class: 'recommendation-line advice'
-        }
-      }
-    } else if (trimmedLine.toLowerCase().includes('thank you for your time')) {
+    
+    if (!currentSymptomSection) return
+    
+    // Detect subsection types by keywords
+    if (trimmedLine.startsWith('S/E')) {
+      if (currentSubsection) currentSymptomSection.subsections.push(currentSubsection)
+      currentSubsection = {
+        title: '⚠️ Side Effects:',
+        lines: [trimmedLine.replace('S/E :', '').replace('S/E:', '').trim()],
+        class: 'recommendation-line side-effect'
+      }
+    } else if (trimmedLine.toLowerCase().includes('if your condition') || trimmedLine.toLowerCase().includes('refer to doctor') || trimmedLine.toLowerCase().includes('i recommend')) {
+      if (currentSubsection) currentSymptomSection.subsections.push(currentSubsection)
+      currentSubsection = {
+        title: '🏥 When to See a Doctor:',
+        lines: [trimmedLine],
+        class: 'recommendation-line warning'
+      }
+    } else if (trimmedLine.toLowerCase().startsWith('advise:') || trimmedLine.toLowerCase().startsWith('advice:') || (trimmedLine.toLowerCase().includes('avoid') && !trimmedLine.toLowerCase().includes('medication')) || trimmedLine.toLowerCase().includes('drink enough water') || trimmedLine.toLowerCase().includes('have a good rest')) {
+      // Check if current subsection is already an advice section
+      if (currentSubsection && currentSubsection.class === 'recommendation-line advice') {
+        // Add to existing advice section instead of creating a new one
+        currentSubsection.lines.push(trimmedLine.replace(/^Advise:/i, '').replace(/^Advice:/i, '').trim())
+I     } else {
+        // Create new advice section
+        if (currentSubsection) currentSymptomSection.subsections.push(currentSubsection)
+        currentSubsection = {
+          title: '💡 Advice:',
+          lines: [trimmedLine.replace(/^Advise:/i, '').replace(/^Advice:/i, '').trim()],
+          class: 'recommendation-line advice'
+        }
+      }
+    } else if (trimmedLine.toLowerCase().includes('thank you for your time')) {
       if (currentSubsection) currentSymptomSection.subsections.push(currentSubsection)
       currentSubsection = {
         title: null,
@@ -647,27 +703,27 @@ function parseRecommendationSections(promptArray, symptomName = null) {
       }
     } else if (trimmedLine.length > 0) {
       // Regular line - could be medication or continuation
-      if (!currentSubsection) {
-        // Start medication subsection
-        currentSubsection = {
-          title: '💊 Medication:',
-          lines: [trimmedLine],
-          class: 'recommendation-line medication'
-        }
-      } else {
-        // Add to current subsection
-        currentSubsection.lines.push(trimmedLine)
-      }
-    }
-  })
-  
-  // Push last section
-  if (currentSymptomSection) {
-    if (currentSubsection) currentSymptomSection.subsections.push(currentSubsection)
-    sections.push(currentSymptomSection)
-  }
-  
-  return sections
+      if (!currentSubsection) {
+        // Start medication subsection
+        currentSubsection = {
+          title: '💊 Medication:',
+          lines: [trimmedLine],
+          class: 'recommendation-line medication'
+        }
+      } else {
+        // Add to current subsection
+        currentSubsection.lines.push(trimmedLine)
+section   }
+    }
+  })
+  
+  // Push last section
+  if (currentSymptomSection) {
+    if (currentSubsection) currentSymptomSection.subsections.push(currentSubsection)
+    sections.push(currentSymptomSection)
+  }
+  
+  return sections
 }
 
 function formatAnswer(a) {
