@@ -1,6 +1,11 @@
 <template>
   <div class="checkout-container">
-    <h1>Checkout</h1>
+    <div class="page-header">
+      <button class="btn-back" @click="goBack" title="Go back">
+        <span class="back-arrow">←</span>
+      </button>
+      <h1>Checkout</h1>
+    </div>
     <div v-if="cart.items.length === 0" class="empty-cart">
       <p>Your cart is empty. Please add items to your cart before proceeding.</p>
       <router-link to="/checkout" class="cart-button">
@@ -84,6 +89,10 @@
 
   const cart = useCartStore()
   const router = useRouter()
+
+  function goBack() {
+    router.back()
+  }
 
   const customerName = ref('')
   const customerPhone = ref('')
@@ -248,4 +257,26 @@
   color: white;
   box-shadow: 0 4px 12px rgba(66, 185, 131, 0.4);
 }
+
+/* Header back button styles (kept small and consistent) */
+.page-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+.btn-back {
+  background: none;
+  border: 2px solid transparent;
+  cursor: pointer;
+  padding: 0.3rem 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+.btn-back:hover { transform: translateX(-2px); background-color: rgba(0,0,0,0.03); }
+.back-arrow { font-size: 1.2rem; color: #333; line-height: 1; font-weight: 600; }
 </style>

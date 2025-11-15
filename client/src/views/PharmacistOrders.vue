@@ -1,6 +1,11 @@
 <template>
   <div class="pharmacist-orders">
-    <h2>Pending Orders</h2>
+    <div class="page-header">
+      <button class="btn-back" @click="goBack" title="Go back">
+        <span class="back-arrow">←</span>
+      </button>
+      <h2>Pending Orders</h2>
+    </div>
 
     <div v-if="isLoading" class="loading">
       <p>Loading orders...</p>
@@ -305,6 +310,7 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue';
+import { useRouter } from 'vue-router'
 import axios from 'axios';
 
 const orders = ref([]);
@@ -315,6 +321,11 @@ const selectedOrder = ref(null);
 const medicines = ref([]);
 const medicineSlots = ref([]);
 const extraMedicines = ref([]);
+const router = useRouter()
+
+function goBack() {
+  router.back()
+}
 
 onMounted(async () => {
   await fetchOrders();
@@ -1378,5 +1389,33 @@ h2 {
 
 .btn-add-medicine:active {
   transform: scale(0.98);
+}
+
+/* Header back button styles (consistent with other pages) */
+.page-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+.btn-back {
+  background: none;
+  border: 2px solid transparent;
+  cursor: pointer;
+  padding: 0.3rem 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+.btn-back:hover { transform: translateX(-2px); background-color: rgba(0,0,0,0.03); }
+.back-arrow { font-size: 1.2rem; color: #333; line-height: 1; font-weight: 600; }
+/* Make the header title centered while leaving the back button at left */
+.page-header h2 {
+  flex: 1 1 auto;
+  text-align: center;
+  margin: 0;
 }
 </style>
