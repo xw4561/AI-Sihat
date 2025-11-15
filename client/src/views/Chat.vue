@@ -9,8 +9,8 @@
   <div v-else-if="selectedBranch" class="chat card">
     <div class="chat-header">
       <div class="title">AI_SIHAT CHAT</div>
-      <div class="subtitle">
-        Connected to: <strong>{{ selectedBranch.name }}</strong>
+      <div class="subtitle clickable" @click="showSelector = true" title="Click to change branch">
+        Connected to: <strong>{{ selectedBranch.name }} ▾</strong>
       </div>
       <div class="controls">
         <button class="btn" @click="refreshChat" :disabled="loading">Start New Chat</button>
@@ -311,9 +311,6 @@ async function startSession() {
     sessionId.value = res.data.sessionId
     currentQuestion.value = res.data.currentQuestion
 
-    // Language selection is now shown to user (not auto-selected)
-    // This provides consistent UX
-
     resetInput()
   } catch (e) {
     error.value = e.response?.data?.error || e.message || 'Failed to start session'
@@ -329,15 +326,15 @@ function refreshChat() {
 }
 
 function buildAnswerPayload() {
-  const t = currentQuestion.value.type
-  if (t === 'single_choice') {
-    // For 'Yes' with details, send just the text. Otherwise, send the selected option.
-    if (yesSelected.value) {
-      return textAnswer.value
-    }
-    return singleChoice.value
-  }
-  if (t === 'multiple_choice') {
+  const t = currentQuestion.value.type
+  if (t === 'single_choice') {
+    // For 'Yes' with details, send just the text. Otherwise, send the selected option.
+    if (yesSelected.value) {
+      return textAnswer.value
+    }
+    return singleChoice.value
+  }
+  if (t === 'multiple_choice') {
     // Combine selected chips and the text input if 'Other' was selected
     const payload = [...multiChoice.value]
     if (otherSymptomSelected.value && textAnswer.value) {
@@ -456,9 +453,15 @@ onMounted(() => {
 
 // Handle event from BranchSelector
 function handleBranchSelected(branch) {
+  const isChanging = selectedBranch.value && selectedBranch.value.branchId !== branch.branchId;
+  
   selectedBranch.value = branch;
-  showSelector.value = false;
-  startSession(); // Now that branch is selected, start chat
+  showSelector.value = false; // Hide the modal
+
+  // If the session is already running and they changed branch, start a new chat.
+  // If this is the *first time* they are selecting, start the chat.
+  if (isChanging || !sessionId.value) {
+    refreshChat(); // This calls startSession()
 }
 
 // Auto-advance past heading-only prompt so user only sees the combined recommendation bubble
@@ -487,21 +490,21 @@ function selectQuick(opt) {
 }
 
 function toggleMulti(opt) {
-  if (opt === 'Other (Specify)') {
-    otherSymptomSelected.value = !otherSymptomSelected.value
-    // also add/remove from multichoice to show visual selection
-    const idx = multiChoice.value.indexOf(opt)
-    if (idx === -1 && otherSymptomSelected.value) {
-MultiChoice.value.push(opt)
-    } else if (idx > -1 && !otherSymptomSelected.value) {
-      multiChoice.value.splice(idx, 1)
-    }
-    return
-  }
+  if (opt === 'Other (Specify)') {
+    otherSymptomSelected.value = !otherSymptomSelected.value
+    // also add/remove from multichoice to show visual selection
+    const idx = multiChoice.value.indexOf(opt)
+    if (idx === -1 && otherSymptomSelected.value) {
+      multiChoice.value.push(opt)
+    } else if (idx > -1 && !otherSymptomSelected.value) {
+      multiChoice.value.splice(idx, 1)
+    }
+    return
+  }
 
-  const idx = multiChoice.value.indexOf(opt)
-  if (idx === -1) multiChoice.value.push(opt)
-  else multiChoice.value.splice(idx, 1)
+  const idx = multiChoice.value.indexOf(opt)
+  if (idx === -1) multiChoice.value.push(opt)
+  else multiChoice.value.splice(idx, 1)
 }
 
 async function continueFromRecommendation() {
@@ -662,39 +665,39 @@ function parseRecommendationSections(promptArray, symptomName = null) {
       currentSubsection = null
       return
     }
-    
-    if (!currentSymptomSection) return
-    
-    // Detect subsection types by keywords
-    if (trimmedLine.startsWith('S/E')) {
-      if (currentSubsection) currentSymptomSection.subsections.push(currentSubsection)
-      currentSubsection = {
-        title: '⚠️ Side Effects:',
-        lines: [trimmedLine.replace('S/E :', '').replace('S/E:', '').trim()],
-        class: 'recommendation-line side-effect'
-      }
-    } else if (trimmedLine.toLowerCase().includes('if your condition') || trimmedLine.toLowerCase().includes('refer to doctor') || trimmedLine.toLowerCase().includes('i recommend')) {
-      if (currentSubsection) currentSymptomSection.subsections.push(currentSubsection)
-      currentSubsection = {
-        title: '🏥 When to See a Doctor:',
-        lines: [trimmedLine],
-        class: 'recommendation-line warning'
-      }
-    } else if (trimmedLine.toLowerCase().startsWith('advise:') || trimmedLine.toLowerCase().startsWith('advice:') || (trimmedLine.toLowerCase().includes('avoid') && !trimmedLine.toLowerCase().includes('medication')) || trimmedLine.toLowerCase().includes('drink enough water') || trimmedLine.toLowerCase().includes('have a good rest')) {
-      // Check if current subsection is already an advice section
-      if (currentSubsection && currentSubsection.class === 'recommendation-line advice') {
-        // Add to existing advice section instead of creating a new one
-        currentSubsection.lines.push(trimmedLine.replace(/^Advise:/i, '').replace(/^Advice:/i, '').trim())
-I     } else {
-        // Create new advice section
-        if (currentSubsection) currentSymptomSection.subsections.push(currentSubsection)
-        currentSubsection = {
-          title: '💡 Advice:',
-          lines: [trimmedLine.replace(/^Advise:/i, '').replace(/^Advice:/i, '').trim()],
-          class: 'recommendation-line advice'
-        }
-      }
-    } else if (trimmedLine.toLowerCase().includes('thank you for your time')) {
+
+    if (!currentSymptomSection) return
+
+    // Detect subsection types by keywords
+    if (trimmedLine.startsWith('S/E')) {
+      if (currentSubsection) currentSymptomSection.subsections.push(currentSubsection)
+      currentSubsection = {
+        title: '⚠️ Side Effects:',
+        lines: [trimmedLine.replace('S/E :', '').replace('S/E:', '').trim()],
+        class: 'recommendation-line side-effect'
+      }
+    } else if (trimmedLine.toLowerCase().includes('if your condition') || trimmedLine.toLowerCase().includes('refer to doctor') || trimmedLine.toLowerCase().includes('i recommend')) {
+      if (currentSubsection) currentSymptomSection.subsections.push(currentSubsection)
+      currentSubsection = {
+        title: '🏥 When to See a Doctor:',
+        lines: [trimmedLine],
+        class: 'recommendation-line warning'
+      }
+    } else if (trimmedLine.toLowerCase().startsWith('advise:') || trimmedLine.toLowerCase().startsWith('advice:') || (trimmedLine.toLowerCase().includes('avoid') && !trimmedLine.toLowerCase().includes('medication')) || trimmedLine.toLowerCase().includes('drink enough water') || trimmedLine.toLowerCase().includes('have a good rest')) {
+      // Check if current subsection is already an advice section
+      if (currentSubsection && currentSubsection.class === 'recommendation-line advice') {
+        // Add to existing advice section instead of creating a new one
+        currentSubsection.lines.push(trimmedLine.replace(/^Advise:/i, '').replace(/^Advice:/i, '').trim())
+      } else {
+        // Create new advice section
+        if (currentSubsection) currentSymptomSection.subsections.push(currentSubsection)
+        currentSubsection = {
+          title: '💡 Advice:',
+          lines: [trimmedLine.replace(/^Advise:/i, '').replace(/^Advice:/i, '').trim()],
+          class: 'recommendation-line advice'
+        }
+      }
+    } else if (trimmedLine.toLowerCase().includes('thank you for your time')) {
       if (currentSubsection) currentSymptomSection.subsections.push(currentSubsection)
       currentSubsection = {
         title: null,
@@ -703,27 +706,27 @@ I     } else {
       }
     } else if (trimmedLine.length > 0) {
       // Regular line - could be medication or continuation
-      if (!currentSubsection) {
-        // Start medication subsection
-        currentSubsection = {
-          title: '💊 Medication:',
-          lines: [trimmedLine],
-          class: 'recommendation-line medication'
-        }
-      } else {
-        // Add to current subsection
-        currentSubsection.lines.push(trimmedLine)
-section   }
-    }
-  })
-  
-  // Push last section
-  if (currentSymptomSection) {
-    if (currentSubsection) currentSymptomSection.subsections.push(currentSubsection)
-    sections.push(currentSymptomSection)
-  }
-  
-  return sections
+      if (!currentSubsection) {
+        // Start medication subsection
+        currentSubsection = {
+          title: '💊 Medication:',
+          lines: [trimmedLine],
+          class: 'recommendation-line medication'
+        }
+      } else {
+        // Add to current subsection
+        currentSubsection.lines.push(trimmedLine)
+      }
+    }
+  })
+
+  // Push last section
+  if (currentSymptomSection) {
+    if (currentSubsection) currentSymptomSection.subsections.push(currentSubsection)
+    sections.push(currentSymptomSection)
+  }
+
+  return sections
 }
 
 function formatAnswer(a) {
@@ -732,6 +735,23 @@ function formatAnswer(a) {
 </script>
 
 <style scoped>
+.chat-header .subtitle.clickable {
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 3px;
+  transition: color 0.2s;
+}
+.chat-header .subtitle.clickable:hover {
+  color: #007bff;
+}
+
+.loader {
+  text-align: center;
+  font-size: 1.2rem;
+  padding: 3rem;
+}
+
 .chat {
   max-width: 800px;
   width: 100%;

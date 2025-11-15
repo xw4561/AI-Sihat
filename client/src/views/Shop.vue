@@ -8,8 +8,8 @@
   <!-- Show Shop Content only if a branch is selected -->
   <div v-else-if="selectedBranch" class="shopping">
     <h1>🛒 Pharmacy Store</h1>
-    <p class="branch-info">
-      Shopping at: <strong>{{ selectedBranch.name }}</strong>
+    <p class="branch-info clickable" @click="showSelector = true" title="Click to change branch">
+      Shopping at: <strong>{{ selectedBranch.name }} ▾</strong>
     </p>
 
     <div v-if="loadingProducts" class="loader">Loading products...</div>

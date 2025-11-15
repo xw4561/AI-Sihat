@@ -70,11 +70,13 @@ async function createBranch(branchData) {
  */
 async function getAllBranches() {
   return await prisma.pharmacyBranch.findMany({
-    select: {
-      branchId: true,
-      name: true,
-      address: true,
-      phone: true,
+    include: {
+      user: { // Include the associated user's login info
+        select: {
+          email: true,
+          username: true
+        }
+      }
     },
     orderBy: {
       name: "asc", // Order alphabetically by name

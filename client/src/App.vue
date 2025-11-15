@@ -34,6 +34,9 @@ function logout() {
   localStorage.removeItem('userName');
   localStorage.removeItem('userEmail');
   localStorage.removeItem('userRole');
+  localStorage.removeItem('selectedBranch');
+
+  router.push('/login');
 }
 </script>
 

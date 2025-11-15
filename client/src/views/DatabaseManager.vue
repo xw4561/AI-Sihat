@@ -85,18 +85,18 @@
         </form>
       </div>
 
-      <!-- Branches List -->
-      <div class="data-card">
-        <div class="card-header">
-          <h4>All Branches</h4>
-          <button @click="loadBranches" class="btn-refresh">🔄 Refresh</button>
-        </div>
-        <div v-if="branchesLoading" class="loading">Loading branches...</div>
-        <div v-else-if="branches.length === 0" class="empty">No branches found</div>
-        <div v-else class="table-wrapper">
-          <table>
-            <thead>
-              <tr>
+      <!-- Branches List -->
+      <div class="data-card">
+        <div class="card-header">
+          <h4>All Branches</h4>
+          <button @click="loadBranches" class="btn-refresh">🔄 Refresh</button>
+        </div>
+        <div v-if="branchesLoading" class="loading">Loading branches...</div>
+        <div v-else-if="branches.length === 0" class="empty">No branches found</div>
+        <div v-else class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
                 <th>Branch ID</th>
                 <th>Branch Name</th>
                 <th>Address</th>
