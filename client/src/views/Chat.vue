@@ -610,7 +610,7 @@ async function pollOrderStatus() {
       loading.value = false
       error.value = 'Approval timeout. Please check your prescription status later.'
     }
-  }, 300000)
+  }, 808000)
 }
 
 function continueFromCart() {

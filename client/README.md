@@ -71,13 +71,13 @@ The application will be available at **http://localhost:5173**
 
 The Vite dev server is configured to proxy API requests to the backend server:
 
-- `/api/*` → `http://localhost:3000/api/*`
-- `/chat/*` → `http://localhost:3000/chat/*`
-- `/ai-sihat/*` → `http://localhost:3000/ai-sihat/*`
+- `/api/*` → `http://localhost:8080/api/*`
+- `/chat/*` → `http://localhost:8080/chat/*`
+- `/ai-sihat/*` → `http://localhost:8080/ai-sihat/*`
 
 This configuration is defined in `vite.config.js`.
 
-**Note:** Make sure the backend server is running on port 3000 before starting the frontend.
+**Note:** Make sure the backend server is running on port 8080 before starting the frontend.
 
 ## Building for Production
 
@@ -180,7 +180,7 @@ taskkill /PID <PID> /F
 ### Backend Connection Issues
 
 If the frontend cannot connect to the backend:
-1. Ensure the backend server is running on port 3000
+1. Ensure the backend server is running on port 8080
 2. Check the proxy configuration in `vite.config.js`
 3. Verify CORS settings in the backend `.env` file
 

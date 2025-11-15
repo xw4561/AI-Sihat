@@ -51,7 +51,9 @@ const showSelector = ref(false);
 async function fetchProducts() {
   loadingProducts.value = true;
   try {
-    const response = await axios.get('http://localhost:3000/ai-sihat/medicines');
+    const response = await axios.get('http://localhost:8080/ai-sihat/medicines')
+    
+    // Map the backend data to the format your ProductCard expects
     products.value = response.data.map(medicine => ({
       id: medicine.medicineId,
       name: medicine.medicineName,

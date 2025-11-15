@@ -6,7 +6,7 @@ Usage (from repo root):
   .\scripts\prisma-fix.ps1
 
 The script will:
- - show processes listening on port 3000
+ - show processes listening on port 8080
  - optionally stop all `node` processes
  - remove `node_modules/.prisma/client` under the server folder
  - run `npx prisma generate`
@@ -15,7 +15,7 @@ Use carefully — stopping node processes will terminate any running Node server
 #>
 
 param(
-  [int] $Port = 3000
+  [int] $Port = 8080
 )
 
 Write-Host "Prisma Windows EPERM helper — port=$Port"

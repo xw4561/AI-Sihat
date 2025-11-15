@@ -1,0 +1,54 @@
+# This Cloud Build configuration uses Google Cloud Buildpacks, tags the image with the SHORT_SHA, and deploys to Cloud Run.
+
+steps:
+  # 0. Run Prisma Client Generation
+  # This step uses a Node.js image to install dependencies and execute 'prisma generate'.
+  # We use 'sh' entrypoint to run multiple commands sequentially.
+  - name: 'node' # Use the standard Node.js image (often maps to node:latest)
+    id: 'Prisma_Generate'
+    entrypoint: 'sh'
+    args:
+      - '-c'
+      - |
+          echo "Installing dependencies and running Prisma generate..."
+          # Install all dependencies (dev dependencies are needed for Prisma CLI)
+          npm install
+          # Generate the Prisma Client
+          npx prisma generate
+    timeout: '300s' # Give it enough time to install dependencies
+
+  # 1. Build the container image using the dedicated Buildpacks builder.
+  - name: 'gcr.io/cloud-builders/buildpacks'
+    id: 'Build_with_Buildpacks'
+    args:
+      # Image tag is now unique using $SHORT_SHA
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/${_IMAGE_NAME}:$SHORT_SHA' 
+    timeout: '900s'
+
+  # 2. Deploy the image to Cloud Run.
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'Deploy_to_Cloud_Run'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - '${_SERVICE_NAME}'
+      - '--image'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/${_IMAGE_NAME}:$SHORT_SHA'
+      - '--region'
+      - '${_REGION}' 
+      - '--platform'
+      - 'managed'
+
+# Substitutions allow you to pass variables at runtime.
+substitutions:
+  _IMAGE_NAME: 'ai-sihat' # Image name (Artifact Registry repository)
+  _SERVICE_NAME: 'ai-sihat' # Name of the Cloud Run service
+  _REGION: 'us-central1' # Region where Cloud Run service is deployed
+
+# Define the image that was built to be available as an output of the build and pushed to the registry.
+images:
+  - 'us-central1-docker.pkg.dev/$PROJECT_ID/${_IMAGE_NAME}:$SHORT_SHA'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
