@@ -43,19 +43,29 @@
       <form @submit.prevent="submitOrder" class="checkout-form" v-if="orderType">
         <h3>Customer Information</h3>
         <input type="text" v-model="customerName" placeholder="Your Name" required />
-        <input type="email" v-model="customerEmail" placeholder="Your Email" required />
 
-        <!-- Pickup fields -->
-        <template v-if="orderType === 'pickup'">
-          <input type="text" v-model="customerPhone" placeholder="Phone Number" required />
-          <input type="text" v-model="purchaseMethod" placeholder="Purchase Method (e.g. Cash/Online)" required />
-        </template>
+      <!-- Pickup fields -->
+      <template v-if="orderType === 'pickup'">
+        <input type="text" v-model="customerPhone" placeholder="Phone Number" required />
+          <select v-model="purchaseMethod" required>
+            <option value="" disabled>Select Purchase Method</option>
+            <option value="Cash">Cash</option>
+            <option value="TNG">TNG</option>
+            <option value="Online Banking">Online Banking</option>
+          </select>
+      </template>
+
 
         <!-- Delivery fields -->
         <template v-if="orderType === 'delivery'">
           <input type="text" v-model="customerAddress" placeholder="Address" required />
           <input type="text" v-model="customerPhone" placeholder="Phone Number" required />
-          <input type="text" v-model="purchaseMethod" placeholder="Purchase Method (e.g. Cash/Online)" required />
+          <select v-model="purchaseMethod" required>
+            <option value="" disabled>Select Purchase Method</option>
+            <option value="Cash">Cash</option>
+            <option value="TNG">TNG</option>
+            <option value="Online Banking">Online Banking</option>
+          </select>
         </template>
 
         <button type="submit" class="submit-order" :disabled="isSubmitting">
@@ -76,7 +86,6 @@
   const router = useRouter()
 
   const customerName = ref('')
-  const customerEmail = ref('')
   const customerPhone = ref('')
   const customerAddress = ref('')
   const purchaseMethod = ref('')
@@ -185,6 +194,14 @@
   border: 1px solid #ddd;
   border-radius: 4px;
 }
+
+.checkout-form select {
+  margin-bottom: 1rem;
+  padding: 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
 .submit-order {
   background: #42b983;
   color: white;
