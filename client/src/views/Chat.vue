@@ -11,7 +11,9 @@
         </button>
         <div class="title">AI_SIHAT CHAT</div>
       </div>
-
+      <div class="subtitle clickable" @click="showSelector = true" title="Click to change branch">
+        Connected to: <strong>{{ selectedBranch.name }} ▾</strong>
+      </div>
       <div class="controls">
         <button class="btn" @click="refreshChat" :disabled="loading">Start New Chat</button>
       </div>

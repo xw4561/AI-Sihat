@@ -12,9 +12,9 @@
         <span class="back-arrow">←</span>
       </button>
       <h1>Pharmacy Store</h1>
-    <p class="branch-info clickable" @click="showSelector = true" title="Click to change branch">
-      Shopping at: <strong>{{ selectedBranch.name }} ▾</strong>
-    </p>
+      <p class="branch-info clickable" @click="showSelector = true" title="Click to change branch">
+        Shopping at: <strong>{{ selectedBranch.name }} ▾</strong>
+      </p>
 
     </div>
 
