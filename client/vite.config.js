@@ -11,17 +11,17 @@ export default defineConfig({
       '/api': {
         target: process.env.VITE_API_URL || 'http://localhost:8080',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, '')
+        // rewrite: (path) => path.replace(/^\/api/, '')
       },
       '/chat': {
         target: process.env.VITE_API_URL || 'http://localhost:8080',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/chat/, '')
+        // rewrite: (path) => path.replace(/^\/chat/, '')
       },
       '/ai-sihat': {
         target: process.env.VITE_API_URL || 'http://localhost:8080',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/ai-sihat/, '')
+        // rewrite: (path) => path.replace(/^\/ai-sihat/, '')
       }
     }
   }
