@@ -64,22 +64,23 @@ model Medicine {
 }
 
 model Order {
-  orderId         String      @id @default(cuid()) @map("order_id")
-  userId          String      @map("user_id")
-  prescriptionId  String?     @map("prescription_id")
-  totalPrice      Decimal     @default(0) @map("total_price") @db.Decimal(10, 2)
-  totalPoints     Int         @default(0) @map("total_points")
-  status          String      @default("pending") @db.VarChar(20)
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
-  customerAddress String?     @map("customer_address")
-  customerName    String      @map("customer_name") @db.VarChar(255)
-  customerPhone   String      @map("customer_phone") @db.VarChar(50)
+  orderId         String         @id @default(cuid()) @map("order_id")
+  userId          String         @map("user_id")
+  prescriptionId  String?        @map("prescription_id")
+  totalPrice      Decimal        @default(0) @map("total_price") @db.Decimal(10, 2)
+  totalPoints     Int            @default(0) @map("total_points")
+  status          String         @default("pending") @db.VarChar(20)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  customerAddress String?        @map("customer_address")
+  customerName    String         @map("customer_name") @db.VarChar(255)
+  customerPhone   String         @map("customer_phone") @db.VarChar(50)
   items           OrderItem[]
-  user            User        @relation(fields: [userId], references: [userId], onDelete: Cascade)
-  prescription    Prescription? @relation(fields: [prescriptionId], references: [prescriptionId])
+  user            User           @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  prescription    Prescription?  @relation(fields: [prescriptionId], references: [prescriptionId])
   branchId        String         @map("branch_id")
   branch          PharmacyBranch @relation(fields: [branchId], references: [branchId])
+  paymentMethod   PaymentMethod? @map("payment_method")
 
   @@index([userId])
   @@index([prescriptionId])
@@ -123,11 +124,11 @@ model Prescription {
   prescriptionId  String   @id @default(cuid()) @map("prescription_id")
   chatId          Int      @map("chat_id")
   userId          String   @map("user_id")
+  branchId        String?  @map("branch_id")
   pharmacistId    String?  @map("pharmacist_id")
   status          String   @default("pending") @db.VarChar(20)
   customerName    String   @map("customer_name") @db.VarChar(255)
   customerPhone   String   @map("customer_phone") @db.VarChar(50)
-  customerAddress String?  @map("customer_address")
   createdAt       DateTime @default(now()) @map("created_at")
   approvedAt      DateTime? @map("approved_at")
   rejectedAt      DateTime? @map("rejected_at")
@@ -139,6 +140,7 @@ model Prescription {
   orders          Order[]
 
   @@index([userId])
+  @@index([branchId])
   @@index([pharmacistId])
   @@index([status])
   @@index([chatId])
@@ -175,4 +177,9 @@ enum Role {
 enum MedicineType {
   OTC
   NON_OTC
+}
+
+enum PaymentMethod {
+  CASH
+  ONLINE_BANKING
 }

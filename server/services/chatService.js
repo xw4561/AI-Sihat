@@ -1143,9 +1143,10 @@ function approveRecommendation(sessionId, approved) {
 /**
  * Create an order from chat session for pharmacist approval
  * @param {string} sessionId
+ * @param {string} branchId
  * @returns {object} Created order
  */
-async function createOrderFromChat(sessionId) {
+async function createOrderFromChat(sessionId, branchId) {
   const session = sessionService.getSession(sessionId);
   if (!session) throw new Error("Session not found");
   if (!session.userId) throw new Error("User ID required to create order");
@@ -1167,9 +1168,9 @@ async function createOrderFromChat(sessionId) {
     data: {
       chatId: session.chatId,
       userId: session.userId,
+      branchId: branchId,
       customerName: summary.name || "Unknown",
       customerPhone: summary.phoneNumber || "N/A",
-      customerAddress: null,
       status: "pending",
     },
   });
