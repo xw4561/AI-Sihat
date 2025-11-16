@@ -169,14 +169,158 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* ... (all styles above .status-badge are unchanged) ... */
+/* --- General Page Layout --- */
+.order-history {
+  padding-bottom: 2rem;
+  max-width: 800px;
+  margin: 0 auto;
+}
 
+.page-header {
+  display: flex;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid #f0f0f0;
+  background: #fff;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.btn-back {
+  background: none;
+  border: none;
+  font-size: 1.75rem;
+  color: #2c3e50;
+  cursor: pointer;
+  margin-right: 1rem;
+  padding: 0 0.5rem;
+}
+
+.btn-back .back-arrow {
+  transition: transform 0.2s ease;
+}
+
+.btn-back:hover .back-arrow {
+  transform: translateX(-3px);
+}
+
+.page-header h1 {
+  font-size: 1.75rem;
+  font-weight: 600;
+  color: #2c3e50;
+  margin: 0;
+}
+
+/* --- Loading/Empty States --- */
+.loading,
+.error,
+.empty {
+  padding: 3rem 1.5rem;
+  text-align: center;
+  color: #666;
+}
+
+.error {
+  color: #721c24;
+  background: #f8d7da;
+  border: 1px solid #f5c6cb;
+  border-radius: 8px;
+  margin: 1rem;
+}
+
+.empty p {
+  font-size: 1.1rem;
+  margin-bottom: 1.5rem;
+}
+
+/* --- Filter Tabs --- */
+.orders-container {
+  padding: 0 1.5rem;
+}
+
+.filter-tabs {
+  display: flex;
+  gap: 0.5rem;
+  padding: 1rem 0;
+  border-bottom: 1px solid #e0e0e0;
+  margin-bottom: 1rem;
+}
+
+.tab {
+  padding: 0.6rem 1.2rem;
+  border: 1px solid #ccc;
+  border-radius: 20px;
+  background: #f8f9fa;
+  color: #495057;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap; /* Prevents text from wrapping */
+}
+
+.tab:hover {
+  background: #e9ecef;
+}
+
+.tab.active {
+  background: #10b981;
+  color: white;
+  border-color: #10b981;
+}
+
+/* --- Orders List & Cards --- */
+.orders-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.order-card {
+  background: #ffffff;
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  transition: box-shadow 0.2s ease;
+}
+
+.order-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.order-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.order-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.order-info h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  color: #2c3e50;
+}
+
+.order-date {
+  font-size: 0.9rem;
+  color: #666;
+}
+
+/* --- Status Badge (From your code) --- */
 .status-badge {
   padding: 0.4rem 0.8rem;
   border-radius: 20px;
   font-size: 0.85rem;
   font-weight: 600;
   text-transform: capitalize;
+  flex-shrink: 0; /* Prevents badge from shrinking */
 }
 
 .status-badge.pending {
@@ -184,21 +328,18 @@ onMounted(() => {
   color: #856404;
 }
 
-/* --- STYLE MODIFIED --- */
-/* Combined 'completed' states */
 .status-badge.picked_up,
 .status-badge.delivered {
   background: #d4edda;
   color: #155724;
 }
 
-/* This is likely no longer used but safe to keep */
 .status-badge.rejected {
   background: #f8d7da;
   color: #721c24;
 }
 
-/* ... (all styles below this are unchanged) ... */
+/* --- Order Details (From your code) --- */
 .order-details {
   display: flex;
   flex-direction: column;
@@ -254,6 +395,7 @@ onMounted(() => {
   font-size: 0.9rem;
 }
 
+/* --- Order Actions (From your code) --- */
 .order-actions {
   margin-top: 1rem;
   padding-top: 1rem;
@@ -286,5 +428,103 @@ onMounted(() => {
 .btn.primary:hover, .btn-small.primary:hover {
   background: #059669;
   transform: translateY(-1px);
+}
+
+/* ======================================= */
+/* === MOBILE RESPONSIVE STYLES === */
+/* ======================================= */
+
+@media (max-width: 600px) {
+  .page-header {
+    padding: 0.75rem 1rem;
+  }
+  
+  .page-header h1 {
+    font-size: 1.4rem; /* Smaller title */
+  }
+
+  .btn-back {
+    margin-right: 0.75rem;
+  }
+
+  .orders-container {
+    padding: 0; /* Remove side padding to allow tabs to scroll to edge */
+  }
+
+  .filter-tabs {
+    overflow-x: auto; /* Allow horizontal scrolling */
+    white-space: nowrap; /* Keep tabs in one line */
+    padding: 0.75rem 1rem; /* Add padding for content and scrollbar area */
+    margin-bottom: 1rem;
+    /* Hide scrollbar for a cleaner look */
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
+  }
+
+  .filter-tabs::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Opera */
+  }
+
+  .tab {
+    padding: 0.5rem 1rem; /* Slightly smaller tabs */
+    font-size: 0.9rem;
+    flex: 0 0 auto; /* Prevent tabs from shrinking */
+  }
+
+  .orders-list {
+    padding: 0 1rem; /* Add padding back for the cards list */
+    gap: 1rem;
+  }
+  
+  .order-card {
+    padding: 1rem; /* Reduce card padding */
+    border-radius: 10px;
+  }
+
+  .order-header {
+    flex-wrap: wrap; /* Allow badge to wrap below if needed */
+    margin-bottom: 1rem;
+  }
+  
+  .order-info h3 {
+    font-size: 1.15rem; /* Smaller order ID */
+  }
+  
+  .status-badge {
+    font-size: 0.8rem;
+    padding: 0.3rem 0.6rem;
+  }
+
+  .detail-row {
+    flex-direction: column; /* Stack label and value */
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+  
+  .label {
+    font-size: 0.9rem;
+  }
+  
+  .value {
+    font-weight: 500;
+  }
+
+  .medication-list {
+    padding-left: 0.5rem;
+  }
+  
+  .med-name {
+    font-size: 0.95rem;
+  }
+
+  .med-qty {
+    font-size: 0.85rem;
+  }
+
+  .order-actions .btn-small {
+    width: 100%; /* Make buttons full-width */
+    text-align: center;
+    padding: 0.75rem;
+  }
 }
 </style>

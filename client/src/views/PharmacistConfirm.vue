@@ -132,11 +132,30 @@ function setFilter(s) {
 </script>
 
 <style scoped>
-.pharmacist-confirm { max-width: 1000px; margin: 1.5rem auto; padding: 1rem }
-.page-header { display:flex; align-items:center; gap:0.75rem; margin-bottom: 1rem }
+/* --- Base Layout --- */
+.pharmacist-confirm {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding-bottom: 2rem;
+  background-color: #f8f9fa; /* Lighter page background */
+  min-height: 100vh;
+}
+
+/* --- Page Header --- */
+.page-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid #e0e0e0;
+  background: #ffffff;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
 .btn-back {
   background: none;
-  border: 2px solid transparent;
+  border: none;
   cursor: pointer;
   padding: 0.3rem 0.5rem;
   display: flex;
@@ -146,19 +165,241 @@ function setFilter(s) {
   transition: all 0.2s ease;
   flex-shrink: 0;
 }
-.btn-back:hover { transform: translateX(-2px); background-color: rgba(0,0,0,0.03); }
-.back-arrow { font-size: 1.2rem; color: #333; line-height: 1; font-weight: 600; }
-/* Make the header title centered while leaving the back button at left */
-.page-header h2 { flex: 1 1 auto; text-align: center; margin: 0; }
-.order-list { display:flex; flex-direction:column; gap:1rem; margin-top:1rem }
-.order-card { border:1px solid #eee; padding:1rem; border-radius:8px; background:white }
-.order-top { display:flex; justify-content:space-between; align-items:center }
-.sub { color:#666; font-size:0.9rem }
-.order-items { margin-top:0.75rem }
-.item-row { display:flex; justify-content:space-between; padding:0.3rem 0 }
-.actions { margin-top:0.75rem; display:flex; gap:0.5rem }
-.btn { background:#10b981; color:white; border:none; padding:0.5rem 0.8rem; border-radius:6px; cursor:pointer }
-.btn.secondary { background:#6b7280 }
-.filters button { border:1px solid #ddd; padding:0.4rem 0.6rem; border-radius:6px; background:white; cursor:pointer }
-.filters button.active { background:#efefef; border-color:#bbb }
+.btn-back:hover {
+  background-color: rgba(0, 0, 0, 0.03);
+}
+.back-arrow {
+  font-size: 1.5rem; /* Bigger tap target */
+  color: #333;
+  line-height: 1;
+  font-weight: 600;
+}
+.page-header h2 {
+  flex: 1 1 auto;
+  text-align: center;
+  margin: 0;
+  font-size: 1.25rem;
+  /* Shift left to account for back button, centering the title */
+  margin-left: -2.5rem; 
+}
+
+/* --- Loading / Empty States --- */
+.loading,
+.empty {
+  padding: 3rem 1.5rem;
+  text-align: center;
+  color: #666;
+  font-size: 1.1rem;
+}
+
+/* --- Filters (Mobile-Optimized) --- */
+.filters {
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.75rem 1.5rem;
+  overflow-x: auto; /* Key change: Allow horizontal scrolling */
+  white-space: nowrap;
+  background: #ffffff;
+  border-bottom: 1px solid #e0e0e0;
+
+  /* Hide scrollbar for a cleaner look */
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.filters::-webkit-scrollbar {
+  display: none;
+}
+.filters button {
+  border: 1px solid #ccc;
+  padding: 0.5rem 1rem;
+  border-radius: 20px; /* Pill shape */
+  background: white;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  flex-shrink: 0; /* Prevent buttons from shrinking */
+}
+.filters button.active {
+  background: #10b981;
+  color: white;
+  border-color: #10b981;
+}
+.filters button:hover:not(.active) {
+  background: #f0f0f0;
+}
+
+/* --- Order List & Cards --- */
+.order-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 0 1.5rem;
+  margin-top: 1rem;
+}
+
+.order-card {
+  border: 1px solid #e0e0e0;
+  padding: 1.25rem;
+  border-radius: 12px;
+  background: white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.order-top {
+  display: flex;
+  flex-direction: column; /* Key change: Stack info vertically */
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.order-top strong {
+  font-size: 1.15rem;
+  color: #2c3e50;
+}
+
+.sub {
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.status {
+  font-weight: 600;
+  font-size: 0.9rem;
+  padding: 0.3rem 0.75rem;
+  border-radius: 20px;
+  background: #e9ecef;
+  color: #495057;
+  text-transform: capitalize;
+}
+
+/* --- Order Items & Meta --- */
+.order-items {
+  margin-top: 0.75rem;
+}
+
+.item-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.6rem 0; /* More vertical space */
+  border-bottom: 1px dashed #f0f0f0; /* Softer separator */
+}
+.item-row:last-child {
+  border-bottom: none;
+}
+
+.name {
+  color: #333;
+  font-weight: 500;
+  margin-right: 1rem; /* Space before qty */
+}
+
+.qty {
+  color: #10b981; /* Use accent color */
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.order-meta {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #f0f0f0;
+  font-size: 0.95rem;
+  color: #444;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.order-meta strong {
+  color: #000;
+}
+
+/* --- Actions (Mobile-Optimized) --- */
+.actions {
+  margin-top: 1.25rem;
+  display: flex;
+  flex-direction: column; /* Key change: Stack buttons */
+  gap: 0.75rem;
+}
+
+.btn {
+  background: #10b981;
+  color: white;
+  border: none;
+  padding: 0.75rem 1rem; /* Bigger tap target */
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 1rem;
+  text-align: center;
+  transition: all 0.2s ease;
+  width: 100%; /* Key change: Full width */
+}
+.btn:hover {
+  background: #059669;
+}
+
+.btn.secondary {
+  background: #6b7280;
+}
+.btn.secondary:hover {
+  background: #4b5563;
+}
+
+/* ======================================= */
+/* === DESKTOP / WIDER SCREEN STYLES === */
+/* ======================================= */
+
+@media (min-width: 600px) {
+  .pharmacist-confirm {
+    padding: 1.5rem; /* Restore padding */
+  }
+
+  .page-header {
+    background: none;
+    border-bottom: none;
+    position: static;
+    padding: 0.5rem 0;
+    margin-bottom: 1rem;
+  }
+  
+  .page-header h2 {
+    margin-left: 0; /* Reset mobile centering hack */
+  }
+
+  .filters {
+    overflow-x: visible; /* Disable scrolling */
+    background: none;
+    padding: 0.75rem 0;
+  }
+  
+  .order-list {
+    padding: 0; /* Reset padding */
+  }
+
+  .order-top {
+    flex-direction: row; /* Back to row layout */
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: none;
+    padding-bottom: 0;
+    margin-bottom: 0.75rem;
+  }
+
+  .actions {
+    flex-direction: row; /* Buttons side-by-side */
+    gap: 0.5rem;
+  }
+
+  .btn {
+    width: auto; /* Auto-width for buttons */
+    padding: 0.5rem 0.8rem; /* Restore original padding */
+    font-size: 0.9rem;
+  }
+}
 </style>

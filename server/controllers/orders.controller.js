@@ -62,7 +62,7 @@ exports.findByUser = async (req, res) => {
     const { userId } = req.params;
     const orders = await prisma.order.findMany({
       where: { userId: userId },
-      select: { orderId: true, createdAt: true, status: true, totalPrice: true, prescription: { include: { items: { include: { medicine: true } } } } },
+      select: { orderId: true, createdAt: true, status: true, totalPrice: true, paymentMethod: true,prescription: { include: { items: { include: { medicine: true } } } } },
       orderBy: { createdAt: 'desc' }
     });
     
